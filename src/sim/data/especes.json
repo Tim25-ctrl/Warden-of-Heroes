@@ -17,10 +17,10 @@
     "special": "regeneration", "etats": [{ "etat": "fracture", "chance": 0.1 }], "butin": ["graisse_troll", "sang_troll", "peau_troll"], "r": 0.03, "k": 5, "mortVivant": false },
   { "id": "goule", "nom": "Goule", "pluriel": "goules", "rang": "C", "menace": 6, "pv": 60, "attaque": 50, "defense": 30, "groupe": [3, 6],
     "special": "malediction", "etats": [{ "etat": "poison", "chance": 0.1 }, { "etat": "malediction", "chance": 0.1 }], "butin": ["poussiere_os", "griffes_goule"], "r": 0.04, "k": 3, "mortVivant": true },
-  { "id": "wyverne", "nom": "Wyverne", "pluriel": "wyvernes", "rang": "B", "menace": 12, "pv": 350, "attaque": 90, "defense": 60, "groupe": [1, 2],
+  { "id": "wyverne", "nom": "Wyverne", "pluriel": "wyvernes", "rang": "B", "menace": 12, "pv": 250, "attaque": 75, "defense": 60, "groupe": [1, 2],
     "special": "aerienne", "etats": [{ "etat": "poison", "chance": 0.3, "gravite": 1 }], "butin": ["glande_wyverne", "ecailles_wyverne", "cuir_aile", "viande_wyverne"], "r": 0.015, "k": 8, "mortVivant": false },
-  { "id": "golem", "nom": "Golem runique", "pluriel": "golems runiques", "rang": "A", "menace": 20, "pv": 900, "attaque": 120, "defense": 120, "groupe": [1, 1],
+  { "id": "golem", "nom": "Golem runique", "pluriel": "golems runiques", "rang": "A", "menace": 20, "pv": 600, "attaque": 100, "defense": 100, "groupe": [1, 1],
     "special": "golem", "etats": [{ "etat": "fracture", "chance": 0.1 }], "butin": ["coeur_runique", "pierre_runique"], "r": 0, "k": 20, "mortVivant": false },
-  { "id": "dragon", "nom": "Jeune dragon", "pluriel": "jeunes dragons", "rang": "S", "menace": 40, "pv": 3000, "attaque": 220, "defense": 150, "groupe": [1, 1],
+  { "id": "dragon", "nom": "Jeune dragon", "pluriel": "jeunes dragons", "rang": "S", "menace": 40, "pv": 750, "attaque": 120, "defense": 120, "groupe": [1, 1],
     "special": "souffle", "etats": [{ "etat": "brulure", "chance": 0.5, "gravite": 1 }], "butin": ["ecailles_dragon", "coeur_dragon", "sang_dragon", "viande_dragon"], "r": 0, "k": 100, "mortVivant": false }
 ]

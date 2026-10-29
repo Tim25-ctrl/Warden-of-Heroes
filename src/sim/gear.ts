@@ -81,7 +81,9 @@ export function wear(s: GameState, a: Adventurer, combats: number): void {
   for (const kind of ['weapon', 'armor'] as GearKind[]) {
     const g = a[kind];
     const before = g.dur;
-    g.dur = Math.max(0, g.dur - loss);
+    // Ajusté en v1.1 : les matériaux nobles s'usent moins vite (−10 % par palier, 40 % de l'usure au minimum).
+    const tierMult = Math.max(GEAR.usurePlancher, 1 - GEAR.usureParPalier * (g.tier - 1));
+    g.dur = Math.max(0, g.dur - Math.round(loss * tierMult));
     if (before > 0 && g.dur === 0) log(s, 'aventuriers', 'info', `L'${kind === 'weapon' ? 'arme' : 'armure'} de ${advLink(a)} est brisée.`);
   }
 }

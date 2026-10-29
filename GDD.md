@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.0 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**. Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.4
+> **Statut du document :** v2.1 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.6
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -146,21 +146,25 @@ Ces repères calibrent tout le reste de l'économie.
 | Coût de la vie d'un aventurier débutant (paillasse + gruau + ragoût) | ≈ **7 pa / jour** |
 | Revenu moyen d'un débutant (quêtes, dépouilles et petits boulots, lissé sur les jours de repos) | ≈ **1 po / jour** |
 | Salaire d'un cuisinier moyen | 1 po / jour |
-| Salaire d'un professeur de niveau 10 | ≈ 8 po / jour |
+| Salaire d'un professeur de niveau 10 | ≈ 4 po / jour (8 po avant la v1.1) |
 
 **Récompenses de quête par rang.** La récompense est le montant **total** de la quête, **partagé entre les membres de l'équipe**. La part individuelle suppose une équipe de 3.
 
 | Rang | Durée typique | Récompense totale | Part individuelle |
 |------|---------------|-------------------|-------------------|
 | F | Quelques heures à 1 jour | 5 pa à 2 po | 2 à 7 pa |
-| E | 1 à 2 jours | 4 à 8 po | 1 po 3 pa à 2 po 7 pa |
-| D | 2 à 3 jours | 10 à 20 po | 3 à 7 po |
-| C | 3 à 4 jours | 25 à 45 po | 8 à 15 po |
-| B | 4 à 6 jours | 60 à 120 po | 20 à 40 po |
-| A | 5 à 8 jours | 150 à 280 po | 50 à 93 po |
-| S | 7 jours et plus | 350 po et plus | 115 po et plus |
+| E | 1 à 2 jours | 6 à 12 po | 2 à 4 po |
+| D | 2 à 3 jours | 15 à 30 po | 5 à 10 po |
+| C | 3 à 4 jours | 50 à 95 po | 17 à 32 po |
+| B | 4 à 6 jours | 130 à 250 po | 43 à 83 po |
+| A | 5 à 8 jours | 290 à 560 po | 97 à 187 po |
+| S | 7 jours et plus | 550 po et plus | 185 po et plus |
 
 > **Ajusté en tranche 2 :** les récompenses des rangs E et plus sont relevées d'environ 50 % (le rang F ne change pas : les débutants restent modestes). Le simulateur montrait des aventuriers qui plafonnaient à environ 1 po par jour, quel que soit leur niveau, et une guilde qui ne pouvait donc pas gagner plus.
+
+> **Ajusté en v1.1 :** les rangs E à A sont relevés une seconde fois (Base_rang 9 / 22 / 50 / 110 / 250 po, contre 6 / 15 / 35 / 90 / 220). Le rang F ne change pas. Ce relèvement profite surtout à la taxe : un aventurier qui approche de son objectif de fortune part moins souvent en quête, donc le gain de la guilde reste limité. C'est voulu, car ce sont ses salles qui la font vivre (D-116).
+
+> **Ajusté en v1.1 (fin de partie) :** les rangs C à S sont relevés (Base_rang 70 / 180 / 400 / 800 po). Un aventurier de haut rang passe beaucoup de temps blessé et paie des soins, un lit confortable et l'entretien d'un équipement coûteux : avec les anciennes récompenses, il revenait de ses quêtes sans le sou, dormait dehors et ne pouvait jamais s'équiper (D-123).
 
 > Le débutant dépense environ **70 % de son revenu** en besoins vitaux. Il vit chichement, s'entraîne sans professeur et se soigne quand il le peut. Plus il monte en niveau, plus sa marge grandit : c'est le moteur des services haut de gamme. Les dépouilles (ch. 2) représentent environ 25 à 40 % de ses revenus.
 
@@ -206,10 +210,12 @@ Les événements du chapitre 5 peuvent modifier la taxe royale (une guerre l'aug
 
 | Salle | Niv 1 | Niv 2 | Niv 3 | Niv 4 (rang 3) | Niv 5 (rang 4) |
 |-------|-------|-------|-------|----------------|----------------|
-| Dortoirs | *de départ* (valeur 100 po) | 250 po | 600 po | 1 500 po | 3 500 po |
-| Réfectoire | *de départ* (valeur 100 po) | 200 po | 500 po | 1 200 po | 3 000 po |
-| Terrain d'entraînement | 120 po | 300 po | 700 po | 1 600 po | 3 500 po |
-| Infirmerie | 150 po | 400 po | 900 po | 2 000 po | 4 000 po |
+| Dortoirs | *de départ* (valeur 100 po) | 150 po | 300 po | 900 po | 2 000 po |
+| Réfectoire | *de départ* (valeur 100 po) | 120 po | 250 po | 700 po | 1 800 po |
+| Terrain d'entraînement | 120 po | 180 po | 420 po | 1 000 po | 2 100 po |
+| Infirmerie | 150 po | 250 po | 550 po | 1 200 po | 2 400 po |
+
+> **Ajusté en v1.1 :** les niveaux 2 à 5 coûtent environ 40 % de moins. Anciens coûts : dortoirs 250 / 600 / 1 500 / 3 500 po, réfectoire 200 / 500 / 1 200 / 3 000, terrain 300 / 700 / 1 600 / 3 500, infirmerie 400 / 900 / 2 000 / 4 000. Le revenu de la guilde est plafonné par ce que ses salles peuvent vendre : 12 paillasses au niveau 1 ne rapportent que 3 po 6 pa par nuit. Aux anciens prix, la guilde restait coincée sous ce plafond, et aucune salle n'atteignait le niveau 3 en un an (D-117).
 
 #### Aménagements du siège (hors salles)
 
@@ -378,10 +384,10 @@ La salle offre des **places**. Le joueur les répartit librement entre les types
 | Niveau | Places | Types débloqués | Coût | Prérequis |
 |--------|--------|-----------------|------|-----------|
 | 1 | 12 | Paillasse | *de départ* | — |
-| 2 | 24 | + Dortoir commun | 250 po | — |
-| 3 | 40 | + Chambre individuelle | 600 po | — |
-| 4 | 60 | + Suite | 1 500 po | Rang 3 |
-| 5 | 80 | Tous, avec qualité de base +10 | 3 500 po | Rang 4 |
+| 2 | 24 | + Dortoir commun | 150 po | — |
+| 3 | 40 | + Chambre individuelle | 300 po | — |
+| 4 | 60 | + Suite | 900 po | Rang 3 |
+| 5 | 80 | Tous, avec qualité de base +10 | 2 000 po | Rang 4 |
 
 #### 1.5.3 Qualité et propreté
 
@@ -479,10 +485,10 @@ Moral_gagné = Moral_recette × (0,5 + Q_plat / 100)
 | Niveau | Places | Plats au menu | Garde-manger | Débloque | Coût |
 |--------|--------|---------------|--------------|----------|------|
 | 1 | 8 | 2 | 100 portions | Gruau, Ragoût | *de départ* |
-| 2 | 16 | 3 | 200 | Bière, Panier de route | 200 po |
-| 3 | 24 | 4 | 350 | Viande de monstre, Rôti | 500 po |
-| 4 | 32 | 5 | 500 | Festin du Héros | 1 200 po (rang 3) |
-| 5 | 40 | 6 | 700 | *Table renommée* : attire des visiteurs nobles (événement *Gourmet de passage*, 5.4.3) | 3 000 po (rang 4) |
+| 2 | 16 | 3 | 200 | Bière, Panier de route | 120 po |
+| 3 | 24 | 4 | 350 | Viande de monstre, Rôti | 250 po |
+| 4 | 32 | 5 | 500 | Festin du Héros | 700 po (rang 3) |
+| 5 | 40 | 6 | 700 | *Table renommée* : attire des visiteurs nobles (événement *Gourmet de passage*, 5.4.3) | 1 800 po (rang 4) |
 
 #### 1.6.8 Modules
 
@@ -521,10 +527,12 @@ Moral_gagné = Moral_recette × (0,5 + Q_plat / 100)
 | **Salaire journalier** | Voir formule |
 
 ```
-Salaire_prof (po/jour) = ( 2 + 0,25 × Niveau ^ 1,4 ) × ( 0,7 + Pédagogie / 166 )
+Salaire_prof (po/jour) = ( 1 + 0,12 × Niveau ^ 1,4 ) × ( 0,7 + Pédagogie / 166 )
 ```
 
-Exemples à pédagogie 50 : niveau 5 ≈ 4,4 po/jour, niveau 10 ≈ 8,3 po/jour, niveau 20 ≈ 18,6 po/jour.
+Exemples à pédagogie 50 : niveau 5 ≈ 2,1 po/jour, niveau 10 ≈ 4 po/jour, niveau 20 ≈ 9 po/jour.
+
+> **Ajusté en v1.1 :** le salaire est divisé par deux environ (formule d'origine : 2 + 0,25 × Niveau ^ 1,4). Un aventurier gagne 1 à 2 po par jour : même avec des séances pleines, un professeur à 8 po par jour ne pouvait pas être rentable. Sur 200 jours simulés, le terrain coûtait 1 670 po de salaires pour 225 po de séances (D-118).
 
 - **Recrutement :** les offres sont **rares** (environ 1 toutes les 2 semaines), et leur qualité dépend de la renommée.
 - Un prof peut partir si la renommée baisse, ou si son salaire est impayé.
@@ -535,6 +543,7 @@ Exemples à pédagogie 50 : niveau 5 ≈ 4,4 po/jour, niveau 10 ≈ 8,3 po/jour,
 - L'aventurier paie **à la séance**. Il n'y a pas d'abonnement.
 - **Coût physique :** énergie −15, faim −10. Moral +2 pour les aventuriers ambitieux.
 - **Rendement décroissant :** la 2ᵉ séance de la journée donne ×0,5. La 3ᵉ n'est pas autorisée.
+- **Choix de la séance (précisé en v1.1) :** l'aventurier prend la séance qui donne le plus d'XP pour son coût total, c'est-à-dire le prix plus ses trois heures, comptées 1 po. Auparavant, il comparait l'XP au seul prix : l'entraînement libre, à 1 pa, gagnait toujours, et les professeurs restaient sans élèves (D-118).
 
 ```
 XP_séance = 0,15 × XP_quête_type(niveau_élève) × M_prof × M_affinité × M_terrain × M_plafond
@@ -555,17 +564,17 @@ Prix_base_séance = 2 pa × (1 + Niveau_prof / 2) × M_prof
 
 Comme pour les autres salles, le prix de référence applique ensuite MQ et IP (1.3.3), avec `Q_terrain = clamp(30 + 8 × Niveau + Bonus_modules, 0, 100)`.
 
-Exemple : un prof de niveau 10 et de pédagogie 50 donne un prix de base de 1 po 2 pa. Six élèves sur deux séances par jour rapportent environ 14 po, contre un salaire de 8,3 po. **Un prof n'est rentable que si ses séances sont remplies.**
+Exemple : un prof de niveau 10 et de pédagogie 50 donne un prix de base de 1 po 2 pa. Six élèves sur deux séances par jour rapportent environ 14 po, contre un salaire de 4 po (8,3 po avant la v1.1). **Un prof n'est rentable que si ses séances sont remplies.**
 
 #### 1.7.4 Niveaux
 
 | Niveau | Profs max | Débloque | Coût |
 |--------|-----------|----------|------|
 | 1 | 1 | Entraînement libre, Maître d'armes | 120 po |
-| 2 | 2 | Archimage, mannequins | 300 po |
-| 3 | 3 | Stratège, piste d'obstacles | 700 po |
-| 4 | 4 | Maître-chasseur, **salle de duel** : duels entre aventuriers, qui créent des rivalités (3.11.1) | 1 600 po (rang 3) |
-| 5 | 5 | Aumônier, **Arène** (voir ci-dessous) | 3 500 po (rang 4) |
+| 2 | 2 | Archimage, mannequins | 180 po |
+| 3 | 3 | Stratège, piste d'obstacles | 420 po |
+| 4 | 4 | Maître-chasseur, **salle de duel** : duels entre aventuriers, qui créent des rivalités (3.11.1) | 1 000 po (rang 3) |
+| 5 | 5 | Aumônier, **Arène** (voir ci-dessous) | 2 100 po (rang 4) |
 
 **L'Arène :** un spectacle par semaine, le 6ᵉ jour au soir. Les aventuriers volontaires (Fierté ≥ 50 ou Bagarreurs) s'y affrontent en duels sans danger de mort.
 - Recette : `20 po × (1 + Prospérité / 50)`, ×2 si la ville est au palier Cité.
@@ -658,10 +667,10 @@ Le joueur peut activer les **soins à crédit**. Un aventurier sans le sou est a
 | Niveau | Lits | Débloque | Coût |
 |--------|------|----------|------|
 | 1 | 3 | Plaie, Maladie, Poison léger. 1 soigneur | 150 po |
-| 2 | 6 | Fracture, Brûlure, vente de potions | 400 po |
-| 3 | 10 | **Apothicairerie** (fabrication), malédiction légère (Élixir de purification) | 900 po |
-| 4 | 14 | Soins critiques, **Chirurgien** : risque de séquelle −75 % | 2 000 po (rang 3) |
-| 5 | 20 | **Sanctuaire** : malédictions de toute gravité, production d'eau bénite | 4 000 po (rang 4) |
+| 2 | 6 | Fracture, Brûlure, vente de potions | 250 po |
+| 3 | 10 | **Apothicairerie** (fabrication), malédiction légère (Élixir de purification) | 550 po |
+| 4 | 14 | Soins critiques, **Chirurgien** : risque de séquelle −75 % | 1 200 po (rang 3) |
+| 5 | 20 | **Sanctuaire** : malédictions de toute gravité, production d'eau bénite | 2 400 po (rang 4) |
 
 #### 1.8.7 Modules
 
@@ -740,10 +749,14 @@ Ces cibles servent à **valider les chiffres** : si une simulation de test ne le
 |-------|--------------------------|
 | Première salle construite (Infirmerie ou Terrain) | Jour 1 à 3 |
 | Les 4 salles construites | Jour 8 à 12 |
-| Première salle au niveau 3 | Jour 20 à 30 |
+| Première salle au niveau 3 | Jour 45 à 60 (20 à 30 avant la v1.1) |
 | Rang 3 (*Sceau d'Argent*) | Jour 50 à 70 |
+| Rang 4 (*Sceau d'Or*) | Jour 120 à 170 (ajout v1.1) |
+| Rang 5 (*Sceau de Mithril*, victoire) | Jour 300 à 500, dans la plupart des parties (ajout v1.1) |
 | Toutes les salles au niveau 5 | Jour 150 et plus |
 | Revenu net journalier au jour 30 | 10 à 20 po |
+
+> **Ajusté en v1.1 :** la cible de la première salle au niveau 3 passe de J20-30 à **J45-60**. C'est la seule cible modifiée, car l'ancienne contredisait les deux autres. Avec 10 à 20 po net par jour au jour 30, la guilde ne peut pas avoir payé avant J30 ses deux salles neuves, l'agrandissement des dortoirs et un niveau 3. Or le Sceau d'Argent (J50 à 70) demande justement une salle au niveau 3 : elle doit arriver peu avant lui (D-120).
 
 ---
 
@@ -1134,6 +1147,8 @@ Attaque         = 2 × Attribut_d'attaque + Compétence_d'arme + Bonus_arme
 Défense         = CON + AGI / 2 + Protection + Bonus_armure
 ```
 
+> **Ajouté en v1.1 : la maîtrise.** Au-delà du niveau 10, chaque niveau ajoute **+2,5 en Attaque et +1,5 en Défense**. Les attributs plafonnent à 20 vers le niveau 11 : sans la maîtrise, un aventurier de niveau 22 ne combattait guère mieux qu'un niveau 13, et les quêtes de rang B et au-delà restaient hors de portée quel que soit le niveau (D-124).
+
 L'attribut d'attaque est FOR pour le Guerrier, AGI pour le Rôdeur et le Voleur, INT pour le Mage, VOL pour le Clerc. La compétence d'arme est Maniement d'armes (Guerrier), Tir (Rôdeur), Discrétion (Voleur, attaque sournoise), Arcanes (Mage) ou Exorcisme (Clerc). Le combat est résolu en 4.7.
 
 ### 3.4 Les compétences
@@ -1291,7 +1306,10 @@ Les paliers en vente dépendent aussi de la taille de la ville (5.3) : paliers 1
 
 - Chaque pièce a une **durabilité** de 100. Elle perd 5 à 20 points par quête, selon la dureté des combats.
 - À 0, l'objet est **brisé** et son bonus tombe à 0.
-- **Réparation** chez le Forgeron : 10 % du prix de l'objet par tranche de 25 points. C'est une dépense régulière des aventuriers, hors de la guilde.
+- **Réparation** chez le Forgeron : 4 % du prix de l'objet par tranche de 25 points. C'est une dépense régulière des aventuriers, hors de la guilde.
+- **Matériaux nobles (ajout v1.1) :** l'usure baisse de 10 % par palier au-dessus du premier, jusqu'à 40 % de l'usure normale.
+
+> **Ajusté en v1.1 :** la réparation coûtait 10 % du prix par tranche. Au palier Monstre (150 à 180 po la pièce), chaque quête coûtait environ 16 po de réparations, plus que la part d'un aventurier sur une quête de rang C. Les vétérans finissaient ruinés. L'entretien représente maintenant 15 à 35 % de ce que rapporte une quête de son rang (D-122).
 
 #### 3.8.4 Objets anciens
 
@@ -1301,7 +1319,8 @@ Les quêtes dans les **Ruines** peuvent rapporter des **objets anciens**, trouv�
 
 - **Niveau maximum : 30.**
 - XP nécessaire pour passer du niveau n au niveau n+1 : `XP_requis(n) = 100 × n ^ 1,5`.
-- **XP d'une quête type** (une quête de son rang, réussie) : `XP_quête_type(n) = 0,25 × XP_requis(n)`. Il faut donc environ **4 quêtes de son niveau** pour monter d'un niveau. C'est la référence utilisée par l'entraînement (1.7.3).
+- **XP d'une quête type** (une quête de son rang, réussie) : `XP_quête_type(n) = 0,35 × XP_requis(n)`. Il faut donc environ **3 quêtes de son niveau** pour monter d'un niveau. C'est la référence utilisée par l'entraînement (1.7.3).
+- **Ajusté en v1.1 :** le coefficient passe de 0,25 à 0,35, et les quêtes de haut rang, plus longues, forment davantage : XP ×1,3 pour une quête de rang C, ×1,6 en B, ×1,9 en A, ×2,2 en S. Les meilleurs aventuriers plafonnaient vers le niveau 18 au bout d'un an et demi (D-124).
 - **Correspondance indicative entre niveau et rang de quête :** F = 1 à 3, E = 4 à 7, D = 8 à 12, C = 13 à 17, B = 18 à 22, A = 23 à 27, S = 28 à 30.
 
 ### 3.10 La prise de décision
@@ -1521,6 +1540,7 @@ Petits boulots par jour (panneau séparé)   = 4 + 0,05 × Prospérité        (
 > **Ajusté en tranche 2 :**
 > - **La guilde attire le travail.** Chaque aventurier inscrit ajoute **0,2 quête de combat** et **0,1 petit boulot** par jour (12 petits boulots affichés au maximum). Sans ce terme, l'offre de quêtes était fixe : au-delà d'une quinzaine d'aventuriers, recruter ne rapportait plus rien.
 > - **Le greffier trie les quêtes.** La **portée** de la guilde est le rang que tiennent au moins 3 aventuriers, plus un. Une quête au-delà de cette portée n'est affichée qu'**une fois sur sept** (15 %) ; sinon le greffier en tire une autre (4 essais au maximum). Avant ce tri, les trois quarts du tableau étaient des quêtes de rang C ou B que personne ne pouvait prendre : elles bloquaient les places jusqu'à leur expiration.
+> - **Ajusté en v1.1 :** le greffier écarte aussi les quêtes **trop modestes**. Une quête de 3 rangs ou plus sous la portée n'est affichée qu'une fois sur trois (35 %). Sans ce tri, une guilde de rang C voyait surtout des quêtes F et E à 4 po. Ses aventuriers gagnaient environ 1 po par jour, dormaient dehors faute de pouvoir payer leur lit, et les quêtes D et C restaient rares (D-121).
 - La part d'escortes et d'aides en ville suit la Prospérité. La part de protections suit le Danger.
 
 #### 4.3.3 La récompense
@@ -1531,7 +1551,7 @@ Récompense = Base_rang × Mult_type × IP × Urgence × Satisfaction_client × 
 
 | Rang | F | E | D | C | B | A | S |
 |------|---|---|---|---|---|---|---|
-| **Base_rang** | 1 po | 6 po | 15 po | 35 po | 90 po | 220 po | 500 po |
+| **Base_rang** | 1 po | 9 po | 22 po | 50 po | 110 po | 250 po | 500 po |
 
 | Type | Aide | Chasse | Extermination | Cueillette | Escorte | Exploration | Protection |
 |------|------|--------|---------------|------------|---------|-------------|------------|
@@ -1540,10 +1560,11 @@ Récompense = Base_rang × Mult_type × IP × Urgence × Satisfaction_client × 
 - **Urgence :** ×1,0 en temps normal, jusqu'à ×1,5 pendant une prolifération ou un événement.
 - La fourchette obtenue correspond au barème 1.1.2.
 - **Ajusté en tranche 2 :** Base_rang des rangs E à S relevée d'environ 50 % (voir 1.1.2). L'extermination passe de Base / 4 à **Base × 0,1 par tête**, sur une durée fixée de 12 à 36 h : à Base / 4, une extermination rapportait plusieurs fois une chasse et vidait le tableau de tout le reste.
+- **Ajusté en v1.1 :** Base_rang des rangs E à A relevée de 15 à 50 % (voir 1.1.2).
 
 #### 4.3.4 Le tableau
 
-- **Taille :** `8 + 2 × (rang de renommée − 1)` quêtes de combat, soit de 8 à 16. Les petits boulots en ville ont leur propre panneau (12 au maximum) et ne comptent pas dans cette limite. **Ajusté en tranche 2 :** les **avis d'extermination** (proliférations) et les **primes de la guilde** ne comptent pas non plus dans cette limite (les primes ont leur propre plafond, 4.4).
+- **Taille :** `10 + 2 × (rang de renommée − 1)` quêtes de combat, soit de 10 à 18 (de 8 à 16 avant la v1.1), **plus une place par tranche de 4 aventuriers au-delà de 20** (ajout v1.1 : une grande guilde manquait de quêtes, et ses aventuriers s'appauvrissaient). Les petits boulots en ville ont leur propre panneau (12 au maximum) et ne comptent pas dans cette limite. **Ajusté en tranche 2 :** les **avis d'extermination** (proliférations) et les **primes de la guilde** ne comptent pas non plus dans cette limite (les primes ont leur propre plafond, 4.4).
 - **Expiration :** 2 à 7 jours. Une quête expirée part chez un concurrent.
 - **Pénalité d'expiration ou d'échec :** satisfaction du client −5. Renommée de la guilde −0 (rang F), −1 (E–D), −2 (C–B), −4 (A–S).
 - **Danger estimé** affiché de 1 à 5 points. Il est calculé par le greffier de la guilde avec une **erreur de ±15 %** : le tableau peut se tromper.
@@ -1613,6 +1634,7 @@ Attrait = ( Récompense_par_membre + 0,5 × Dépouilles_espérées + Valeur_XP )
 - **Superstitieux :** refuse les Ruines.
 - **Nobles :** exigent un chef à Respectabilité ≥ 60.
 - Une **prime de la guilde** donne un bonus d'attrait (+10 %) aux aventuriers loyaux (Loyauté ≥ 60).
+- **Le goût du défi (ajout v1.1) :** l'attrait est multiplié selon l'écart entre le rang de la quête et celui du chef d'équipe : ×1,2 au-dessus, ×1 à son rang, ×0,7 un rang en dessous, ×0,4 deux rangs ou plus en dessous. Sans cette préférence, les vétérans enchaînaient les cueillettes de rang F, proches et vite faites, et ne progressaient plus (D-125).
 
 #### 4.5.3 Les préparatifs
 
@@ -1684,9 +1706,11 @@ Les combats sont résolus en **rounds abstraits** (10 au maximum). Le journal n'
 | Ours-hibou | 120 | 45 | 30 | 1 | **Étreinte** : 15 % de Fracture par touche |
 | Troll | 200 | 60 | 40 | 1 à 2 | **Régénération** : +10 PV par round, sauf s'il est touché par les Arcanes |
 | Goule | 60 | 50 | 30 | 3 à 6 | **Malédiction** : 10 % par touche. Exorcisme : dégâts ×2 |
-| Wyverne | 350 | 90 | 60 | 1 à 2 | **Venin grave** : 30 %. **Aérienne** : Tir ×1,5, contact ×0,7 |
-| Golem runique | 900 | 120 | 120 | 1 | Immunisé au poison. Dégâts physiques ×0,5 |
-| Jeune dragon | 3 000 | 220 | 150 | 1 | **Souffle** tous les 3 rounds : Brûlure sur toute l'équipe |
+| Wyverne | 250 | 75 | 60 | 1 à 2 | **Venin grave** : 30 %. **Aérienne** : Tir ×1,5, contact ×0,7 |
+| Golem runique | 600 | 100 | 100 | 1 | Immunisé au poison. Dégâts physiques ×0,5 |
+| Jeune dragon | 750 | 120 | 120 | 1 | **Souffle** tous les 3 rounds : Brûlure sur toute l'équipe |
+
+> **Ajusté en v1.1 :** wyverne (350 PV, 90 d'attaque), golem (900, 120, 120) et dragon (3 000, 220, 150) étaient hors d'atteinte : une équipe de rang B n'avait que 36 % de chances perçues contre une wyverne, et une équipe de niveau 30 en équipement draconique 20 % contre le dragon. Avec la maîtrise (3.3), une équipe de chaque rang a maintenant 60 à 70 % de chances contre les monstres de son rang. Le dragon reste l'épreuve finale : environ 70 % pour quatre aventuriers de rang S (D-126).
 
 #### 4.7.2 Un round
 
@@ -1813,14 +1837,14 @@ Prospérité_cible = 50 − Insécurité + Commerce + Apport_guilde + Saison + �
 
 Insécurité    = 0,5 × max(0, Danger − 30)
 Commerce      = +2 par escorte réussie dans la semaine, −3 par escorte échouée   (de −15 à +15)
-Apport_guilde = valeur des ventes en ville et des dépenses des aventuriers sur 7 jours / 50 po   (plafonné à +10)
+Apport_guilde = valeur des ventes en ville et des dépenses des aventuriers sur 7 jours / 50 po   (plafonné à +20 ; +10 avant la v1.1)
 Saison        = Automne +5, Hiver −5
 ```
 
 **Effets de la Prospérité :** l'indice de prix IP (1.3.2), le nombre de quêtes générées (4.3.2), le flux de recrues (3.12.1) et le palier de la ville (5.3).
 
 > **Précisé en tranche 3 :**
-> - **Apport_guilde** = (recettes de la guilde sur 7 jours + or dépensé en ville par les aventuriers : taverne, auberge, Temple, rebouteux, Forgeron, provisions) / 50 po, plafonné à +10.
+> - **Apport_guilde** = (recettes de la guilde sur 7 jours + or dépensé en ville par les aventuriers : taverne, auberge, Temple, rebouteux, Forgeron, provisions) / 50 po, plafonné à +10 (**+20 depuis la v1.1** : une guilde mûre faisait plafonner la ville vers 65 de Prospérité, sous le seuil de la Cité, D-127).
 > - **Effets du Danger sur le tableau :** Calme, quêtes de combat ×0,7. Menaçant et au-delà, récompenses ×1,2 et protections deux fois plus fréquentes. Critique, escortes ×0,3 et, chaque matin, une chasse de **la Couronne** contre l'espèce la plus menaçante (récompense ×1,3, ×1,5 au palier Cité).
 > - **L'hiver** ajoute +10 au Danger des zones à 4 h de trajet ou moins (Ville et Forêt).
 > - La partie commence avec un Danger d'environ 43 (Menaçant) : les premières quêtes sont donc payées ×1,2. C'est voulu, et cela soutient les revenus du début de partie.
@@ -1841,12 +1865,14 @@ La ville a **3 paliers**. Pour changer de palier, la Prospérité doit rester au
 | Palier | Prospérité | Ce qui est disponible |
 |--------|------------|-----------------------|
 | **Bourg** | < 40 | Halle, Tanneur, Alchimiste, Forgeron (équipement des paliers 1 à 4) |
-| **Ville** | 40 à 74 | + **Collectionneur**, **quêtes nobles**, Forgeron jusqu'au palier 6 |
-| **Cité** | ≥ 75 | + Forgeron jusqu'au palier 7 (draconique). Quêtes de la Couronne mieux payées. Spectateurs de l'Arène ×2 |
+| **Ville** | 40 à 69 | + **Collectionneur**, **quêtes nobles**, Forgeron jusqu'au palier 6 |
+| **Cité** | ≥ 70 | + Forgeron jusqu'au palier 7 (draconique). Quêtes de la Couronne mieux payées. Spectateurs de l'Arène ×2 |
 
 **La partie commence au palier Bourg** (Prospérité 30). Faire grandir la ville est l'un des arcs de progression du joueur.
 
 > **Précisé en tranche 3 :** au palier Ville, 15 % des quêtes de villageois deviennent des **quêtes nobles** (client noble nommé, récompense ×1,3). L'équipement du Forgeron et l'accès au Collectionneur suivent le **palier**, et non plus la Prospérité du jour : une ville qui oscille autour de 40 ne fait pas clignoter ses boutiques.
+
+> **Ajusté en v1.1 :** le seuil de la Cité passe de 75 à 70. Une ville ne **régresse** que si sa Prospérité reste 14 jours **10 points sous** le seuil de son palier (60 pour la Cité, 30 pour la Ville) : sans cette marge, une guerre suffisait à faire perdre la Cité pour de bon (D-127).
 
 ### 5.4 Les événements
 
@@ -1857,6 +1883,8 @@ La ville a **3 paliers**. Pour changer de palier, la Prospérité doit rester au
 | **Petit événement** | 2 à 3 par semaine (test quotidien à 35 %) | Rarement |
 | **Événement majeur** | 1 par saison, à une date aléatoire | Oui, 2 à 5 jours avant |
 | **Crise** | 1 à 2 par an, à partir du jour 60, ou déclenchée par une chaîne | Oui, 2 à 5 jours avant |
+
+> **Ajouté en v1.1 :** à partir du Sceau d'Or, la Couronne met la guilde à l'épreuve : **une crise de plus par an**, et le réveil du dragon devient la crise la plus probable (poids 6 au lieu de 2). Le dragon terrassé **met fin à la crise** sur-le-champ. Le dragon n'apparaît que par cet événement : sans ce renfort, la victoire tenait au hasard d'un réveil par an (D-128).
 
 #### 5.4.2 Structure d'un événement
 
@@ -2050,7 +2078,7 @@ La Renommée est un **score en points**, affiché en permanence. Les guildes riv
 
 | Événement | Points |
 |-----------|--------|
-| Quête réussie | F +0,5 · E +1 · D +2 · C +4 · B +8 · A +15 · S +30 (×1,3 pour un client noble ou la Couronne) |
+| Quête réussie | F +1 · E +2,5 · D +5 · C +8 · B +14 · A +24 · S +40 (×1,3 pour un client noble ou la Couronne) |
 | Quête échouée ou expirée | F 0 · E–D −1 · C–B −2 · A–S −4 (4.3.4) |
 | Trophée d'une bête légendaire | +15 |
 | Assaut repoussé (3 vagues gagnées) | +10 (5.6) |
@@ -2066,6 +2094,8 @@ La Renommée est un **score en points**, affiché en permanence. Les guildes riv
 > **Ajusté en tranche 3 :**
 > - La Renommée en points arrive dès la tranche 3, car les guildes rivales s'y mesurent. Le bilan hebdomadaire et les Sceaux restent pour la tranche 4. La guilde commence à **20 points**.
 > - Une quête **expirée** ne coûte que la moitié de la pénalité, et seulement si elle était du **rang de base** de la guilde (le rang que tiennent ses 3 meilleurs aventuriers). Avec la pénalité complète sur toutes les quêtes à sa portée, la guilde perdait autant de renommée qu'elle en gagnait, car elle ne peut pas tout prendre.
+
+> **Ajusté en v1.1 :** les points des quêtes réussies sont relevés (ils valaient F 0,5 · E 1 · D 2 · C 4 · B 8 · A 15 · S 30). Avec l'ancien barème, le Sceau de Fer arrivait entre J45 et J111, et le Sceau d'Argent jamais en un an (D-119).
 
 #### 6.1.2 Bilan hebdomadaire (le Jour du Roi)
 
@@ -2092,11 +2122,11 @@ La progression des métaux reprend celle des **pièces** (cuivre, argent, or) et
 
 | Rang | Sceau | Points | Conditions supplémentaires | Débloque |
 |------|-------|--------|----------------------------|----------|
-| 1 | **Sceau de Cuivre** | 0 | — (départ) | Salles jusqu'au niveau 3. Tableau de 8 quêtes. Prêt de 200 po. 3 primes actives. Professeurs jusqu'au niveau 8 |
-| 2 | **Sceau de Fer** | 100 | 15 aventuriers · les 4 salles construites · 20 quêtes réussies | Tableau de 10. Prêt de 500 po. 4 primes. Professeurs jusqu'au niveau 14 |
-| 3 | **Sceau d'Argent** | 300 | 25 aventuriers · une salle au niveau 3 · un monstre de rang C tué · aucune dette depuis 14 jours | **Salles au niveau 4.** Tableau de 12. Prêt de 1 500 po. 5 primes. Professeurs jusqu'au niveau 20 |
-| 4 | **Sceau d'Or** | 700 | 40 aventuriers · 2 aventuriers de niveau 18 ou plus · ville au palier Ville au moins · une quête de rang B réussie | **Salles au niveau 5.** Tableau de 14. Prêt de 4 000 po. 6 primes. Professeurs jusqu'au niveau 26 |
-| 5 | **Sceau de Mithril** | 1 500 | 50 aventuriers · un aventurier de niveau 25 ou plus · une quête de rang S réussie · ville au palier Cité | **Victoire** (6.6). Tableau de 16. Prêt de 10 000 po. 7 primes. Professeurs jusqu'au niveau 30 |
+| 1 | **Sceau de Cuivre** | 0 | — (départ) | Salles jusqu'au niveau 3. Tableau de 10 quêtes. Prêt de 200 po. 3 primes actives. Professeurs jusqu'au niveau 8 |
+| 2 | **Sceau de Fer** | 100 | 15 aventuriers · les 4 salles construites · 20 quêtes réussies | Tableau de 12. Prêt de 500 po. 4 primes. Professeurs jusqu'au niveau 14 |
+| 3 | **Sceau d'Argent** | 300 | 25 aventuriers · une salle au niveau 3 · un monstre de rang C tué · aucune dette depuis 14 jours | **Salles au niveau 4.** Tableau de 14. Prêt de 1 500 po. 5 primes. Professeurs jusqu'au niveau 20 |
+| 4 | **Sceau d'Or** | 700 | 40 aventuriers · 2 aventuriers de niveau 18 ou plus · ville au palier Ville au moins · une quête de rang B réussie | **Salles au niveau 5.** Tableau de 16. Prêt de 4 000 po. 6 primes. Professeurs jusqu'au niveau 26 |
+| 5 | **Sceau de Mithril** | 1 500 | 50 aventuriers · un aventurier de niveau 25 ou plus · une quête de rang S réussie · ville au palier Cité | **Victoire** (6.6). Tableau de 18. Prêt de 10 000 po. 7 primes. Professeurs jusqu'au niveau 30 |
 
 - **Montée de rang :** dès que les points et les conditions sont réunis, un **héraut royal** vient apposer le sceau le lendemain matin. Fête dans la guilde : moral +10 pour tous les aventuriers présents.
 - L'écran de progression affiche en permanence les conditions du rang suivant, cochées ou non.
@@ -2668,7 +2698,7 @@ Chaque tranche est **jouable et testée** avant de passer à la suivante.
 | **2** | *La guilde complète* | Infirmerie (états, remèdes, apothicairerie), Terrain et professeurs, inventaire et Forgeron, marché complet (bourse, 5 acheteurs, contrats, rachat, Resserre), fiscalité et fraude, équipes et relations, **primes du joueur**, 6 zones et 12 espèces, plantes, populations, consignes de l'intendant, tous les types de quêtes | 100 jours jouables. Cibles de rythme 1.13 respectées jusqu'au Sceau d'Argent |
 | **3** | *Le monde vivant* | Danger et Prospérité, saisons, paliers de ville, événements, chaînes et rumeurs, Chroniques, guildes rivales, assauts, épidémies, carte régionale, **mode Chronique** et rapport d'absence | Une année de jeu complète sans incohérence. Test de rattrapage réussi |
 | **4** | *La légende* | Renommée et sceaux, hauts faits, Gaspard, difficultés, épilogue, Panthéon, Livre de la guilde, **application installable**, mode consultation sur téléphone, notifications locales, thèmes, accessibilité, finitions | **Version 1.0** |
-| v1.1+ | *Après la sortie* | Notifications avec le jeu fermé, scénarios *Guilde en ruine* et *Ville frontière*, **tout faire sur téléphone**, synchronisation PC/téléphone, son | — |
+| v1.1+ | *Après la sortie* | **Rééquilibrage du rythme et des revenus** (fait, 8.11.5), notifications avec le jeu fermé, scénarios *Guilde en ruine* et *Ville frontière*, **tout faire sur téléphone**, synchronisation PC/téléphone, son | — |
 
 #### 8.11.1 Bilan de la tranche 1 (2026-10-29)
 
@@ -2793,6 +2823,80 @@ Chaque tranche est **jouable et testée** avant de passer à la suivante.
 | Morts | ≈ 8 par an | ✔ |
 | Première salle au niveau 3 | ≈ J35 (cible J20 à 30) | ✘ proche |
 
+#### 8.11.5 Rééquilibrage du rythme et des revenus (v1.1, 2026-10-29)
+
+**Diagnostic** (simulateur, trace semaine par semaine) :
+- **Les salles plafonnent les revenus.** Les aventuriers sont occupés (environ 40 % du temps en quête), mais la guilde ne vend que ce que ses salles offrent : 12 paillasses et 8 couverts au départ. Relever les récompenses enrichissait les aventuriers sans enrichir la guilde. Les agrandissements coûtaient trop cher pour sortir de ce plafond.
+- **Le tableau restait petit joueur.** Une guilde de rang C voyait surtout des quêtes F et E. Ses aventuriers gagnaient environ 1 po par jour et dormaient dehors en fin d'année.
+- **Les professeurs ruinaient la guilde.** Un défaut de l'IA envoyait tous les élèves à l'entraînement libre, et les salaires étaient hors de proportion avec ce que gagnent les aventuriers.
+- **La renommée montait trop lentement** pour les Sceaux.
+
+**Ajustements :**
+- Récompenses E à A relevées, le rang F ne change pas (D-116).
+- Niveaux 2 à 5 des salles environ 40 % moins chers (D-117).
+- Salaire des professeurs divisé par deux environ, et choix des séances corrigé (D-118).
+- Points de renommée des quêtes relevés, tableau de 10 à 18 quêtes (D-119).
+- Cible de la première salle au niveau 3 : J45-60 (D-120).
+- Le greffier écarte les quêtes trop modestes (D-121).
+
+**Robot du simulateur :** il joue désormais comme un joueur moyen. Il accepte les candidats tant qu'il a des lits (au lieu de s'arrêter à 15 aventuriers, alors que le Sceau d'Argent en demande 25). Il bâtit le premier projet abordable au lieu d'attendre le suivant de sa liste, et sait construire les niveaux 4 et 5 avec les suites. Nouvelles options : `--trace` (bilan hebdomadaire d'une partie) et `--set chemin=valeur` (essai d'un réglage sans modifier les fichiers).
+
+**Résultats** (robot prudent, 8 graines × 112 jours) :
+
+| Cible | v1.0 | v1.1 | Statut |
+|-------|------|------|--------|
+| Revenu net vers J30 (10 à 20 po) | ≈ 7 po | ≈ 12,7 po | ✔ |
+| Revenu net en fin d'année | 2 à 16 po | 17 à 33 po | ✔ |
+| Les 4 salles construites | J28 | J14 | ✔ |
+| Première salle au niveau 3 (J45-60) | jamais en 112 jours | J46 à J66, ≈ J55 | ✔ |
+| Sceau de Fer | J45 à J111 | J22 à J38 | ✔ |
+| Sceau d'Argent (J50-70) | jamais | J54 à J70 | ✔ |
+| Aucune faillite, aucune incohérence | 0 / 0 | 0 / 0, sur 200 jours aussi | ✔ |
+| Morts | 4,3 pour 15 aventuriers | 9,3 pour 34 aventuriers | ✔ |
+
+**Écarts restants : la fin de partie**, traités dans la passe suivante (8.11.6) :
+- Après le Sceau d'Argent, la progression ralentit. Les dortoirs de niveau 4 (900 po) arrivent tard, et le robot reste vers 34 aventuriers : le Sceau d'Or, qui en demande 40, n'est presque jamais atteint en 200 jours.
+- Le terrain reste déficitaire (≈ 1 140 po de salaires pour 400 po de séances sur 200 jours).
+- Dans une grande guilde, le moral moyen tourne autour de 50, contre 70 dans une petite.
+
+#### 8.11.6 Rééquilibrage de la fin de partie (v1.1, 2026-10-29)
+
+**Diagnostic** (simulateur sur 3 à 5 ans, suivi d'un aventurier vedette avec `--suivre`) :
+- **Les vétérans se ruinaient.** L'entretien de l'équipement et les soins dépassaient ce que rapportent les quêtes de rang C. Ils dormaient dehors, leur moral s'effondrait, et ils ne s'équipaient jamais au-delà de l'acier trempé.
+- **Ils ne cherchaient pas les défis.** Ils choisissaient les quêtes au meilleur gain par jour, souvent de petites cueillettes proches.
+- **Le niveau cessait de compter.** Les attributs plafonnaient vers le niveau 11, et les monstres de rang B à S étaient disproportionnés. Les quêtes de rang B, puis le dragon, restaient hors d'atteinte.
+- **La ville plafonnait sous la Cité,** et un seul réveil du dragon par an rendait la victoire aléatoire.
+
+**Ajustements :**
+- Réparations à 4 % et usure réduite des matériaux nobles (D-122).
+- Récompenses C à S relevées (D-123).
+- XP des quêtes relevée, plus forte en haut rang, et maîtrise au-delà du niveau 10 (D-124).
+- Goût du défi dans le choix des quêtes (D-125).
+- Wyverne, golem et dragon ramenés à la portée des équipes de leur rang (D-126).
+- Prospérité : apport de la guilde jusqu'à +20, Cité à 70 avec une marge avant régression (D-127).
+- Épreuves de la Couronne au Sceau d'Or (D-128).
+- Tableau agrandi d'une place par 4 aventuriers au-delà de 20 (D-129).
+
+**Robot du simulateur :** il garde une réserve de 500 po avant un niveau 4 et de 800 po avant un niveau 5, car les charges hebdomadaires sont bien plus lourdes en fin de partie. Il agrandit les dortoirs au niveau 4 dès qu'ils sont pleins. Nouvelles sorties du simulateur : jour où chaque condition de sceau est remplie, conditions manquantes à la fin, départs par cause et par niveau, `--suivre J` pour suivre le meilleur aventurier.
+
+**Résultats** (robot prudent, 8 graines × 560 jours, soit 5 ans) :
+
+| Cible | Avant la passe | Après | Statut |
+|-------|----------------|-------|--------|
+| Revenu net vers J30 | ≈ 12,7 po | ≈ 15,9 po | ✔ |
+| Sceaux de Fer et d'Argent | J22-38 · J54-70 | J22-34 · J55-64 | ✔ |
+| Première salle au niveau 3 (J45-60) | ≈ J55 | ≈ J52 | ✔ |
+| Sceau d'Or (J120-170) | rare, J220 et plus | 8 parties sur 8, J121 à J178, médiane J155 | ✔ |
+| Sceau de Mithril, victoire (J300-500) | jamais | 6 parties sur 8, J293 à J525, médiane J414 | ✔ |
+| Toutes les salles au niveau 5 (J150 et plus) | jamais | J291 à J394 | ✔ |
+| Moral moyen | ≈ 32 la 3ᵉ année | ≈ 57 | ✔ |
+| Faillites, incohérences | 0 / 0 | 0 / 0 | ✔ |
+
+**Écarts restants :**
+- Les **morts** suivent la taille de la guilde : environ 32 en 5 ans pour 50 aventuriers, soit une mort toutes les 2 à 3 semaines comme visé, mais les deux tiers touchent des aventuriers de moins de niveau 13.
+- Les **débauchages** de vétérans par les rivales augmentent en fin de partie (environ 7 aventuriers de niveau 13 ou plus en 5 ans).
+- La **renommée** dépasse largement les seuils en fin de partie (4 000 à 9 000 points) : ce sont les conditions des sceaux qui rythment la fin, pas les points.
+
 ### 8.12 Table centrale des paramètres
 
 Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans `parametres.json` et sont réglées à l'aide du simulateur d'équilibrage.
@@ -2838,7 +2942,8 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | | Détection de fraude | 5 % sans inspecteur, 20 % + 0,6 × C avec | 2.6.2 |
 | **Populations** | Seuils raréfaction / prolifération | 30 % / 80 % | 2.7 |
 | **Aventuriers** | XP requise | 100 × n ^ 1,5 | 3.9 |
-| | XP d'une quête type | 25 % de l'XP requise | 3.9 |
+| | XP d'une quête type | 35 % de l'XP requise ; ×1,3 / 1,6 / 1,9 / 2,2 pour une quête de rang C / B / A / S | 3.9 |
+| | Maîtrise au-delà du niveau 10 | +2,5 en Attaque, +1,5 en Défense par niveau | 3.3 |
 | | Niveau maximum | 30 | 3.9 |
 | | PV maximum | 20 + 5 × CON + 3 × niveau | 3.3 |
 | | Capacité de portage | 4 + FOR / 2 | 3.3 |
@@ -2852,24 +2957,28 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | | Risque de mort à terre | 30 à 60 % | 4.8.3 |
 | **Quêtes** | Quêtes de combat par jour | 3 + 0,05 × Prospérité + 0,2 × Aventuriers + bonus | 4.3.2 |
 | | Petits boulots par jour | 4 + 0,05 × Prospérité + 0,1 × Aventuriers, 12 affichés au maximum | 4.3.2 |
-| | Portée du greffier | Rang tenu par 3 aventuriers + 1 ; au-delà, 15 % des quêtes retenues | 4.3.2 |
+| | Portée du greffier | Rang tenu par 3 aventuriers + 1 ; au-delà, 15 % des quêtes retenues ; 3 rangs ou plus en dessous, 35 % | 4.3.2 |
 | | Extermination | Base × 0,1 par tête, 12 à 36 h | 4.3.3 |
 | | Provisions de la ville | Prix du panier × 1,4 | 4.5.3 |
 | | Abandon pour blessures | PV moyens < 60 / 45 / 30 % | 4.6.3 |
 | | Paie d'un petit boulot | Base F × 0,8 pour 5 h 30 de travail | 4.3.3 |
 | | Estimation du risque | Lanchester, Prudence = 2 | 4.5.1 |
 | | Heure de départ | 07h | 4.5.3 |
-| | Base par rang (F à S) | 1 / 6 / 15 / 35 / 90 / 220 / 500 po | 4.3.3 |
-| | Taille du tableau | 8 + 2 × (rang − 1) | 4.3.4 |
+| | Base par rang (F à S) | 1 / 9 / 22 / 70 / 180 / 400 / 800 po | 4.3.3 |
+| | Taille du tableau | 10 + 2 × (rang − 1), + 1 par 4 aventuriers au-delà de 20 | 4.3.4 |
+| | Goût du défi (attrait selon l'écart de rang) | ×1,2 / ×1 / ×0,7 / ×0,4 | 4.5.2 |
 | | Expiration | 2 à 7 jours | 4.3.4 |
 | **Légende** | Seuils des sceaux | 0 / 100 / 300 / 700 / 1 500 points | 6.2 |
+| | Renommée d'une quête réussie (F à S) | 1 / 2,5 / 5 / 8 / 14 / 24 / 40 points | 6.1.1 |
+| | Salaire d'un professeur | (1 + 0,12 × Niveau ^ 1,4) × (0,7 + Pédagogie / 166) po par jour | 1.7.2 |
+| | Valeur du temps d'une séance | 1 po | 1.7.3 |
 | | Érosion sans quête D ou plus | 1 % des points par semaine | 6.1.2 |
 | | Banque : intérêts, échéance, plafond | 8 % par saison, 56 jours, 200 à 10 000 po selon le sceau | 1.1.3 |
 | | Usurier : intérêts, échéance, plafond | 5 % par semaine, 28 jours, 300 po | 1.1.3 |
 | | Recette de l'Arène | 20 po × (1 + Prospérité / 50), ×2 au palier Cité | 1.7.4 |
 | | Recrue descendante d'un héros | 3 % | 6.7 |
 | **Monde** | Convergence de la Prospérité | 5 % par jour | 5.1.2 |
-| | Apport de la guilde à la Prospérité | Recettes 7 j + dépenses en ville / 50 po, plafond +10 | 5.1.2 |
+| | Apport de la guilde à la Prospérité | Recettes 7 j + dépenses en ville / 50 po, plafond +20 | 5.1.2 |
 | | Danger Menaçant : récompenses | ×1,2 | 5.1.1 |
 | | Quêtes nobles (palier Ville) | 15 %, ×1,3 | 5.3 |
 | | Rumeurs exactes / fausses alertes / détails faux | 75 / 12,5 / 12,5 % | 5.4.5 |
@@ -2877,7 +2986,8 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | | Renommée de départ (guilde, Aube, Crocs) | 20 / 35 / 20 | 5.5, 6.1 |
 | | Quête prise par une rivale | 4 % × Renommée / 50 par jour, de 1 à 12 % | 5.5 |
 | | Délai entre deux assauts / deux épidémies | 28 / 56 jours | 5.6, 5.7 |
-| | Paliers de ville | 40 / 75, maintenus 14 jours | 5.3 |
+| | Paliers de ville | 40 / 70, maintenus 14 jours ; régression 10 points sous le seuil | 5.3 |
+| | Réparation de l'équipement | 4 % du prix par tranche de 25 points ; usure −10 % par palier (40 % au minimum) | 3.8.3 |
 | | Petits événements | Test quotidien à 35 % | 5.4.1 |
 | | Fiabilité des rumeurs | 75 % (Normal) | 5.4.5 |
 | **Progression** | Seuils des sceaux | 100 / 300 / 700 / 1 500 points | 6.2 |
@@ -3034,6 +3144,20 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-113 | 2026-10-29 | Application installable : manifeste, service worker (cache puis rafraîchissement), notifications seulement hors premier plan, chemins relatifs. | 8.7 |
 | D-114 | 2026-10-29 | Reportés après la v1.0 : textes de l'interface dans des fichiers séparés, difficulté personnalisée, rééquilibrage du rythme et des revenus. | 6.5, 7.10, 1.13 |
 | D-115 | 2026-10-29 | Titre du jeu : *Warden of Heroes* (« le gardien des héros », qui veille sur eux sans les commander). Aucun jeu de ce nom sur Steam, itch.io, l'App Store ou Google Play ; wardenofheroes.com et wardenofheroes.fr libres à cette date. Identifiants internes (base du navigateur, format des sauvegardes) inchangés. | 0 |
+| D-116 | 2026-10-29 | Récompenses des rangs E à A relevées à nouveau (Base_rang 9 / 22 / 50 / 110 / 250 po). Le rang F reste à 1 po. | 1.1.2, 4.3.3 |
+| D-117 | 2026-10-29 | Niveaux 2 à 5 des salles environ 40 % moins chers : ce sont les salles qui plafonnent le revenu de la guilde. | 1.2, 1.5.2, 1.6.7, 1.7.4, 1.8.6 |
+| D-118 | 2026-10-29 | Salaire des professeurs divisé par deux environ. L'élève choisit sa séance d'après l'XP rapportée au prix plus le temps (1 po). | 1.7.2, 1.7.3 |
+| D-119 | 2026-10-29 | Points de renommée des quêtes réussies relevés (F 1 · E 2,5 · D 5 · C 8 · B 14 · A 24 · S 40). Tableau de 10 à 18 quêtes. | 4.3.4, 6.1.1, 6.2 |
+| D-120 | 2026-10-29 | Cible de rythme de la première salle au niveau 3 : J45-60 au lieu de J20-30, l'ancienne contredisant le revenu au jour 30 et le Sceau d'Argent. | 1.13 |
+| D-121 | 2026-10-29 | Le greffier n'affiche qu'une quête sur trois parmi celles de 3 rangs ou plus sous la portée de la guilde. | 4.3.2 |
+| D-122 | 2026-10-29 | Réparation à 4 % du prix par tranche (au lieu de 10 %) ; les matériaux nobles s'usent moins (−10 % par palier). | 3.8.3 |
+| D-123 | 2026-10-29 | Récompenses des rangs C à S relevées (Base_rang 70 / 180 / 400 / 800 po). | 1.1.2, 4.3.3 |
+| D-124 | 2026-10-29 | XP d'une quête type à 35 % de l'XP requise, majorée pour les rangs C à S ; maîtrise au-delà du niveau 10 (+2,5 Attaque, +1,5 Défense par niveau). | 3.3, 3.9 |
+| D-125 | 2026-10-29 | Goût du défi : l'attrait d'une quête dépend de l'écart entre son rang et celui du chef d'équipe. | 4.5.2 |
+| D-126 | 2026-10-29 | Wyverne, golem et dragon affaiblis pour que chaque rang ait 60 à 70 % de chances contre ses monstres ; le dragon reste l'épreuve finale. | 4.7.1 |
+| D-127 | 2026-10-29 | Apport de la guilde à la Prospérité plafonné à +20 ; Cité à 70 ; une ville ne régresse que 10 points sous le seuil de son palier. | 5.1.2, 5.3 |
+| D-128 | 2026-10-29 | À partir du Sceau d'Or : une crise de plus par an, le réveil du dragon devient la crise la plus probable, et sa mort met fin à la crise. | 5.4.1 |
+| D-129 | 2026-10-29 | Cibles de rythme ajoutées : Sceau d'Or J120-170, Sceau de Mithril J300-500. Tableau agrandi d'une place par 4 aventuriers au-delà de 20. | 1.13, 4.3.4 |
 
 ### Relecture de cohérence (v1.0)
 

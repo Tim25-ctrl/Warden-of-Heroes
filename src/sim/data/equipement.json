@@ -9,7 +9,9 @@
     { "palier": 7, "nom": "Draconique",   "niveau": 27, "arme": 200000, "armure": 250000, "bonus": 30, "materiau": "ecailles_dragon" }
   ],
   "palierMaxParVille": { "bourg": 4, "ville": 6, "cite": 7 },
-  "reparationParTranche": 0.1,
+  "reparationParTranche": 0.04,
+  "usureParPalier": 0.1,
+  "usurePlancher": 0.4,
   "sac": { "places": 4 },
   "acheteurs": {
     "tanneur":        { "nom": "Le Tanneur",            "description": "Peaux, cuirs, fourrures, soie, plumes" },

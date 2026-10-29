@@ -10,7 +10,8 @@ import { sealOf, unlock } from './legend';
 import type { Adventurer, GameState, Money, Professor, ProfType, SlotId } from './types';
 
 export function profSalary(p: Professor): Money {
-  return Math.round((2 + 0.25 * Math.pow(p.level, 1.4)) * (0.7 + p.pedagogie / 166) * 100);
+  const k = TRAINING.salaire;   // ajusté en v1.1 : (1 + 0,12 × Niveau^1,4), contre (2 + 0,25 × Niveau^1,4) avant
+  return Math.round((k.base + k.coef * Math.pow(p.level, k.exposant)) * (0.7 + p.pedagogie / 166) * 100);
 }
 
 export function createProf(s: GameState, type?: ProfType): Professor {
@@ -138,7 +139,9 @@ export function tryTrain(s: GameState, a: Adventurer): boolean {
   if (attendance(s, 0) < TRAINING.libre.places) opts.push({ p: null, price: sessionPrice(s, null), xp: expectedXp(s, null, a) });
   const affordable = opts.filter((o) => o.price <= a.gold - P.economie.coutVieJour);
   if (affordable.length === 0) return false;
-  const best = affordable.sort((x, y) => y.xp / Math.max(1, y.price) * 100 + y.xp - (x.xp / Math.max(1, x.price) * 100 + x.xp))[0];
+  // L'élève compare l'XP au coût total de la séance : son prix, plus les trois heures qu'il y passe (ajusté en v1.1).
+  const worth = (o: { price: Money; xp: number }) => o.xp / (o.price + TRAINING.valeurTemps);
+  const best = affordable.sort((x, y) => worth(y) - worth(x))[0];
   const { verdict, R } = judge(a, best.price, sessionRef(s, best.p));
   if (verdict === 'refus') {
     applyRefusal(s, a, R);

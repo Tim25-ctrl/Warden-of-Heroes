@@ -40,15 +40,18 @@ export function pvMax(a: Adventurer): number {
 
 export const gearBonus = (g: { tier: number; dur: number }) => (g.dur > 0 ? TIER_BONUS[g.tier] : 0);
 
+/** Maîtrise (ajout v1.1) : au-delà du niveau 10, l'expérience compense les attributs plafonnés à 20. */
+const mastery = (a: Adventurer) => Math.max(0, a.level - P.aventuriers.maitrise.seuil);
+
 export function attackOf(a: Adventurer): number {
   const c = CLASSES[a.classe];
-  let v = 2 * a.attrs[c.attaque] + (a.skills[c.arme] ?? 0) + gearBonus(a.weapon);
+  let v = 2 * a.attrs[c.attaque] + (a.skills[c.arme] ?? 0) + gearBonus(a.weapon) + P.aventuriers.maitrise.attaque * mastery(a);
   if (hasState(a, 'malediction')) v *= 0.8;
   if (a.buffs.includes('force') || a.buffs.includes('legendaire')) v *= 1.05;
   return v;
 }
 export function defenseOf(a: Adventurer): number {
-  return a.attrs.CON + a.attrs.AGI / 2 + (a.skills.protection ?? 0) + gearBonus(a.armor);
+  return a.attrs.CON + a.attrs.AGI / 2 + (a.skills.protection ?? 0) + gearBonus(a.armor) + P.aventuriers.maitrise.defense * mastery(a);
 }
 export function capacityOf(a: Adventurer): number {
   return 4 + a.attrs.FOR / 2;
@@ -63,7 +66,8 @@ export function powerOf(a: Adventurer): number {
 export const skill = (a: Adventurer, k: SkillId) => a.skills[k] ?? 0;
 
 export function xpRequired(n: number): number { return Math.round(100 * Math.pow(n, 1.5)); }
-export function xpQuestType(n: number): number { return 0.25 * xpRequired(n); }
+/** XP d'une quête de son rang : une fraction du niveau (un quart à l'origine). */
+export function xpQuestType(n: number): number { return P.quetes.xpParQuete * xpRequired(n); }
 
 export function rangForLevel(level: number): Rang {
   if (level <= 3) return 'F';

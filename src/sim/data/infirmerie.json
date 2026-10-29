@@ -246,23 +246,23 @@
     {
       "niveau": 2,
       "lits": 6,
-      "cout": 40000
+      "cout": 25000
     },
     {
       "niveau": 3,
       "lits": 10,
-      "cout": 90000
+      "cout": 55000
     },
     {
       "niveau": 4,
       "lits": 14,
-      "cout": 200000,
+      "cout": 120000,
       "rang": 3
     },
     {
       "niveau": 5,
       "lits": 20,
-      "cout": 400000,
+      "cout": 240000,
       "rang": 4
     }
   ]

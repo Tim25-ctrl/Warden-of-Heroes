@@ -94,7 +94,7 @@ describe('règles de jeu', () => {
     const s = createGame({ seed: 3 });
     const before = s.treasury;
     applyCommand(s, { type: 'upgradeRoom', room: 'refectoire' });
-    expect(s.treasury).toBe(before - 20000);
+    expect(s.treasury).toBe(before - 12000);
     expect(s.refectoire.works?.targetLevel).toBe(2);
     stepDays(s, 3);
     expect(s.refectoire.level).toBe(2);
@@ -274,7 +274,7 @@ describe('la légende (tranche 4)', () => {
     s.dortoirs.level = 3;
     expect(upgradeCost(s, 'dortoirs')).toBeNull();
     s.rank = 3;
-    expect(upgradeCost(s, 'dortoirs')).toBe(150000);
+    expect(upgradeCost(s, 'dortoirs')).toBe(90000);
   });
   it('banque et usurier : plafonds, intérêts et remboursement (1.1.3)', () => {
     const s = createGame({ seed: 53 });

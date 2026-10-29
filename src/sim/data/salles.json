@@ -46,7 +46,7 @@
         "paillasse",
         "commun"
       ],
-      "cout": 25000
+      "cout": 15000
     },
     {
       "niveau": 3,
@@ -56,7 +56,7 @@
         "commun",
         "individuelle"
       ],
-      "cout": 60000
+      "cout": 30000
     },
     {
       "niveau": 4,
@@ -67,7 +67,7 @@
         "individuelle",
         "suite"
       ],
-      "cout": 150000,
+      "cout": 90000,
       "rang": 3
     },
     {
@@ -79,7 +79,7 @@
         "individuelle",
         "suite"
       ],
-      "cout": 350000,
+      "cout": 200000,
       "rang": 4,
       "qualite": 10
     }
@@ -98,21 +98,21 @@
       "places": 16,
       "plats": 3,
       "garde": 200,
-      "cout": 20000
+      "cout": 12000
     },
     {
       "niveau": 3,
       "places": 24,
       "plats": 4,
       "garde": 350,
-      "cout": 50000
+      "cout": 25000
     },
     {
       "niveau": 4,
       "places": 32,
       "plats": 5,
       "garde": 500,
-      "cout": 120000,
+      "cout": 70000,
       "rang": 3
     },
     {
@@ -120,7 +120,7 @@
       "places": 40,
       "plats": 6,
       "garde": 700,
-      "cout": 300000,
+      "cout": 180000,
       "rang": 4
     }
   ],

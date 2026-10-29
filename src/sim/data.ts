@@ -114,6 +114,8 @@ export interface EventDef {
   categorie: 'petit' | 'majeur' | 'crise';
   theme: 'economie' | 'monstres' | 'societe' | 'sante';
   poids: number;
+  /** Poids à partir d'un sceau donné (ajout v1.1) : la Couronne met une guilde célèbre à l'épreuve. */
+  poidsSceau?: { rang: number; poids: number };
   duree: number;
   conditions?: {
     saison?: number[]; pasSaison?: number[]; prosperiteMax?: number; prosperiteMin?: number;

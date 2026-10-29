@@ -11,7 +11,7 @@
     {
       "niveau": 2,
       "profs": 2,
-      "cout": 30000,
+      "cout": 18000,
       "debloque": [
         "maitre_armes",
         "archimage"
@@ -20,7 +20,7 @@
     {
       "niveau": 3,
       "profs": 3,
-      "cout": 70000,
+      "cout": 42000,
       "debloque": [
         "maitre_armes",
         "archimage",
@@ -30,7 +30,7 @@
     {
       "niveau": 4,
       "profs": 4,
-      "cout": 160000,
+      "cout": 100000,
       "debloque": [
         "maitre_armes",
         "archimage",
@@ -42,7 +42,7 @@
     {
       "niveau": 5,
       "profs": 5,
-      "cout": 350000,
+      "cout": 210000,
       "debloque": [
         "maitre_armes",
         "archimage",
@@ -143,6 +143,8 @@
     }
   ],
   "dureeSeance": 3,
+  "valeurTemps": 100,
+  "salaire": { "base": 1, "coef": 0.12, "exposant": 1.4 },
   "libre": {
     "prix": 10,
     "places": 8,

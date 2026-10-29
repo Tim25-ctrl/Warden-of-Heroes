@@ -7,6 +7,8 @@ import { FLOWS } from '../src/sim/journal';
 import { canHireProf, profSalary } from '../src/sim/training';
 import { upgradeCost } from '../src/sim/rooms';
 import type { GameState, RoomId } from '../src/sim/types';
+import { DORM_LEVELS, INF_LEVELS, MESS_LEVELS, P, TERRAIN_LEVELS, TIERS } from '../src/sim/data';
+import { PROG, sealConditions } from '../src/sim/legend';
 
 const args = process.argv.slice(2);
 const arg = (name: string, def: string) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : def; };
@@ -15,7 +17,22 @@ const SEEDS = Number(arg('seeds', '8'));
 const BOT = arg('bot', 'prudent') as 'prudent' | 'passif';
 const VERBOSE = args.includes('--verbose');
 const FIRST_SEED = Number(arg('seed', '1'));
-const POP_MAX = Number(arg('pop', '15'));
+const POP_MAX = Number(arg('pop', '60'));      // le robot accepte les candidats tant qu'il a des lits
+const TRACE = args.includes('--trace');
+const FOLLOW = Number(arg('suivre', '0'));   // --suivre J : suit le meilleur aventurier à partir du jour J (première graine)
+const PROFS_MAX = Number(arg('profs', '5'));
+const PROF_SLOTS = arg('creneaux', 'apresmidi').split(',');
+// Essais d'équilibrage sans toucher aux fichiers : --set quetes.tableauBase=12 (racines P, PROG, DORM, MESS, INF, TERR, TIERS), répétable.
+for (let i = 0; i < args.length; i++) {
+  if (args[i] !== '--set') continue;
+  const [path, val] = args[i + 1].split('=');
+  const keys = path.split('.');
+  const roots: Record<string, unknown> = { PROG, DORM: DORM_LEVELS, MESS: MESS_LEVELS, INF: INF_LEVELS, TERR: TERRAIN_LEVELS, TIERS };
+  let o = (roots[keys[0]] ?? P) as Record<string, unknown>;
+  if (roots[keys[0]]) keys.shift();
+  for (const k of keys.slice(0, -1)) o = o[k] as Record<string, unknown>;
+  o[keys[keys.length - 1]] = JSON.parse(val);
+}
 
 const day = (s: GameState) => Math.floor(s.tick / 24) + 1;
 const roomsBuilt = (s: GameState) => (['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]).filter((r) => s[r].level > 0).length;
@@ -68,7 +85,7 @@ function checkInvariants(s: GameState, issues: string[]): void {
 /** Joueur-robot : réagit une fois par jour, à 07h. */
 function bot(s: GameState): void {
   answerDecisions(s);
-  const beds = s.dortoirs.beds.paillasse + s.dortoirs.beds.commun + s.dortoirs.beds.individuelle;
+  const beds = s.dortoirs.beds.paillasse + s.dortoirs.beds.commun + s.dortoirs.beds.individuelle + s.dortoirs.beds.suite;
   for (const c of [...s.doorCandidates]) {
     if (BOT === 'passif' || (s.adventurers.length < beds && s.adventurers.length < POP_MAX)) applyCommand(s, { type: 'acceptCandidate', id: c.id });
   }
@@ -81,26 +98,31 @@ function bot(s: GameState): void {
   for (const d of ['ragout', 'roti', 'biere', 'vin'] as const) if (s.refectoire.curseurs[d] !== 1.05) applyCommand(s, { type: 'setDishCurseur', dish: d, value: 1.05 });
   if (s.taxRate !== 0.18) applyCommand(s, { type: 'setTaxRate', value: 0.18 });
 
-  // Construction : infirmerie d'abord (elle évite les morts), puis la capacité d'accueil, puis le reste
+  // Construction : infirmerie d'abord (elle évite les morts), puis la capacité d'accueil, puis le reste.
+  // Le robot n'économise que pour l'essentiel (infirmerie, dortoirs pleins) ; sinon il bâtit le premier projet abordable.
   const full = s.adventurers.length >= beds - 1;
-  if (s.infirmerie.level === 0) upgrade(s, 'infirmerie', 3000);
-  else if (s.dortoirs.level < 2 && full) upgrade(s, 'dortoirs', 3000);
-  else if (s.terrain.level === 0) upgrade(s, 'terrain', 3000);
-  else if (s.refectoire.level < 2) upgrade(s, 'refectoire', 5000);
-  else if (s.dortoirs.level < 3 && full) upgrade(s, 'dortoirs', 8000);
-  else if (s.infirmerie.level < 2) upgrade(s, 'infirmerie', 10000);
-  else if (s.refectoire.level < 3) upgrade(s, 'refectoire', 15000);
-  else if (s.terrain.level < 2) upgrade(s, 'terrain', 15000);
-  else if (s.infirmerie.level < 3) upgrade(s, 'infirmerie', 20000);
-  else if (s.terrain.level < 3) upgrade(s, 'terrain', 20000);
+  const plan: [RoomId, number, number, boolean][] = [   // salle, niveau visé, réserve à garder, essentiel
+    ['infirmerie', 1, 3000, true], ['dortoirs', 2, 3000, full], ['terrain', 1, 3000, false], ['refectoire', 2, 5000, false],
+    ['dortoirs', 3, 8000, full], ['dortoirs', 4, 50000, full], ['infirmerie', 2, 10000, false], ['refectoire', 3, 15000, false], ['terrain', 2, 15000, false],
+    ['infirmerie', 3, 20000, false], ['terrain', 3, 20000, false],
+    ['refectoire', 4, 50000, false], ['infirmerie', 4, 50000, false], ['terrain', 4, 50000, false],
+    ['dortoirs', 5, 80000, full], ['refectoire', 5, 80000, false], ['infirmerie', 5, 80000, false], ['terrain', 5, 80000, false],
+  ];
+  for (const [room, lvl, buffer, essential] of plan) {
+    if (s[room].level >= lvl || s[room].works) continue;
+    if (room === 'dortoirs' && !full) continue;
+    if (upgrade(s, room, buffer) || essential) break;
+  }
   // Répartition des lits : un tiers de lits confortables dès qu'ils existent
   if (!s.dortoirs.pendingBeds && !s.dortoirs.works) {
-    const places = s.dortoirs.level === 1 ? 12 : s.dortoirs.level === 2 ? 24 : 40;
+    const places = [0, 12, 24, 40, 60, 80][s.dortoirs.level];
     const want = s.dortoirs.level === 1 ? { paillasse: 12, commun: 0, individuelle: 0, suite: 0 }
       : s.dortoirs.level === 2 ? { paillasse: 10, commun: 14, individuelle: 0, suite: 0 }
-      : { paillasse: 8, commun: 20, individuelle: Math.floor((places - 28) / 2), suite: 0 };
+      : s.dortoirs.level === 3 ? { paillasse: 8, commun: 20, individuelle: Math.floor((places - 28) / 2), suite: 0 }
+      : s.dortoirs.level === 4 ? { paillasse: 8, commun: 24, individuelle: 10, suite: 2 }
+      : { paillasse: 8, commun: 30, individuelle: 15, suite: 3 };
     const cur = s.dortoirs.beds;
-    if (cur.paillasse !== want.paillasse || cur.commun !== want.commun || cur.individuelle !== want.individuelle) {
+    if (cur.paillasse !== want.paillasse || cur.commun !== want.commun || cur.individuelle !== want.individuelle || cur.suite !== want.suite) {
       applyCommand(s, { type: 'setBeds', beds: want });
     }
   }
@@ -111,7 +133,7 @@ function bot(s: GameState): void {
   if (s.infirmerie.level >= 3 && count('apothicaire') === 0 && s.treasury > 5000) hireBest(s, 'apothicaire');
   const waited = s.journal.filter((e) => e.tick > s.tick - 24 && e.text.startsWith("File d'attente")).length;
   if (waited > 0 && count('commis') + count('cuisinier') < 1 + s.refectoire.level && s.treasury > 8000) hireBest(s, 'commis');
-  const places = s.dortoirs.level === 1 ? 12 : s.dortoirs.level === 2 ? 24 : 40;
+  const places = [0, 12, 24, 40, 60, 80][s.dortoirs.level];
   if (count('valet') * 15 < places && s.treasury > 8000) hireBest(s, 'valet');
   if (count('intendant') === 0 && s.treasury > 30000) hireBest(s, 'intendant');
   if (count('inspecteur') === 0 && s.adventurers.length >= 15 && s.treasury > 20000) hireBest(s, 'inspecteur');
@@ -121,12 +143,12 @@ function bot(s: GameState): void {
   }
 
   // Professeurs : un seul au début, puis un par niveau de terrain, au meilleur rapport compétence / salaire
-  const wantProfs = s.adventurers.length >= 18 ? s.terrain.level : Math.min(1, s.terrain.level);
+  const wantProfs = Math.min(PROFS_MAX, s.adventurers.length >= 18 ? s.terrain.level : Math.min(1, s.terrain.level));
   for (const p of [...s.profCandidates].sort((a, b) => b.pedagogie / profSalary(b) - a.pedagogie / profSalary(a))) {
     if (s.terrain.profs.length >= wantProfs) break;
     if (!canHireProf(s, p) && s.treasury > profSalary(p) * 30) {
       applyCommand(s, { type: 'hireProf', id: p.id });
-      applyCommand(s, { type: 'setProfSlot', id: p.id, slot: 'apresmidi', open: true });
+      for (const slot of PROF_SLOTS) applyCommand(s, { type: 'setProfSlot', id: p.id, slot: slot as 'matin', open: true });
     }
   }
 
@@ -156,6 +178,7 @@ interface Result {
   revenue: Record<string, number>; expenses: Record<string, number>; flows: Record<string, number>; types: Record<string, number>; frauds: number; outside: number;
   prosperity: number; palier: string; palierDay: number; renown: number; events: Record<string, number>; assaults: number; epidemics: number;
   rivals: string; issues: string[]; danger: number; sealDays: number[]; achievements: number; book: number;
+  allL5: number; rooms: string; maxAdv: number; morale: number[]; conds: string; missing: string; gone: Record<string, number>;
 }
 
 function netOver(s: GameState, from: number, to: number): number {
@@ -175,9 +198,52 @@ function run(seed: number): Result {
   const seenRuns = new Set<number>();
   const issues: string[] = [];
   const events: Record<string, number> = {};
-  let palierDay = 0, assaults = 0, epidemics = 0;
+  let palierDay = 0, assaults = 0, epidemics = 0, allL5 = 0, maxAdv = 0;
+  const morale: number[] = [];
+  const condDay: Record<string, number> = {};   // premier jour où chaque condition du sceau suivant est remplie
   const sealDays: number[] = [];
+  const act: Record<string, number> = {};
+  let followId = -1; const followAct: Record<string, number> = {}; const followRuns = new Set<number>();
+  const seen = new Set<number>();
+  const launched: { rang: string; reward: number }[] = [];
+  let lastRec = 0;
   for (let h = 0; h < DAYS * 24 && !s.gameOver; h++) {
+    if (FOLLOW && seed === FIRST_SEED && day(s) >= FOLLOW) {
+      if (followId < 0) { const b = [...s.adventurers].sort((x, y) => y.level - x.level)[0]; followId = b.id; console.log(`Suivi de ${b.name}, ${b.classe} niveau ${b.level}, jour ${day(s)}`); }
+      const f = s.adventurers.find((x) => x.id === followId);
+      if (f) {
+        followAct[f.activity.kind + (f.activity.bed ? `:${f.activity.bed}` : "") + (f.activity.dish ? `:${f.activity.dish}` : "")] = (followAct[f.activity.kind + (f.activity.bed ? `:${f.activity.bed}` : "") + (f.activity.dish ? `:${f.activity.dish}` : "")] ?? 0) + 1;
+        const r = s.runs.find((x) => x.members.includes(f.id));
+        if (r && r.stage !== 'preparation' && !followRuns.has(r.id)) { followRuns.add(r.id); console.log(`  J${day(s)} niv ${f.level} (xp ${f.xp}) part : ${r.quest.title} [${r.quest.type} ${r.quest.rang}] à ${r.members.length} · or ${money(f.gold)} moral ${Math.round(f.morale)}`); }
+        if (s.tick % (24 * 14) === 0) { const tot = Object.values(followAct).reduce((x, y) => x + y, 0); console.log(`  -- J${day(s)} activités : ${Object.entries(followAct).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${Math.round(v / tot * 100)}%`).join(' ')} · pensées : ${f.thoughts.slice(-3).map((th) => th.text).join(' / ')}`); for (const k of Object.keys(followAct)) delete followAct[k]; }
+      } else if (followId >= 0) { console.log(`  J${day(s)} : l'aventurier suivi a quitté la guilde`); followId = -2; }
+    }
+    if (TRACE && seed === FIRST_SEED) {
+      // Trace hebdomadaire de la première graine : activités, tableau, quêtes lancées, recettes
+      for (const a of s.adventurers) act[a.activity.kind] = (act[a.activity.kind] ?? 0) + 1;
+      for (const r of s.runs) if (r.stage !== 'preparation' && !seen.has(r.id)) { seen.add(r.id); launched.push({ rang: r.quest.rang, reward: r.quest.reward + (r.quest.perHead ?? 0) }); }
+      if (s.tick % (24 * 7) === 0 && s.tick > 0) {
+        const tot = Object.values(act).reduce((x, y) => x + y, 0) || 1;
+        const ranks: Record<string, number> = {};
+        for (const a of s.adventurers) { const r = a.level <= 3 ? 'F' : a.level <= 7 ? 'E' : a.level <= 12 ? 'D' : 'C'; ranks[r] = (ranks[r] ?? 0) + 1; }
+        const bq: Record<string, number> = {};
+        for (const q of s.board) if (q.type !== 'aide') bq[q.type.slice(0, 4) + q.rang] = (bq[q.type.slice(0, 4) + q.rang] ?? 0) + 1;
+        const byR: Record<string, number[]> = {};
+        for (const d of launched) (byR[d.rang] ??= []).push(d.reward);
+        let rec = 0; for (const d of s.ledger) for (const v of Object.values(d.recettes)) rec += v;
+        console.log(`J${day(s)} avent ${s.adventurers.length} ${JSON.stringify(ranks)} trés ${money(s.treasury)} recettes/j ${money(Math.round((rec - lastRec) / 7))} renom ${Math.round(s.renown)} salles ${s.dortoirs.level}${s.refectoire.level}${s.infirmerie.level}${s.terrain.level}`);
+        lastRec = rec;
+        const recent = (re: RegExp) => s.adventurers.reduce((n, x) => n + x.thoughts.filter((th) => th.tick > s.tick - 168 && re.test(th.text)).length, 0);
+        const lv = s.adventurers.map((x) => x.level).sort((x, y) => y - x);
+        { const ok = s.world.escortes.filter((e) => e.ok).length; let flux = s.world.townSpend.reduce((x, y) => x + y, 0); for (const d of s.ledger.slice(-7)) for (const v of Object.values(d.recettes)) flux += v;
+          console.log(`  prospérité ${s.prosperity.toFixed(0)} · danger ${s.danger} · escortes réussies ${ok}/${s.world.escortes.length} sur 7 j · flux ${money(flux)} · modificateurs ${s.world.mods.filter((m) => m.key.startsWith('prosperite')).map((m) => `${m.key} ${m.add ?? m.mult} (${m.source})`).join(', ') || 'aucun'}`); }
+        console.log(`  dehors : plus de lit ${recent(/Pas un lit de libre/)}, trop pauvre ${recent(/Pas de quoi me payer/)}, auberge ${recent(/Sanglier Borgne/)} · or moyen ${money(Math.round(s.adventurers.reduce((x, y) => x + y.gold, 0) / s.adventurers.length))} · niveaux ${lv.slice(0, 8).join(' ')} · moral ${Math.round(s.adventurers.reduce((x, y) => x + y.morale, 0) / s.adventurers.length)} · lits ${JSON.stringify(s.dortoirs.beds)}`);
+        console.log('  activités %', Object.entries(act).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${Math.round(v / tot * 100)}`).join(' '));
+        console.log('  tableau', JSON.stringify(bq), '| lancées', Object.entries(byR).map(([k, v]) => `${k}:${v.length}×${money(Math.round(v.reduce((x, y) => x + y, 0) / v.length))}`).join(' '));
+        for (const k of Object.keys(act)) delete act[k];
+        launched.length = 0;
+      }
+    }
     const evBefore = s.world.events.map((e) => e.startTick + e.id);
     const hadAssault = !!s.world.assault, hadEpi = !!s.world.epidemic;
     step(s);
@@ -187,10 +253,16 @@ function run(seed: number): Result {
     if (!palierDay && s.world.palier !== 'bourg') palierDay = day(s);
     if (s.rank > sealDays.length + 1) sealDays.push(day(s));
     if (s.tick % 24 === 7) bot(s);
-    if (s.tick % 24 === 12) checkInvariants(s, issues);
+    if (s.tick % 24 === 12) {
+      checkInvariants(s, issues);
+      if (s.rank >= 3) for (const c of sealConditions(s)) { const k = `${s.rank + 1}:${c.label.replace(/ (.*)$/, '')}`; if (c.ok && !condDay[k]) condDay[k] = day(s); else if (!c.ok && !(k in condDay)) condDay[k] = 0; }
+    }
     if (s.tick % 24 === 3) outside += s.adventurers.filter((a) => a.activity.kind === 'dehors').length;
     for (const r of s.runs) if (!seenRuns.has(r.id) && r.stage !== 'preparation') { seenRuns.add(r.id); types[r.quest.type] = (types[r.quest.type] ?? 0) + 1; }
     if (!firstRoom && roomsBuilt(s) >= 3) firstRoom = day(s);
+    if (!allL5 && (['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]).every((r) => s[r].level >= 5)) allL5 = day(s);
+    maxAdv = Math.max(maxAdv, s.adventurers.length);
+    if (s.tick % (24 * 28) === 0 && s.adventurers.length) morale.push(Math.round(s.adventurers.reduce((a, x) => a + x.morale, 0) / s.adventurers.length));
     if (!fourRooms && roomsBuilt(s) >= 4) fourRooms = day(s);
     if (!firstLevel3 && (['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]).some((r) => s[r].level >= 3)) firstLevel3 = day(s);
     if (day(s) === 31 && s.tick % 24 === 1) net30 = netOver(s, 24, 30);
@@ -219,6 +291,10 @@ function run(seed: number): Result {
     teams: s.teams.length, revenue, expenses, flows: { ...FLOWS }, types,
     prosperity: s.prosperity, palier: s.world.palier, palierDay, renown: s.renown, events, assaults, epidemics, danger: s.danger,
     sealDays, achievements: Object.keys(s.legend.achievements).length, book: s.book.chapters.length,
+    gone: s.departed.reduce((o, d) => { const k = `${d.reason} ${d.level >= 13 ? 'niv13+' : 'niv1-12'}`; o[k] = (o[k] ?? 0) + 1; return o; }, {} as Record<string, number>),
+    missing: sealConditions(s).filter((c) => !c.ok).map((c) => c.label).join(' ; '),
+    conds: Object.entries(condDay).map(([k, v]) => `${k} ${v ? 'J' + v : '—'}`).join(' · '),
+    allL5, rooms: `${s.dortoirs.level}${s.refectoire.level}${s.infirmerie.level}${s.terrain.level}`, maxAdv, morale,
     rivals: s.world.rivals.map((r) => `${r.nom} ${Math.round(r.renown)}`).join(', '), issues, frauds: s.fraud.detected, outside,
   };
 }
@@ -245,26 +321,37 @@ const sumRec = (rec: (r: Result) => Record<string, number>) => {
 console.log('\nRecettes moyennes :', Object.entries(sumRec((r) => r.revenue)).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${fmt(v)}`).join(', '));
 console.log('Dépenses moyennes :', Object.entries(sumRec((r) => r.expenses)).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${fmt(v)}`).join(', '));
 console.log('Or des aventuriers :', Object.entries(sumRec((r) => r.flows)).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${fmt(v)}`).join(', '));
+console.log('Départs (moyenne par partie) :', Object.entries(sumRec((r) => r.gone)).sort().map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', '));
 console.log('Quêtes par type :', Object.entries(sumRec((r) => r.types)).map(([k, v]) => `${k} ${v.toFixed(0)}`).join(', '));
 console.log(`Moral moyen ${avg('avgMorale').toFixed(0)}, PV moyens ${(avg('avgHp') * 100).toFixed(0)} %, fraudes détectées ${avg('frauds').toFixed(1)}, nuits dehors ${avg('outside').toFixed(0)}`);
 
 console.log('\nMonde (fin de partie) :');
 for (const r of results) console.log(`  graine ${r.seed} : prospérité ${r.prosperity.toFixed(0)} (${r.palier}${r.palierDay ? `, Ville au J${r.palierDay}` : ''}), danger ${r.danger}, renommée ${r.renown.toFixed(0)}, assauts ${r.assaults}, épidémies ${r.epidemics} · rivales : ${r.rivals}`);
-for (const r of results) console.log(`  graine ${r.seed} : sceaux aux jours ${r.sealDays.length ? r.sealDays.join(', ') : 'aucun'} · ${r.achievements} hauts faits · ${r.book} chapitres au Livre`);
+for (const r of results) console.log(`  graine ${r.seed} : sceaux aux jours ${r.sealDays.length ? r.sealDays.join(', ') : 'aucun'} · ${r.achievements} hauts faits · ${r.book} chapitres au Livre · salles ${r.rooms}${r.allL5 ? ` (toutes niv 5 au J${r.allL5})` : ''} · ${r.maxAdv} aventuriers au plus · moral par mois ${r.morale.join(' ')}`);
+for (const r of results) console.log(`  graine ${r.seed} : conditions (sceau n° : condition, jour) ${r.conds}`);
+for (const r of results) if (r.missing) console.log(`  graine ${r.seed} : manque à la fin pour le sceau suivant : ${r.missing}`);
 console.log('Événements (moyenne par partie) :', Object.entries(sumRec((r) => r.events)).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', '));
 const allIssues = results.flatMap((r) => r.issues.map((i) => `graine ${r.seed}, ${i}`));
 console.log(allIssues.length ? `\nIncohérences (${allIssues.length}) :\n  ${allIssues.slice(0, 15).join('\n  ')}` : '\nAucune incohérence détectée.');
 
 const in30 = DAYS >= 30;
+/** Cible de sceau (v1.1) : jour médian dans la fourchette, et sceau obtenu dans au moins 6 parties sur 8. */
+function sealCheck(name: string, i: number, lo: number, hi: number): [string, boolean, string] {
+  const days = results.map((r) => r.sealDays[i]).filter((d): d is number => d !== undefined).sort((a, b) => a - b);
+  const med = days.length ? days[Math.floor(days.length / 2)] : 0;
+  return [name, days.length >= results.length * 0.75 && med >= lo && med <= hi, `${days.length}/${results.length} parties, médiane J${med}`];
+}
 const checks: [string, boolean, string][] = [
   ['Aucune faillite', results.every((r) => !r.gameOver), `${results.filter((r) => r.gameOver).length} faillite(s)`],
   ['Aucune incohérence sur la durée', allIssues.length === 0, `${allIssues.length} incohérence(s)`],
   ['Trois salles construites vers J1-3 (1.13 : première salle)', avg('firstRoom') <= 4, `J${avg('firstRoom').toFixed(1)}`],
   ['Les 4 salles construites vers J8-12', avg('fourRooms') > 0 && avg('fourRooms') <= 14, `J${avg('fourRooms').toFixed(1)}`],
-  ['Première salle au niveau 3 vers J20-30', avg('firstLevel3') >= 15 && avg('firstLevel3') <= 35, `J${avg('firstLevel3').toFixed(1)}`],
+  ['Première salle au niveau 3 vers J45-60 (cible v1.1)', avg('firstLevel3') >= 40 && avg('firstLevel3') <= 65, `J${avg('firstLevel3').toFixed(1)}`],
   ...(in30 ? [['Revenu net de 10 à 20 po par jour vers J30', avg('net30') >= 1000 && avg('net30') <= 2000, fmt(avg('net30'))] as [string, boolean, string]] : []),
   ['Morts : environ 1 toutes les 2 à 3 semaines', avg('deaths') >= DAYS / 21 * 0.6 && avg('deaths') <= DAYS / 14 * 1.4, `${avg('deaths').toFixed(1)} en ${DAYS} jours`],
   ['Les aventuriers vivent de leur travail', avg('avgGold') > 300, `or moyen ${fmt(avg('avgGold'))}`],
+  ...(DAYS >= 200 ? [sealCheck("Sceau d'Or vers J120-170", 2, 115, 175)] : []),
+  ...(DAYS >= 500 ? [sealCheck('Sceau de Mithril (victoire) entre J300 et J500, dans la plupart des parties', 3, 280, 520)] : []),
 ];
 console.log('\nCibles :');
 for (const [name, ok, detail] of checks) console.log(`  ${ok ? '✔' : '✘'} ${name} — ${detail}`);

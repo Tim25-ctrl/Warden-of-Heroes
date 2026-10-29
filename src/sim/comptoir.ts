@@ -14,7 +14,8 @@ import { onQuestEnd, referenceTaxRate } from './world';
 
 function modRang(q: Quest, a: Adventurer): number {
   const d = rangIndex(q.rang) - rangIndex(rangForLevel(a.level));
-  return d >= 1 ? 1.5 : d === 0 ? 1 : d === -1 ? 0.5 : 0.2;
+  const x = P.quetes.xpEcartRang;
+  return d >= 1 ? x.dessus : d === 0 ? x.egal : d === -1 ? x.dessous1 : x.dessous2;
 }
 
 export function taxExempt(s: GameState, a: Adventurer, aide: boolean): boolean {
@@ -215,7 +216,9 @@ export function processReturn(s: GameState, run: QuestRun): void {
       earn(s, 'creditRembourse', repay);
     }
     m.gold += g; flow('quetes', (g));
-    let xp = xpQuestType(m.level) * modRang(q, m) * (ok ? 1 : P.quetes.xpEchec);
+    // Ajusté en v1.1 : les quêtes de haut rang, plus longues, forment davantage.
+    const rangXp = (P.quetes.xpRangQuete as Record<string, number>)[q.rang] ?? 1;
+    let xp = xpQuestType(m.level) * modRang(q, m) * rangXp * (ok ? 1 : P.quetes.xpEchec);
     if (mentor && m.level <= 3) xp *= 1.2;
     gainXp(s, m, xp);
     m.lastQuestTick = s.tick;

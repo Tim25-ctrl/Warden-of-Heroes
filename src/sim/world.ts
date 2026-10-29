@@ -137,6 +137,12 @@ export function onQuestEnd(s: GameState, run: QuestRun, ok: boolean, team: Adven
     } else if (rangIndex(q.rang) >= 3) {
       news(s, 'exploits', `${team.map((a) => a.name).join(', ')} ont accompli « ${q.title} » (rang ${q.rang}).`);
     }
+    // Ajout v1.1 : le dragon terrassé met fin à la crise (les caravanes reprennent la route des Pics).
+    if (q.target === 'dragon' && s.world.events.some((e) => e.id === 'dragon')) {
+      s.world.events = s.world.events.filter((e) => e.id !== 'dragon');
+      s.world.mods = s.world.mods.filter((m) => m.source !== 'dragon');
+      log(s, 'monde', 'critique', 'Le dragon est mort : les caravanes reprennent la route des Pics.');
+    }
   } else {
     addRenown(s, -R.echec[q.rang]);
   }
@@ -183,7 +189,10 @@ function updateProsperity(s: GameState): void {
 
 function updatePalier(s: GameState): void {
   const w = s.world;
-  const want = tierFor(s.prosperity);
+  let want = tierFor(s.prosperity);
+  // Ajout v1.1 : une ville ne décline que sous le seuil de son palier moins une marge, pour ne pas osciller.
+  const floor = w.palier === 'cite' ? W().paliers.cite : w.palier === 'ville' ? W().paliers.ville : 0;
+  if (PALIERS.indexOf(want) < PALIERS.indexOf(w.palier) && s.prosperity >= floor - W().palierMarge) want = w.palier;
   if (want === w.palier) { w.palierStreak = 0; return; }
   w.palierStreak += 1;
   if (w.palierStreak < W().palierJours) return;
@@ -231,7 +240,7 @@ function pickEvent(s: GameState, cat: 'petit' | 'majeur' | 'crise', sea?: number
   for (const [id, e] of Object.entries(EVENTS)) {
     if (e.categorie !== cat || e.poids <= 0 || !eligible(s, id, sea, day)) continue;
     if (s.world.events.some((x) => x.id === id)) continue;
-    w[id] = e.poids;
+    w[id] = e.poidsSceau && s.rank >= e.poidsSceau.rang ? e.poidsSceau.poids : e.poids;
   }
   return Object.keys(w).length ? weighted(s, 'monde', w) : null;
 }
@@ -293,7 +302,8 @@ function scheduleSeason(s: GameState): void {
 function scheduleCrises(s: GameState): void {
   const yearStart = (yearOf(s.tick) - 1) * 112 + 1;
   const n0 = randInt(s, 'monde', W().crisesParAn[0], W().crisesParAn[1]) * diff(s).crises;   // difficulté (6.5)
-  const n = Math.floor(n0) + (chance(s, 'monde', n0 % 1) ? 1 : 0);
+  const bonus = s.rank >= W().crisesBonusSceau.rang ? W().crisesBonusSceau.nombre : 0;   // ajout v1.1
+  const n = Math.floor(n0) + (chance(s, 'monde', n0 % 1) ? 1 : 0) + bonus;
   for (let i = 0; i < n; i++) {
     const from = Math.max(yearStart + 5, W().criseJourMin);
     const day = randInt(s, 'monde', from, yearStart + 110);

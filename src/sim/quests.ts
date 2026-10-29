@@ -21,7 +21,9 @@ import type { Adventurer, ClientType, GameState, Money, Quest, QuestRun, QuestTy
 export const FAR_FUTURE = 1e9;
 
 export function boardCapacity(s: GameState): number {
-  return P.quetes.tableauBase + 2 * (s.rank - 1);
+  // Ajusté en v1.1 : une place de plus par 4 aventuriers au-delà de 20, pour qu'une grande guilde ait de quoi faire.
+  const q = P.quetes;
+  return q.tableauBase + 2 * (s.rank - 1) + Math.floor(Math.max(0, s.adventurers.length - q.tableauSeuilAventuriers) / q.tableauParAventuriers);
 }
 
 export const QUEST_TYPE_NAMES: Record<QuestType, string> = {
@@ -252,7 +254,8 @@ function roll(s: GameState, expected: number): number {
 
 /**
  * Portée de la guilde (ajout tranche 2) : le rang le plus haut que tiennent au moins
- * `portee.equipe` aventuriers, plus un. Le greffier écarte la plupart des quêtes au-delà.
+ * `portee.equipe` aventuriers, plus un. Le greffier écarte la plupart des quêtes au-delà,
+ * et, une fois la guilde aguerrie, la plupart des quêtes trop modestes pour elle (ajusté en v1.1).
  */
 export function guildReach(s: GameState): number {
   const ranks = s.adventurers.map((a) => rangIndex(rangForLevel(a.level))).sort((a, b) => b - a);
@@ -277,7 +280,11 @@ export function generateQuests(s: GameState, firstDay = false): void {
     for (let tries = 0; tries < q.portee.essais && !quest; tries++) {
       const t = firstDay ? 'chasse' : weighted(s, 'quetes', mix);
       const cand = makeQuest(s, t);
-      if (cand && (rangIndex(cand.rang) <= reach || chance(s, 'quetes', q.portee.horsPortee))) quest = cand;
+      if (!cand) continue;
+      const ri = rangIndex(cand.rang);
+      if (ri > reach && !chance(s, 'quetes', q.portee.horsPortee)) continue;
+      if (reach - ri >= q.portee.ecartSous && !chance(s, 'quetes', q.portee.sousPortee)) continue;
+      quest = cand;
     }
     if (quest) { decorateQuest(s, quest); s.board.push(quest); }
   }
@@ -454,6 +461,10 @@ function bestQuestFor(s: GameState, core: Adventurer[], pool: Adventurer[], team
     if (team.length < q.minMembers || perceivedChance(s, team, q, leader, teamId) < need) continue;
     let attrait = (questValue(q) / team.length + (0.5 * expectedLoot(q)) / team.length) / durationDays(q);
     if ((q.clientType === 'guilde' || q.bonus > 0) && leader.loyalty >= 60) attrait *= 1 + P.quetes.bonusLoyaute;
+    // Ajusté en v1.1 : on cherche les défis de son rang (prestige, expérience), pas seulement l'or à la journée.
+    const gap = rangIndex(q.rang) - rangIndex(rangForLevel(leader.level));
+    const ar = P.quetes.attraitRang;
+    attrait *= gap >= 1 ? ar.dessus : gap === 0 ? ar.egal : gap === -1 ? ar.dessous1 : ar.dessous2;
     if (!best || attrait > best.attrait) best = { q, team, attrait };
   }
   return best;

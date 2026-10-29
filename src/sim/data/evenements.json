@@ -53,7 +53,7 @@
     "texte": "Vague de monstres : les {espece} déferlent {lieu}. La Couronne paie leur extermination."
   },
   "dragon": {
-    "nom": "Réveil du dragon", "categorie": "crise", "theme": "monstres", "poids": 2, "duree": 28,
+    "nom": "Réveil du dragon", "categorie": "crise", "theme": "monstres", "poids": 2, "poidsSceau": { "rang": 4, "poids": 6 }, "duree": 28,
     "conditions": { "jourMin": 60 },
     "rumeur": "Des bergers des Pics parlent d'un grondement sous la montagne et de troupeaux disparus.",
     "effets": [{ "key": "prosperite", "add": -10 }],
