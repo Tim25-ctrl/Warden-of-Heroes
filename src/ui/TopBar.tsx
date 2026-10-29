@@ -24,7 +24,7 @@ export function TopBar({ s, speed }: { s: GameState; speed: number }) {
   const debtLeft = diff(s).faillite - s.debtDays;
   return (
     <header class="topbar">
-      <span class="brand">Siège de Guilde</span>
+      <span class="brand">Warden of Heroes</span>
       <span class="stat" title="Trésorerie de la guilde et variation depuis minuit">
         <span class="k">Trésorerie</span>
         <button class={`v ${s.treasury < 0 ? 'debt' : ''}`} onClick={() => nav.go('livre')}><Money v={s.treasury} /></button>

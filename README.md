@@ -1,4 +1,6 @@
-# Siège de Guilde
+# Warden of Heroes
+
+*Le gardien de la guilde.*
 
 Simulation de gestion indirecte d'un siège de guilde d'aventuriers autonomes, jouable dans le navigateur.
 La conception complète est dans [GDD.md](GDD.md).

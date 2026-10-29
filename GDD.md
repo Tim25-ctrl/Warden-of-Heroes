@@ -1,4 +1,6 @@
-# GAME DESIGN DOCUMENT — Siège de Guilde d'Aventuriers
+# GAME DESIGN DOCUMENT — Warden of Heroes
+
+> **Titre :** *Warden of Heroes*, sous-titre français *Le gardien de la guilde* (D-115). « Siège de Guilde », le titre de travail, reste le nom du bâtiment dans le jeu.
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
@@ -3031,6 +3033,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-112 | 2026-10-29 | Mode consultation automatique sous 640 px, avec un écran Résumé et des actions rapides. | 7.9 |
 | D-113 | 2026-10-29 | Application installable : manifeste, service worker (cache puis rafraîchissement), notifications seulement hors premier plan, chemins relatifs. | 8.7 |
 | D-114 | 2026-10-29 | Reportés après la v1.0 : textes de l'interface dans des fichiers séparés, difficulté personnalisée, rééquilibrage du rythme et des revenus. | 6.5, 7.10, 1.13 |
+| D-115 | 2026-10-29 | Titre du jeu : *Warden of Heroes* (« le gardien des héros », qui veille sur eux sans les commander). Aucun jeu de ce nom sur Steam, itch.io, l'App Store ou Google Play ; wardenofheroes.com et wardenofheroes.fr libres à cette date. Identifiants internes (base du navigateur, format des sauvegardes) inchangés. | 0 |
 
 ### Relecture de cohérence (v1.0)
 

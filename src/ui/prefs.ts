@@ -62,7 +62,7 @@ export async function notify(cat: NotifCat, text: string): Promise<void> {
   const body = text.replace(/\[\[a:\d+\|([^\]]+)\]\]/g, '$1');
   try {
     const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
-    if (reg) await reg.showNotification('Siège de Guilde', { body, icon: 'icons/icon-192.png', tag: cat });
-    else new Notification('Siège de Guilde', { body, icon: 'icons/icon-192.png', tag: cat });
+    if (reg) await reg.showNotification('Warden of Heroes', { body, icon: 'icons/icon-192.png', tag: cat });
+    else new Notification('Warden of Heroes', { body, icon: 'icons/icon-192.png', tag: cat });
   } catch { /* notification refusée par le navigateur */ }
 }

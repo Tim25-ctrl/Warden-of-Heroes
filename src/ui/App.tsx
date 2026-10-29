@@ -58,7 +58,8 @@ function StartScreen() {
   return (
     <div class="overlay">
       <div class="modal">
-        <h1>Siège de Guilde</h1>
+        <h1>Warden of Heroes</h1>
+        <p class="subtitle">Le gardien de la guilde</p>
         <p class="soft">Tu ne diriges pas les héros. Tu diriges l'endroit où ils vivent.</p>
         <p>Dix aventuriers comptent sur toi pour les loger et les nourrir. Fixe tes prix, recrute ton personnel, agrandis le siège : eux décideront du reste.</p>
         {sorted.length > 0 && (

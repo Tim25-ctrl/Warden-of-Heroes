@@ -360,3 +360,4 @@ ul.plain li { padding: 2px 0; }
   .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
   .modal { max-width: calc(100vw - 32px); }
 }
+.modal .subtitle { margin: -0.4em 0 0.8em; font-family: var(--font-title); font-style: italic; color: var(--ink-soft); }

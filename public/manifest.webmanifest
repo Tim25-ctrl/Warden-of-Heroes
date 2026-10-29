@@ -1,6 +1,6 @@
 {
-  "name": "Siège de Guilde",
-  "short_name": "Guilde",
+  "name": "Warden of Heroes",
+  "short_name": "Warden",
   "description": "Gérez le siège d'une guilde d'aventuriers autonomes.",
   "lang": "fr",
   "start_url": "./",
