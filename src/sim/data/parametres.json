@@ -1,0 +1,385 @@
+{
+  "temps": {
+    "heureDepart": 6,
+    "jourDuRoi": 7,
+    "joursParSaison": 28,
+    "secondesParTickX1": 12.5
+  },
+  "economie": {
+    "tresorerieDepart": 30000,
+    "coutVieJour": 70,
+    "entretienTauxHebdo": 0.015,
+    "taxeRoyaleBase": 500,
+    "taxeRoyaleTaux": 0.03,
+    "delaiFaillite": 7,
+    "prosperiteDepart": 30,
+    "dangerDepart": 35
+  },
+  "tarifs": {
+    "curseurMin": 0.5,
+    "curseurMax": 3,
+    "toleranceBase": 1.1,
+    "toleranceCoef": 0.25,
+    "bonneAffaire": 0.9,
+    "griefRefus": 5,
+    "griefDecroissanceJour": 2,
+    "loyauteRefus": -3,
+    "reconfigParPlace": 20
+  },
+  "concurrents": {
+    "auberge": {
+      "qualite": 40,
+      "prixBase": 60,
+      "energie": 75,
+      "moral": -3,
+      "trajet": 1
+    },
+    "taverne": {
+      "qualite": 40,
+      "prixBase": 30,
+      "faim": 55,
+      "moral": 2,
+      "trajet": 1,
+      "ouverture": 7,
+      "fermeture": 22
+    },
+    "temple": {
+      "prixBase": 180,
+      "soinPvPct": 100
+    },
+    "rebouteux": {
+      "prixBase": 50,
+      "soinPvPct": 50,
+      "risque": 0.25
+    }
+  },
+  "personnel": {
+    "exposantSalaire": 1.3,
+    "joursParProgression": 5,
+    "plafondsPotentiel": [
+      40,
+      55,
+      70,
+      85,
+      100
+    ],
+    "loyauteDepart": 50,
+    "seuilDemission": 20,
+    "chanceDemission": 0.1,
+    "joursImpayesMax": 3,
+    "indemniteJours": 3,
+    "placesParValet": 15
+  },
+  "aventuriers": {
+    "faimEveilleH": 4,
+    "faimSommeilH": 1.5,
+    "energieEveilleH": 3,
+    "pvSommeilPctH": 3,
+    "pvEveillePctH": 0.5,
+    "moralDeriveJour": 2,
+    "loyauteDepart": 30,
+    "respectDepart": 20,
+    "seuilMecontent": 30,
+    "seuilDepart": 60,
+    "seuilUrgenceSante": 0.25,
+    "seuilUrgenceFaim": 20,
+    "seuilUrgenceEnergie": 15,
+    "joursOrUrgence": 2,
+    "aleaScores": 0.1,
+    "orDepartMin": 50,
+    "orDepartMax": 200,
+    "orRecrueMin": 100,
+    "orRecrueMax": 300,
+    "candidatsParJour": 0.5,
+    "niveauMax": 30,
+    "heureFormationEquipes": 19,
+    "heureEvaluationDepart": 21,
+    "moralRetourPct": 0.15
+  },
+  "quetes": {
+    "baseParRang": {
+      "F": 100,
+      "E": 600,
+      "D": 1500,
+      "C": 3500,
+      "B": 9000,
+      "A": 22000,
+      "S": 50000
+    },
+    "multAide": 0.8,
+    "tableauBase": 8,
+    "expirationMin": 2,
+    "expirationMax": 7,
+    "erreurDanger": 0.15,
+    "seuils": {
+      "temeraire": 0.45,
+      "normal": 0.65,
+      "prudent": 0.8,
+      "fauche": 0.4
+    },
+    "biais": {
+      "temeraire": 0.7,
+      "normal": 1,
+      "prudent": 1.4
+    },
+    "intervalleRencontreH": 4,
+    "reussiteAide": 0.85,
+    "xpEchec": 0.3,
+    "pistageForet": 6,
+    "pistageVille": 2,
+    "populationNormale": 50,
+    "chasseBase": 3,
+    "chasseParProsperite": 0.05,
+    "aideBase": 4,
+    "aideParProsperite": 0.05,
+    "aideMax": 12,
+    "heureDepart": 7,
+    "abandonFaim": 10,
+    "abandonEnergie": 10,
+    "melange": {
+      "chasse": 0.55,
+      "cueillette": 0.2,
+      "escorte": 0.1,
+      "protection": 0.08,
+      "exploration": 0.07
+    },
+    "extermination": {
+      "seuil": 80,
+      "equipesMax": 3,
+      "dureeH": [
+        12,
+        36
+      ],
+      "parTete": 0.1
+    },
+    "primesBase": 2,
+    "bonusLoyaute": 0.1,
+    "convoiPv": 100,
+    "protectionNuits": [
+      2,
+      5
+    ],
+    "vagueChance": 0.6,
+    "explorationSalles": [
+      3,
+      6
+    ],
+    "abandonPv": {
+      "prudent": 0.6,
+      "normal": 0.45,
+      "temeraire": 0.3
+    },
+    "prudenceCombat": 2,
+    "portee": {
+      "equipe": 3,
+      "essais": 4,
+      "horsPortee": 0.15
+    },
+    "chasseParAventurier": 0.2,
+    "aideParAventurier": 0.1,
+    "provisionsVille": 1.4
+  },
+  "combat": {
+    "coefDegats": 0.3,
+    "roundsMax": 10,
+    "mortMin": 0.3,
+    "mortMax": 0.6,
+    "seuilsRetraite": {
+      "prudent": 0.6,
+      "normal": 0.4,
+      "temeraire": 0.2
+    }
+  },
+  "comptoir": {
+    "tauxDefaut": 0.15,
+    "tauxMax": 0.4,
+    "fraisVenteAventurier": 0.1,
+    "fraisVenteGuilde": 0.05,
+    "resserreBase": 50
+  },
+  "marche": {
+    "joursStockNormal": 5,
+    "elasticiteCommune": 0.5,
+    "elasticiteRare": 0.8,
+    "apportCommun": 0.5,
+    "apportRare": 0.2,
+    "bruit": 0.03,
+    "contrats": {
+      "offresParSemaine": [
+        1,
+        3
+      ],
+      "actifsMax": 3,
+      "primeMin": 0.3,
+      "primeMax": 0.8,
+      "delaiJours": [
+        7,
+        21
+      ],
+      "echecReputation": -15
+    },
+    "repBonusMax": 0.1,
+    "rachatDefaut": 0.9
+  },
+  "etats": {
+    "infectionH": 48,
+    "fractureJours": 10,
+    "sequelleChance": 0.2,
+    "brulureJours": 14,
+    "maladieJours": 5,
+    "aggravationMaladieH": 48,
+    "mortCritiqueParJour": 0.15,
+    "poisonPvH": [
+      2,
+      5,
+      10
+    ],
+    "infectionChance": 0.3,
+    "delaiMortCritiqueH": 48
+  },
+  "infirmerie": {
+    "creditCapDefaut": 1000,
+    "loyauteCredit": 5,
+    "soinsParSoigneurH": 1
+  },
+  "terrain": {
+    "offreProfParJour": 0.07,
+    "niveauProfMax": 8,
+    "offresDepart": 2
+  },
+  "fraude": {
+    "baseDetection": 0.05,
+    "inspecteurDetection": 0.2,
+    "inspecteurParC": 0.006,
+    "inspecteurCapacite": 20,
+    "partMin": 0.2,
+    "partMax": 0.6
+  },
+  "social": {
+    "amiSeuil": 60,
+    "frereSeuil": 85,
+    "rivalSeuil": -40,
+    "ennemiSeuil": -75,
+    "bagarreChance": 0.3,
+    "partageInjusteChance": 0.3
+  },
+  "populations": {
+    "departMin": 40,
+    "departMax": 60,
+    "proliferation": 80,
+    "rarefaction": 30
+  },
+  "equipement": {
+    "usureMin": 5,
+    "usureMax": 20,
+    "seuilReparation": 50
+  },
+  "intendant": {
+    "remiseMin": 0.05,
+    "remiseMax": 0.15,
+    "erreurSansIntendant": 0.1
+  },
+  "monde": {
+    "prosperiteConvergence": 0.05,
+    "insecuriteSeuil": 30,
+    "insecuriteCoef": 0.5,
+    "commerceOk": 2,
+    "commerceEchec": -3,
+    "commerceMax": 15,
+    "apportDiviseur": 5000,
+    "apportMax": 10,
+    "saisonProsperite": [
+      0,
+      0,
+      5,
+      -5
+    ],
+    "paliers": {
+      "ville": 40,
+      "cite": 75
+    },
+    "palierJours": 14,
+    "hiverDanger": 10,
+    "printempsCroissance": 1.5,
+    "hiverPlantes": 0.5,
+    "automneDenrees": 0.8,
+    "hiverLegumes": 1.5,
+    "eteEscortes": 1.5,
+    "hiverEnergieNuit": 0.8,
+    "petitChance": 0.35,
+    "rumeurJours": [
+      2,
+      5
+    ],
+    "rumeurFiabilite": 0.75,
+    "crisesParAn": [
+      1,
+      2
+    ],
+    "criseJourMin": 60,
+    "delaiDecisionH": 12,
+    "menacantRecompense": 1.2,
+    "calmeQuetes": 0.7,
+    "critiqueEscortes": 0.3,
+    "noblesPart": 0.15,
+    "noblesMult": 1.3,
+    "couronneMult": 1.3,
+    "couronneMultCite": 1.5,
+    "assautDangerSeuil": 80,
+    "assautDangerJours": 3,
+    "vaguePopJours": 10,
+    "rattesSeuil": 90,
+    "rattesJours": 7,
+    "assautCooldownJours": 28,
+    "barricade": 3000,
+    "mercenaires": 5000,
+    "primeCouronneParDefenseur": 500,
+    "epidemieJours": [
+      14,
+      28
+    ],
+    "contagionBase": 0.05,
+    "epidemieCooldownJours": 56,
+    "retourMaraisEpidemie": 0.15,
+    "rivaleQueteChance": 0.04,
+    "rivaleActionJours": [
+      10,
+      18
+    ],
+    "contreCampagne": 3000,
+    "exemption": 5000,
+    "renommeeDepart": 20,
+    "legendePv": 5,
+    "legendeAttaque": 2,
+    "rivaleGainQuete": 0.25
+  },
+  "renommee": {
+    "quete": {
+      "F": 0.5,
+      "E": 1,
+      "D": 2,
+      "C": 4,
+      "B": 8,
+      "A": 15,
+      "S": 30
+    },
+    "nobleMult": 1.3,
+    "echec": {
+      "F": 0,
+      "E": 1,
+      "D": 1,
+      "C": 2,
+      "B": 2,
+      "A": 4,
+      "S": 4
+    },
+    "mort": 2,
+    "trophee": 15,
+    "assaut": 10,
+    "gruau": 5,
+    "diffamation": 5,
+    "contratEchec": 2,
+    "depart": 1,
+    "expiration": 0.5
+  }
+}

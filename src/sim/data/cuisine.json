@@ -1,0 +1,187 @@
+{
+  "denrees": {
+    "cereales": {
+      "nom": "Céréales",
+      "prix": 3,
+      "conservation": 30
+    },
+    "legumes": {
+      "nom": "Légumes",
+      "prix": 4,
+      "conservation": 5
+    },
+    "viande": {
+      "nom": "Viande commune",
+      "prix": 8,
+      "conservation": 3
+    },
+    "biere": {
+      "nom": "Bière",
+      "prix": 4,
+      "conservation": 30
+    },
+    "epices": {
+      "nom": "Épices",
+      "prix": 15,
+      "conservation": 60
+    },
+    "vin": {
+      "nom": "Vin fin",
+      "prix": 20,
+      "conservation": 90
+    },
+    "monstre": {
+      "nom": "Viande de monstre",
+      "prix": 0,
+      "conservation": 3,
+      "interne": true
+    }
+  },
+  "plats": {
+    "gruau": {
+      "nom": "Gruau du matin",
+      "type": "repas",
+      "ingredients": {
+        "cereales": 1
+      },
+      "faim": 35,
+      "moral": -2,
+      "prix": 10,
+      "niveau": 1,
+      "cMin": 0
+    },
+    "ragout": {
+      "nom": "Ragoût du jour",
+      "type": "repas",
+      "ingredients": {
+        "cereales": 1,
+        "legumes": 1,
+        "viande": 1
+      },
+      "faim": 55,
+      "moral": 3,
+      "prix": 30,
+      "niveau": 1,
+      "cMin": 20
+    },
+    "roti": {
+      "nom": "Rôti de monstre",
+      "type": "repas",
+      "ingredients": {
+        "monstre": 1,
+        "legumes": 1,
+        "epices": 1
+      },
+      "faim": 60,
+      "moral": 6,
+      "prix": 80,
+      "niveau": 3,
+      "cMin": 40
+    },
+    "biere": {
+      "nom": "Chope de bière",
+      "type": "boisson",
+      "ingredients": {
+        "biere": 1
+      },
+      "faim": 0,
+      "moral": 3,
+      "prix": 10,
+      "niveau": 2,
+      "cMin": 0
+    },
+    "vin": {
+      "nom": "Verre de vin fin",
+      "type": "boisson",
+      "ingredients": {
+        "vin": 1
+      },
+      "faim": 0,
+      "moral": 6,
+      "prix": 50,
+      "niveau": 2,
+      "cMin": 0,
+      "module": "cave"
+    },
+    "panier": {
+      "nom": "Panier de route",
+      "type": "provision",
+      "ingredients": {
+        "cereales": 1,
+        "viande": 1,
+        "legumes": 1
+      },
+      "faim": 0,
+      "moral": 0,
+      "prix": 50,
+      "niveau": 2,
+      "cMin": 0
+    },
+    "festin": {
+      "nom": "Festin du Héros",
+      "type": "repas",
+      "ingredients": {
+        "viande": 1,
+        "monstre": 1,
+        "legumes": 1,
+        "epices": 1,
+        "vin": 1
+      },
+      "faim": 80,
+      "moral": 15,
+      "prix": 250,
+      "niveau": 4,
+      "cMin": 65
+    }
+  },
+  "services": [
+    {
+      "id": "petit_dejeuner",
+      "nom": "petit-déjeuner",
+      "debut": 6,
+      "fin": 9
+    },
+    {
+      "id": "dejeuner",
+      "nom": "déjeuner",
+      "debut": 11,
+      "fin": 14
+    },
+    {
+      "id": "diner",
+      "nom": "dîner",
+      "debut": 18,
+      "fin": 21
+    }
+  ],
+  "buffs": {
+    "vigueur": {
+      "nom": "Vigueur",
+      "effet": "énergie consommée −10 % en quête"
+    },
+    "endurance": {
+      "nom": "Endurance",
+      "effet": "+5 % de PV en quête"
+    },
+    "robustesse": {
+      "nom": "Robustesse",
+      "effet": "PV max +5 %"
+    },
+    "force": {
+      "nom": "Force",
+      "effet": "dégâts +5 %"
+    },
+    "antipoison": {
+      "nom": "Résistance au poison",
+      "effet": "immunisé au poison pendant la quête"
+    },
+    "legendaire": {
+      "nom": "Festin du Dragon",
+      "effet": "tous les bonus"
+    },
+    "repu": {
+      "nom": "Repu et confiant",
+      "effet": "moral de quête +10"
+    }
+  }
+}

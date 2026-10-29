@@ -1,0 +1,21 @@
+{
+  "paliers": [
+    { "palier": 1, "nom": "Fer rouillé",  "niveau": 1,  "arme": 50,     "armure": 80,     "bonus": 2,  "materiau": null },
+    { "palier": 2, "nom": "Fer",          "niveau": 3,  "arme": 300,    "armure": 400,    "bonus": 4,  "materiau": null },
+    { "palier": 3, "nom": "Acier",        "niveau": 7,  "arme": 1200,   "armure": 1500,   "bonus": 7,  "materiau": null },
+    { "palier": 4, "nom": "Acier trempé", "niveau": 12, "arme": 4000,   "armure": 5000,   "bonus": 11, "materiau": null },
+    { "palier": 5, "nom": "Monstre",      "niveau": 17, "arme": 15000,  "armure": 18000,  "bonus": 16, "materiau": "carapace" },
+    { "palier": 6, "nom": "Runique",      "niveau": 22, "arme": 50000,  "armure": 60000,  "bonus": 22, "materiau": "pierre_runique" },
+    { "palier": 7, "nom": "Draconique",   "niveau": 27, "arme": 200000, "armure": 250000, "bonus": 30, "materiau": "ecailles_dragon" }
+  ],
+  "palierMaxParVille": { "bourg": 4, "ville": 6, "cite": 7 },
+  "reparationParTranche": 0.1,
+  "sac": { "places": 4 },
+  "acheteurs": {
+    "tanneur":        { "nom": "Le Tanneur",            "description": "Peaux, cuirs, fourrures, soie, plumes" },
+    "alchimiste":     { "nom": "L'Alchimiste",          "description": "Organes, glandes, sang, poussière d'os, plantes" },
+    "forgeron":       { "nom": "Le Forgeron-armurier",  "description": "Carapaces, écailles, os, crocs, pierres. Vend aussi l'équipement" },
+    "halle":          { "nom": "La Halle aux vivres",   "description": "Viandes, truffes. Prix bas, achète tout" },
+    "collectionneur": { "nom": "Le Collectionneur",     "description": "Matières rares et objets anciens, sur contrat. Arrive quand la ville grandit", "palier": "ville" }
+  }
+}

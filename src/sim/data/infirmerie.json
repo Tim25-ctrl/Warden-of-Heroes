@@ -1,0 +1,269 @@
+{
+  "etats": {
+    "plaie": {
+      "nom": "Plaie",
+      "remede": "bandages",
+      "niveau": 1,
+      "prix": [
+        30,
+        100,
+        300
+      ],
+      "hospitalisation": [
+        0,
+        2,
+        4
+      ]
+    },
+    "fracture": {
+      "nom": "Fracture",
+      "remede": "attelle",
+      "niveau": 2,
+      "prix": [
+        400,
+        400,
+        600
+      ],
+      "hospitalisation": [
+        2,
+        3,
+        5
+      ]
+    },
+    "poison": {
+      "nom": "Poison",
+      "remede": "antidote",
+      "niveau": 1,
+      "prix": [
+        200,
+        500,
+        1000
+      ],
+      "hospitalisation": [
+        0,
+        1,
+        3
+      ]
+    },
+    "brulure": {
+      "nom": "Brûlure",
+      "remede": "baume",
+      "niveau": 2,
+      "prix": [
+        150,
+        150,
+        400
+      ],
+      "hospitalisation": [
+        0,
+        2,
+        4
+      ]
+    },
+    "maladie": {
+      "nom": "Maladie",
+      "remede": "tisane",
+      "niveau": 1,
+      "prix": [
+        100,
+        100,
+        300
+      ],
+      "hospitalisation": [
+        0,
+        2,
+        3
+      ]
+    },
+    "malediction": {
+      "nom": "Malédiction",
+      "remede": "elixir",
+      "niveau": 3,
+      "prix": [
+        1200,
+        1200,
+        1200
+      ],
+      "hospitalisation": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "gravites": [
+    "légère",
+    "sérieuse",
+    "critique"
+  ],
+  "remedes": {
+    "bandages": {
+      "nom": "Bandages",
+      "prix": 10,
+      "vente": 30
+    },
+    "attelle": {
+      "nom": "Attelle et onguent",
+      "prix": 80
+    },
+    "antidote": {
+      "nom": "Antidote",
+      "prix": 150,
+      "vente": 200
+    },
+    "baume": {
+      "nom": "Baume",
+      "prix": 100
+    },
+    "tisane": {
+      "nom": "Tisane médicinale",
+      "prix": 50
+    },
+    "elixir": {
+      "nom": "Élixir de purification",
+      "prix": 300
+    },
+    "eau_benite": {
+      "nom": "Eau bénite",
+      "prix": 600
+    },
+    "potion": {
+      "nom": "Potion de soin",
+      "prix": 100,
+      "vente": 200
+    },
+    "potion_sup": {
+      "nom": "Potion de soin supérieure",
+      "prix": 400,
+      "vente": 800
+    }
+  },
+  "recettes": [
+    {
+      "id": "bandages",
+      "produit": "bandages",
+      "qte": 3,
+      "ingredients": {
+        "herbe_plaie": 1
+      },
+      "achat": 2
+    },
+    {
+      "id": "bandages_soie",
+      "produit": "bandages",
+      "qte": 4,
+      "ingredients": {
+        "soie": 1
+      }
+    },
+    {
+      "id": "attelle",
+      "produit": "attelle",
+      "qte": 2,
+      "ingredients": {
+        "chardon_fer": 2,
+        "graisse": 1
+      }
+    },
+    {
+      "id": "attelle_troll",
+      "produit": "attelle",
+      "qte": 2,
+      "ingredients": {
+        "graisse_troll": 1
+      }
+    },
+    {
+      "id": "antidote",
+      "produit": "antidote",
+      "qte": 2,
+      "ingredients": {
+        "glande_venin": 1,
+        "racine_ombre": 1
+      }
+    },
+    {
+      "id": "antidote_wyv",
+      "produit": "antidote",
+      "qte": 4,
+      "ingredients": {
+        "glande_wyverne": 1,
+        "racine_ombre": 1
+      }
+    },
+    {
+      "id": "baume",
+      "produit": "baume",
+      "qte": 3,
+      "ingredients": {
+        "fleur_braise": 1,
+        "graisse": 1
+      }
+    },
+    {
+      "id": "tisane",
+      "produit": "tisane",
+      "qte": 4,
+      "ingredients": {
+        "camomille": 2
+      }
+    },
+    {
+      "id": "elixir",
+      "produit": "elixir",
+      "qte": 1,
+      "ingredients": {
+        "mousse_lumineuse": 1,
+        "poussiere_os": 1
+      }
+    },
+    {
+      "id": "potion",
+      "produit": "potion",
+      "qte": 2,
+      "ingredients": {
+        "lys_argent": 1,
+        "herbe_plaie": 1
+      }
+    },
+    {
+      "id": "potion_sup",
+      "produit": "potion_sup",
+      "qte": 2,
+      "ingredients": {
+        "sang_troll": 1,
+        "lys_argent": 1
+      }
+    }
+  ],
+  "lit": 80,
+  "niveaux": [
+    {
+      "niveau": 1,
+      "lits": 3,
+      "cout": 15000
+    },
+    {
+      "niveau": 2,
+      "lits": 6,
+      "cout": 40000
+    },
+    {
+      "niveau": 3,
+      "lits": 10,
+      "cout": 90000
+    },
+    {
+      "niveau": 4,
+      "lits": 14,
+      "cout": 200000,
+      "rang": 3
+    },
+    {
+      "niveau": 5,
+      "lits": 20,
+      "cout": 400000,
+      "rang": 4
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "caravane": {
+    "nom": "Caravane exceptionnelle", "categorie": "petit", "theme": "economie", "poids": 3, "duree": 7,
+    "action": "caravane",
+    "texte": "Une caravane exceptionnelle déballe ses marchandises sur la place : {categorie} à profusion, les cours baissent."
+  },
+  "mode_noblesse": {
+    "nom": "Mode de la noblesse", "categorie": "petit", "theme": "economie", "poids": 2, "duree": 14,
+    "rumeur": "On murmure dans les salons que la noblesse s'entiche de {ressource}.",
+    "action": "mode",
+    "texte": "La noblesse s'arrache {ressource} : la demande est multipliée par {mult}."
+  },
+  "penurie": {
+    "nom": "Pénurie de céréales", "categorie": "petit", "theme": "economie", "poids": 3, "duree": 7,
+    "conditions": { "pasSaison": [2], "prosperiteMax": 60 },
+    "effets": [{ "key": "denree:cereales", "mult": 2 }, { "key": "taverne:prix", "mult": 1.3 }],
+    "texte": "Pénurie de céréales : le grain coûte le double, et la Taverne du Pont augmente ses prix.",
+    "suite": { "evenement": "emeute", "prosperiteMax": 40, "chance": 0.7 }
+  },
+  "marchand": {
+    "nom": "Marchand ambulant", "categorie": "petit", "theme": "economie", "poids": 3, "duree": 1,
+    "action": "marchand",
+    "texte": "Un marchand ambulant propose un lot de {lot} à −30 %."
+  },
+  "vol_resserre": {
+    "nom": "Vol dans la Resserre", "categorie": "petit", "theme": "economie", "poids": 2, "duree": 1,
+    "action": "vol",
+    "texte": "Des voleurs se sont introduits dans le garde-manger : {perte}."
+  },
+  "emeute": {
+    "nom": "Émeute du pain", "categorie": "majeur", "theme": "economie", "poids": 0, "duree": 5,
+    "conditions": { "chaine": true },
+    "effets": [{ "key": "taverne:ferme", "add": 1 }],
+    "action": "emeute",
+    "texte": "Émeute du pain ! La Taverne du Pont a baissé ses volets, la foule gronde devant les greniers."
+  },
+  "migration": {
+    "nom": "Migration", "categorie": "petit", "theme": "monstres", "poids": 3, "duree": 1,
+    "action": "migration",
+    "texte": "Des {espece} venus d'ailleurs s'installent {lieu}."
+  },
+  "bete_legendaire": {
+    "nom": "Bête légendaire", "categorie": "majeur", "theme": "monstres", "poids": 3, "duree": 21,
+    "rumeur": "Un bûcheron jure avoir vu une bête gigantesque {lieu}.",
+    "action": "legende",
+    "texte": "{legende} a été aperçu {lieu}. La noblesse offre une forte récompense pour son trophée."
+  },
+  "vague": {
+    "nom": "Vague de monstres", "categorie": "majeur", "theme": "monstres", "poids": 2, "duree": 10,
+    "rumeur": "À la taverne, un chasseur raconte avoir vu des dizaines de {espece} descendre {lieu}…",
+    "effets": [{ "key": "danger", "add": 20 }],
+    "action": "vague",
+    "texte": "Vague de monstres : les {espece} déferlent {lieu}. La Couronne paie leur extermination."
+  },
+  "dragon": {
+    "nom": "Réveil du dragon", "categorie": "crise", "theme": "monstres", "poids": 2, "duree": 28,
+    "conditions": { "jourMin": 60 },
+    "rumeur": "Des bergers des Pics parlent d'un grondement sous la montagne et de troupeaux disparus.",
+    "effets": [{ "key": "prosperite", "add": -10 }],
+    "action": "dragon",
+    "texte": "Le jeune dragon s'est réveillé dans les Pics des Wyvernes ! Les caravanes sont attaquées."
+  },
+  "fete": {
+    "nom": "Fête de la ville", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
+    "action": "moral", "valeur": 5,
+    "texte": "Fête de la ville : lampions, musiciens et bonne humeur générale."
+  },
+  "concours": {
+    "nom": "Concours de cuisine", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
+    "conditions": { "refectoireMin": 3 },
+    "choix": [{ "id": "participer", "label": "Participer", "cost": 2000 }, { "id": "non", "label": "Ne pas participer" }],
+    "defaut": "non",
+    "texte": "Le Bourg organise un concours de cuisine. Le réfectoire de la guilde y participe-t-il ?"
+  },
+  "inspecteur": {
+    "nom": "Inspecteur royal", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
+    "action": "inspecteur",
+    "texte": "Un inspecteur royal contrôle les comptes de la guilde."
+  },
+  "rixe": {
+    "nom": "Rixe en ville", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
+    "conditions": { "bagarreur": true },
+    "choix": [{ "id": "caution", "label": "Payer sa caution", "cost": 500 }, { "id": "laisser", "label": "Le laisser 3 jours en prison" }],
+    "defaut": "laisser",
+    "texte": "{aventurier} a été arrêté après une rixe à la Taverne du Pont. La garde demande une caution."
+  },
+  "baron": {
+    "nom": "Le baron et ses soldats", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 5,
+    "choix": [{ "id": "heberger", "label": "Héberger 6 soldats 5 jours (+40 po)" }, { "id": "refuser", "label": "Refuser" }],
+    "defaut": "refuser",
+    "texte": "Le baron de Valcourt cherche à loger six soldats pendant cinq jours. Il paierait 40 po."
+  },
+  "veteran": {
+    "nom": "Vétéran de passage", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
+    "choix": [{ "id": "enseigner", "label": "Le laisser enseigner une journée" }, { "id": "engager", "label": "Lui proposer un poste de professeur" }],
+    "defaut": "enseigner",
+    "texte": "Un vétéran de passage propose de partager son expérience avec les aventuriers."
+  },
+  "recrue": {
+    "nom": "Recrue exceptionnelle", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
+    "action": "recrue",
+    "texte": "Un aventurier aguerri se présente à la porte de la guilde."
+  },
+  "gourmet": {
+    "nom": "Gourmet de passage", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
+    "conditions": { "refectoireMin": 5 },
+    "action": "gourmet",
+    "texte": "Un noble gourmet vient dîner au réfectoire."
+  },
+  "guerre": {
+    "nom": "Guerre régionale", "categorie": "crise", "theme": "societe", "poids": 1, "duree": 28,
+    "conditions": { "jourMin": 60 },
+    "rumeur": "Les crieurs annoncent des mouvements de troupes à la frontière.",
+    "effets": [{ "key": "taxe_royale", "mult": 1.5 }, { "key": "demande:carapace", "mult": 2 }, { "key": "demande:ecailles_wyverne", "mult": 2 }, { "key": "prosperite_jour", "add": -1 }],
+    "action": "guerre",
+    "texte": "La guerre est déclarée ! La Couronne lève des impôts et appelle des hommes sous les drapeaux."
+  },
+  "couronnement": {
+    "nom": "Couronnement", "categorie": "majeur", "theme": "societe", "poids": 2, "duree": 7,
+    "rumeur": "On dit que le vieux roi va abdiquer en faveur de son fils.",
+    "effets": [{ "key": "taxe_royale", "mult": 0 }],
+    "action": "moral", "valeur": 5,
+    "texte": "Couronnement du nouveau roi : la taxe royale est suspendue pendant une semaine."
+  },
+  "fievre": {
+    "nom": "Fièvre des marais", "categorie": "majeur", "theme": "sante", "poids": 3, "duree": 1,
+    "conditions": { "saison": [1] },
+    "rumeur": "Des marchands revenus du Marais toussent et grelottent.",
+    "action": "epidemie",
+    "texte": "La fièvre des marais gagne la ville."
+  },
+  "grand_froid": {
+    "nom": "Grand froid", "categorie": "petit", "theme": "sante", "poids": 4, "duree": 5,
+    "conditions": { "saison": [3] },
+    "effets": [{ "key": "energie_nuit", "mult": 0.7 }, { "key": "trajet", "mult": 1.3 }],
+    "texte": "Grand froid : les nuits sont glaciales et les routes gelées."
+  },
+  "canicule": {
+    "nom": "Canicule", "categorie": "petit", "theme": "sante", "poids": 4, "duree": 5,
+    "conditions": { "saison": [1] },
+    "effets": [{ "key": "conservation_viande", "mult": 2 }, { "key": "moral_jour", "add": -2 }],
+    "texte": "Canicule : la viande se gâte vite et les esprits s'échauffent."
+  },
+  "crue": {
+    "nom": "Crue", "categorie": "petit", "theme": "sante", "poids": 4, "duree": 5,
+    "conditions": { "saison": [0] },
+    "effets": [{ "key": "trajet:marais", "mult": 1.5 }],
+    "texte": "Crue : les chemins du Marais des Brumes sont noyés."
+  },
+  "amours": {
+    "nom": "Saison des amours", "categorie": "petit", "theme": "sante", "poids": 4, "duree": 7,
+    "conditions": { "saison": [0] },
+    "effets": [{ "key": "attaque:loup", "mult": 1.2 }, { "key": "attaque:sanglier", "mult": 1.2 }],
+    "texte": "Saison des amours : loups et sangliers sont plus agressifs que jamais."
+  },
+  "peste": {
+    "nom": "Peste des égouts", "categorie": "majeur", "theme": "sante", "poids": 0, "duree": 1,
+    "conditions": { "chaine": true },
+    "action": "epidemie",
+    "texte": "Les rats grouillent dans les égouts : la peste se déclare."
+  },
+  "assaut": {
+    "nom": "Assaut sur la ville", "categorie": "crise", "theme": "monstres", "poids": 0, "duree": 3,
+    "conditions": { "chaine": true },
+    "action": "assaut",
+    "texte": "Les {espece} marchent sur la ville !"
+  }
+}

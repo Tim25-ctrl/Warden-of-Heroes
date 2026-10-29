@@ -1,0 +1,309 @@
+{
+  "lits": {
+    "paillasse": {
+      "nom": "Paillasse",
+      "places": 1,
+      "energie": 60,
+      "moral": -5,
+      "prix": 30
+    },
+    "commun": {
+      "nom": "Dortoir commun",
+      "places": 1,
+      "energie": 75,
+      "moral": 0,
+      "prix": 60
+    },
+    "individuelle": {
+      "nom": "Chambre individuelle",
+      "places": 2,
+      "energie": 90,
+      "moral": 5,
+      "prix": 150
+    },
+    "suite": {
+      "nom": "Suite",
+      "places": 4,
+      "energie": 100,
+      "moral": 12,
+      "prix": 500
+    }
+  },
+  "dortoirs": [
+    {
+      "niveau": 1,
+      "places": 12,
+      "lits": [
+        "paillasse"
+      ],
+      "cout": 0,
+      "valeur": 10000
+    },
+    {
+      "niveau": 2,
+      "places": 24,
+      "lits": [
+        "paillasse",
+        "commun"
+      ],
+      "cout": 25000
+    },
+    {
+      "niveau": 3,
+      "places": 40,
+      "lits": [
+        "paillasse",
+        "commun",
+        "individuelle"
+      ],
+      "cout": 60000
+    },
+    {
+      "niveau": 4,
+      "places": 60,
+      "lits": [
+        "paillasse",
+        "commun",
+        "individuelle",
+        "suite"
+      ],
+      "cout": 150000,
+      "rang": 3
+    },
+    {
+      "niveau": 5,
+      "places": 80,
+      "lits": [
+        "paillasse",
+        "commun",
+        "individuelle",
+        "suite"
+      ],
+      "cout": 350000,
+      "rang": 4,
+      "qualite": 10
+    }
+  ],
+  "refectoire": [
+    {
+      "niveau": 1,
+      "places": 8,
+      "plats": 2,
+      "garde": 100,
+      "cout": 0,
+      "valeur": 10000
+    },
+    {
+      "niveau": 2,
+      "places": 16,
+      "plats": 3,
+      "garde": 200,
+      "cout": 20000
+    },
+    {
+      "niveau": 3,
+      "places": 24,
+      "plats": 4,
+      "garde": 350,
+      "cout": 50000
+    },
+    {
+      "niveau": 4,
+      "places": 32,
+      "plats": 5,
+      "garde": 500,
+      "cout": 120000,
+      "rang": 3
+    },
+    {
+      "niveau": 5,
+      "places": 40,
+      "plats": 6,
+      "garde": 700,
+      "cout": 300000,
+      "rang": 4
+    }
+  ],
+  "roles": {
+    "cuisinier": {
+      "nom": "Cuisinier",
+      "salaire": 100,
+      "salle": "refectoire"
+    },
+    "commis": {
+      "nom": "Commis de cuisine",
+      "salaire": 40,
+      "salle": "refectoire"
+    },
+    "valet": {
+      "nom": "Valet de dortoir",
+      "salaire": 50,
+      "salle": "dortoirs"
+    },
+    "soigneur": {
+      "nom": "Soigneur",
+      "salaire": 150,
+      "salle": "infirmerie"
+    },
+    "apothicaire": {
+      "nom": "Apothicaire",
+      "salaire": 150,
+      "salle": "infirmerie",
+      "niveauSalle": 3
+    },
+    "intendant": {
+      "nom": "Intendant",
+      "salaire": 200,
+      "salle": "siege",
+      "unique": true
+    },
+    "inspecteur": {
+      "nom": "Inspecteur du butin",
+      "salaire": 150,
+      "salle": "comptoir"
+    }
+  },
+  "modules": {
+    "rideaux": {
+      "nom": "Rideaux épais",
+      "salle": "dortoirs",
+      "cout": 8000,
+      "niveau": 1,
+      "effet": "Qualité +5"
+    },
+    "coffres": {
+      "nom": "Coffres verrouillés",
+      "salle": "dortoirs",
+      "cout": 12000,
+      "niveau": 1,
+      "effet": "Moral +3 pour les aventuriers fiers, loyauté +1 par semaine"
+    },
+    "cheminee": {
+      "nom": "Cheminée",
+      "salle": "dortoirs",
+      "cout": 20000,
+      "niveau": 2,
+      "effet": "Qualité +8, annule le malus d'hiver"
+    },
+    "bains": {
+      "nom": "Bains chauds",
+      "salle": "dortoirs",
+      "cout": 40000,
+      "niveau": 3,
+      "effet": "Qualité +10, moral +5 à la nuitée"
+    },
+    "cassecroute": {
+      "nom": "Comptoir de casse-croûte",
+      "salle": "refectoire",
+      "cout": 10000,
+      "niveau": 1,
+      "effet": "Vente de plats froids hors des services"
+    },
+    "saloir": {
+      "nom": "Saloir et fumoir",
+      "salle": "refectoire",
+      "cout": 15000,
+      "niveau": 1,
+      "effet": "Conservation des viandes ×5"
+    },
+    "cave": {
+      "nom": "Cave à vin",
+      "salle": "refectoire",
+      "cout": 25000,
+      "niveau": 2,
+      "effet": "Débloque le vin fin"
+    },
+    "glaciere": {
+      "nom": "Glacière",
+      "salle": "refectoire",
+      "cout": 40000,
+      "niveau": 3,
+      "effet": "Perte de fraîcheur −50 %"
+    },
+    "salle_etude": {
+      "nom": "Salle d'étude arcanique",
+      "salle": "terrain",
+      "cout": 30000,
+      "niveau": 1,
+      "effet": "Affinité partielle de l'Archimage portée à ×0,7"
+    },
+    "armurerie": {
+      "nom": "Armurerie d'entraînement",
+      "salle": "terrain",
+      "cout": 25000,
+      "niveau": 1,
+      "effet": "+0,1 d'efficacité avec le Maître d'armes"
+    },
+    "table_cartes": {
+      "nom": "Table de cartes",
+      "salle": "terrain",
+      "cout": 20000,
+      "niveau": 1,
+      "effet": "Le Stratège fait progresser la Cohésion jusqu'à 16"
+    },
+    "bassins": {
+      "nom": "Bassins de récupération",
+      "salle": "terrain",
+      "cout": 40000,
+      "niveau": 1,
+      "effet": "Coût en énergie des séances −50 %"
+    },
+    "jardin": {
+      "nom": "Jardin d'herbes",
+      "salle": "infirmerie",
+      "cout": 12000,
+      "niveau": 1,
+      "effet": "5 herbes-à-plaie et 5 camomilles par jour"
+    },
+    "convalescence": {
+      "nom": "Salle de convalescence",
+      "salle": "infirmerie",
+      "cout": 25000,
+      "niveau": 1,
+      "effet": "Moral +3 par jour hospitalisé, hospitalisation −20 %"
+    },
+    "quarantaine": {
+      "nom": "Quarantaine",
+      "salle": "infirmerie",
+      "cout": 35000,
+      "niveau": 1,
+      "effet": "Bloque la contagion pendant les épidémies (tranche 3)"
+    },
+    "laboratoire": {
+      "nom": "Laboratoire",
+      "salle": "infirmerie",
+      "cout": 50000,
+      "niveau": 3,
+      "effet": "Rendement de fabrication +30 %"
+    },
+    "resserre1": {
+      "nom": "Resserre agrandie",
+      "salle": "siege",
+      "cout": 15000,
+      "niveau": 0,
+      "effet": "Stock de dépouilles +100"
+    },
+    "resserre2": {
+      "nom": "Resserre agrandie (2)",
+      "salle": "siege",
+      "cout": 15000,
+      "niveau": 0,
+      "effet": "Stock de dépouilles +100",
+      "requiert": "resserre1"
+    },
+    "salle_froide": {
+      "nom": "Salle froide",
+      "salle": "siege",
+      "cout": 30000,
+      "niveau": 0,
+      "effet": "Conservation des viandes et organes ×2"
+    },
+    "mur": {
+      "nom": "Mur du Souvenir",
+      "salle": "siege",
+      "cout": 15000,
+      "niveau": 0,
+      "effet": "Les morts y sont gravés ; deuil adouci"
+    }
+  }
+}

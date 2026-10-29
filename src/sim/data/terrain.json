@@ -1,0 +1,151 @@
+{
+  "niveaux": [
+    {
+      "niveau": 1,
+      "profs": 1,
+      "cout": 12000,
+      "debloque": [
+        "maitre_armes"
+      ]
+    },
+    {
+      "niveau": 2,
+      "profs": 2,
+      "cout": 30000,
+      "debloque": [
+        "maitre_armes",
+        "archimage"
+      ]
+    },
+    {
+      "niveau": 3,
+      "profs": 3,
+      "cout": 70000,
+      "debloque": [
+        "maitre_armes",
+        "archimage",
+        "stratege"
+      ]
+    },
+    {
+      "niveau": 4,
+      "profs": 4,
+      "cout": 160000,
+      "debloque": [
+        "maitre_armes",
+        "archimage",
+        "stratege",
+        "chasseur"
+      ],
+      "rang": 3
+    },
+    {
+      "niveau": 5,
+      "profs": 5,
+      "cout": 350000,
+      "debloque": [
+        "maitre_armes",
+        "archimage",
+        "stratege",
+        "chasseur",
+        "aumonier"
+      ],
+      "rang": 4
+    }
+  ],
+  "profs": {
+    "maitre_armes": {
+      "nom": "Maître d'armes",
+      "pleine": [
+        "guerrier"
+      ],
+      "partielle": [
+        "rodeur",
+        "voleur"
+      ],
+      "competences": [
+        "maniement",
+        "protection",
+        "tir",
+        "discretion"
+      ]
+    },
+    "archimage": {
+      "nom": "Archimage",
+      "pleine": [
+        "mage"
+      ],
+      "partielle": [
+        "clerc"
+      ],
+      "competences": [
+        "arcanes",
+        "savoir",
+        "soins",
+        "exorcisme"
+      ]
+    },
+    "stratege": {
+      "nom": "Stratège",
+      "pleine": [],
+      "partielle": [
+        "guerrier",
+        "rodeur",
+        "voleur",
+        "mage",
+        "clerc"
+      ],
+      "competences": [
+        "cohesion"
+      ]
+    },
+    "chasseur": {
+      "nom": "Maître-chasseur",
+      "pleine": [
+        "rodeur"
+      ],
+      "partielle": [
+        "guerrier",
+        "voleur"
+      ],
+      "competences": [
+        "connaissance"
+      ]
+    },
+    "aumonier": {
+      "nom": "Aumônier de bataille",
+      "pleine": [
+        "clerc"
+      ],
+      "partielle": [
+        "guerrier"
+      ],
+      "competences": [
+        "exorcisme"
+      ]
+    }
+  },
+  "creneaux": [
+    {
+      "id": "matin",
+      "nom": "Matin",
+      "heure": 8
+    },
+    {
+      "id": "apresmidi",
+      "nom": "Après-midi",
+      "heure": 14
+    },
+    {
+      "id": "soir",
+      "nom": "Soir",
+      "heure": 18
+    }
+  ],
+  "dureeSeance": 3,
+  "libre": {
+    "prix": 10,
+    "places": 8,
+    "mProf": 0.3
+  }
+}

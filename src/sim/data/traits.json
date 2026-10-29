@@ -1,0 +1,22 @@
+{
+  "radin":         { "nom": "Radin",         "oppose": "depensier",  "description": "Tolérance de prix −0,2, choisit toujours le moins cher" },
+  "depensier":     { "nom": "Dépensier",     "oppose": "radin",      "description": "Tolérance de prix +0,3, aime le luxe" },
+  "honnete":       { "nom": "Honnête",       "oppose": "malhonnete", "description": "Ne fraude jamais, Respectabilité +20 %" },
+  "malhonnete":    { "nom": "Malhonnête",    "oppose": "honnete",    "description": "Fraude plus volontiers" },
+  "temeraire":     { "nom": "Téméraire",     "oppose": "prudent",    "description": "Sous-estime le danger" },
+  "prudent":       { "nom": "Prudent",       "oppose": "temeraire",  "description": "Surestime le danger, fuit plus tôt" },
+  "ambitieux":     { "nom": "Ambitieux",     "oppose": "paresseux",  "description": "Cherche les quêtes, Fierté qui monte vite" },
+  "paresseux":     { "nom": "Paresseux",     "oppose": "ambitieux",  "description": "Se repose plus" },
+  "sociable":      { "nom": "Sociable",      "oppose": "solitaire",  "description": "Aime la taverne et les équipes" },
+  "solitaire":     { "nom": "Solitaire",     "oppose": "sociable",   "description": "Préfère partir seul ou en duo" },
+  "gourmand":      { "nom": "Gourmand",      "oppose": "frugal",     "description": "Mange plus souvent, préfère les bons plats" },
+  "frugal":        { "nom": "Frugal",        "oppose": "gourmand",   "description": "Se contente du gruau sans malus" },
+  "ivrogne":       { "nom": "Ivrogne",       "oppose": null,         "description": "Boit beaucoup à la taverne" },
+  "pieux":         { "nom": "Pieux",         "oppose": null,         "description": "Moral +5 quand un Clerc le soigne" },
+  "superstitieux": { "nom": "Superstitieux", "oppose": null,         "description": "Refuse les Ruines" },
+  "coquet":        { "nom": "Coquet",        "oppose": null,         "description": "Fierté +10" },
+  "bagarreur":     { "nom": "Bagarreur",     "oppose": null,         "description": "Rivalités fréquentes" },
+  "mentor":        { "nom": "Mentor",        "oppose": null,         "description": "Les débutants de son équipe gagnent +20 % d'XP" },
+  "robuste":       { "nom": "Robuste",       "oppose": null,         "description": "Constitution +2" },
+  "malchanceux":   { "nom": "Malchanceux",   "oppose": null,         "description": "Dépouilles abîmées plus souvent, Volonté +2" }
+}

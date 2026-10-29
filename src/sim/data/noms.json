@@ -1,0 +1,154 @@
+{
+  "prenoms": [
+    "Brom",
+    "Aldric",
+    "Isolde",
+    "Maëlle",
+    "Garrik",
+    "Yvain",
+    "Sibylle",
+    "Thibaut",
+    "Odile",
+    "Corentin",
+    "Elsa",
+    "Rurik",
+    "Ysolde",
+    "Bastien",
+    "Ombeline",
+    "Gaspard",
+    "Lothar",
+    "Mélisande",
+    "Hugues",
+    "Aénor",
+    "Tristan",
+    "Blanche",
+    "Arnaud",
+    "Clothilde",
+    "Fulbert",
+    "Héloïse",
+    "Jorund",
+    "Margaux",
+    "Perceval",
+    "Roseline",
+    "Sigrid",
+    "Tancrède",
+    "Ursule",
+    "Valdemar",
+    "Wilhelmine",
+    "Ancelin",
+    "Bérénice",
+    "Cédric",
+    "Diane",
+    "Enguerrand",
+    "Gisèle",
+    "Hamon",
+    "Ingrid",
+    "Jehan",
+    "Katell",
+    "Lancelin",
+    "Mahaut",
+    "Nolwenn",
+    "Osric",
+    "Pétronille"
+  ],
+  "surnoms": [
+    "le Roux",
+    "la Brune",
+    "Main-de-Fer",
+    "le Taciturne",
+    "Pied-Léger",
+    "l'Ours",
+    "la Chouette",
+    "le Borgne",
+    "Cœur-Vaillant",
+    "la Fronde",
+    "le Jeune",
+    "Barbe-Grise",
+    "la Rieuse",
+    "le Rêveur",
+    "Croc-de-Loup",
+    "la Patiente",
+    "le Gourmet",
+    "Sans-Peur",
+    "la Muette",
+    "Bois-Dormant",
+    "le Prompt",
+    "la Ronce",
+    "du Pont",
+    "des Marais"
+  ],
+  "clients": [
+    "Maître Odric, éleveur de Vertbois",
+    "Dame Ysabeau, fermière",
+    "le meunier Gautier",
+    "la veuve Hersent",
+    "Père Anselme, curé du Bourg",
+    "le bourgmestre Thibault",
+    "Maîtresse Agnès, aubergiste",
+    "le charron Robin",
+    "les bûcherons de l'Orée",
+    "le berger Colin",
+    "Maître Fulk, tanneur",
+    "la guilde des porteurs"
+  ],
+  "aides": [
+    {
+      "texte": "décharger les charrettes du marché",
+      "attribut": "FOR"
+    },
+    {
+      "texte": "monter la garde de nuit sur les remparts",
+      "attribut": "VOL"
+    },
+    {
+      "texte": "rattraper un voleur de poules",
+      "attribut": "AGI"
+    },
+    {
+      "texte": "retrouver une bague perdue au lavoir",
+      "attribut": "INT"
+    },
+    {
+      "texte": "réparer la palissade du moulin",
+      "attribut": "FOR"
+    },
+    {
+      "texte": "livrer un pli au château",
+      "attribut": "AGI"
+    },
+    {
+      "texte": "aider à la moisson",
+      "attribut": "CON"
+    },
+    {
+      "texte": "tenir les comptes du marchand de sel",
+      "attribut": "INT"
+    }
+  ],
+  "legendes": {
+    "rat": "le Roi des Rats",
+    "sanglier": "le Grand Solitaire",
+    "loup": "le Loup Blanc",
+    "araignee": "la Veuve de Vertbois",
+    "gobelin": "Krok le Borgne",
+    "crabe": "le Crabe-Montagne",
+    "ours": "Griffe-Grise",
+    "troll": "Mâchefer",
+    "goule": "la Goule Pâle",
+    "wyverne": "l'Aile Noire"
+  },
+  "rivales": [
+    "La Lanterne d'Argent",
+    "Les Lames du Couchant",
+    "La Confrérie du Chêne",
+    "Les Sentinelles de Brume",
+    "La Compagnie du Héron"
+  ],
+  "nobles": [
+    "le baron de Valcourt",
+    "la comtesse d'Aubrac",
+    "le seigneur de Haute-Croix",
+    "la dame de Brumes",
+    "le vicomte de Vertbois"
+  ]
+}

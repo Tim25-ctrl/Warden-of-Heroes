@@ -1,0 +1,7 @@
+{
+  "guerrier": { "nom": "Guerrier", "principaux": ["FOR", "CON"], "attaque": "FOR", "competences": ["maniement", "protection"], "arme": "maniement", "role": "tank" },
+  "rodeur":   { "nom": "Rôdeur",   "principaux": ["AGI", "VOL"], "attaque": "AGI", "competences": ["tir", "pistage"], "arme": "tir", "role": "degats" },
+  "voleur":   { "nom": "Voleur",   "principaux": ["AGI", "INT"], "attaque": "AGI", "competences": ["fouille", "discretion"], "arme": "discretion", "role": "degats" },
+  "mage":     { "nom": "Mage",     "principaux": ["INT", "VOL"], "attaque": "INT", "competences": ["arcanes", "savoir"], "arme": "arcanes", "role": "degats" },
+  "clerc":    { "nom": "Clerc",    "principaux": ["VOL", "CON"], "attaque": "VOL", "competences": ["soins", "exorcisme"], "arme": "exorcisme", "role": "soin" }
+}

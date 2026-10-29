@@ -1,0 +1,14 @@
+[
+  { "id": "ville", "nom": "Ville et alentours", "court": "la Ville", "lieu": "dans les égouts", "trajet": 1, "danger": 10, "poidsQuetes": 0.25, "poidsDanger": 3,
+    "especes": { "rat": 1 }, "plantes": { "camomille": 1 }, "village": "le faubourg" },
+  { "id": "foret", "nom": "Forêt de Vertbois", "court": "Vertbois", "lieu": "à Vertbois", "trajet": 4, "danger": 40, "poidsQuetes": 0.35, "poidsDanger": 2,
+    "especes": { "sanglier": 3, "loup": 2, "araignee": 2, "ours": 1 }, "plantes": { "herbe_plaie": 3, "camomille": 2, "truffe": 0.5 }, "village": "le hameau de l'Orée" },
+  { "id": "collines", "nom": "Collines du Croc", "court": "les Collines", "lieu": "dans les Collines du Croc", "trajet": 8, "danger": 50, "poidsQuetes": 0.2, "poidsDanger": 2,
+    "especes": { "loup": 2, "gobelin": 3 }, "plantes": { "chardon_fer": 2, "fleur_braise": 1 }, "village": "le village de Haute-Croix" },
+  { "id": "marais", "nom": "Marais des Brumes", "court": "le Marais", "lieu": "dans le Marais des Brumes", "trajet": 10, "danger": 60, "poidsQuetes": 0.1, "poidsDanger": 1,
+    "especes": { "araignee": 1, "crabe": 2, "troll": 1 }, "plantes": { "racine_ombre": 2, "lys_argent": 1 }, "village": "le village sur pilotis de Brumes" },
+  { "id": "ruines", "nom": "Ruines d'Ostral", "court": "les Ruines", "lieu": "dans les Ruines d'Ostral", "trajet": 14, "danger": 70, "poidsQuetes": 0.06, "poidsDanger": 1,
+    "especes": { "goule": 3, "golem": 1 }, "plantes": { "mousse_lumineuse": 1 }, "village": "le prieuré d'Ostral" },
+  { "id": "pics", "nom": "Pics des Wyvernes", "court": "les Pics", "lieu": "sur les Pics des Wyvernes", "trajet": 20, "danger": 85, "poidsQuetes": 0.04, "poidsDanger": 0.5,
+    "especes": { "wyverne": 1, "dragon": 0.2 }, "plantes": { "fleur_braise": 1 }, "village": "le camp des bergers" }
+]
