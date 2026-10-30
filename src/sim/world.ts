@@ -14,6 +14,10 @@ import { harvested, huntClosed, killed, plantsOf, popOf, regionalDanger } from '
 import { guildReach, makeChasse, makeExterminationFor, makeLegendQuest } from './quests';
 import { chance, pick, randInt, range, weighted } from './rng';
 import { createProf } from './training';
+import { acceptShared, assaultAllies, buyout, canPoach, dailyDiplomacy, hourlyTournament, onDefamation, onPoachAttempt, onSharedDone, proposeBuyout, registerTournament } from './diplomacy';
+import { dailyWorks, grantPrivilege, hasPrivilege } from './charter';
+import { CITIES } from './data';
+import { dailyCities, newRivalCity, onCaravanExpired, onCityEscortEnd, onRouteQuestDone, reopenRoute, rivalCity, tradeFactor } from './cities';
 import type {
   Adventurer, Decision, DecisionOption, GameState, NewsItem, Palier, Quest, QuestRun, Rival, RoomId, WorldState,
 } from './types';
@@ -47,6 +51,7 @@ export function initWorld(s: GameState): WorldState {
   w.rivals.push(makeRival(s, 'aube', "La Compagnie de l'Aube", 'prestige', 35));
   w.rivals.push(makeRival(s, 'crocs', 'Les Crocs Libres', 'mercenaires', 20));
   w.rivals.push(makeRival(s, 'chene', 'La Confrérie du Chêne', 'chasseurs', 25));   // ajout v1.1
+  for (const r of w.rivals) r.ville = rivalCity(r);   // chaque guilde siège dans une ville voisine (v1.1)
   scheduleSeason(s);
   scheduleCrises(s);
   return w;
@@ -64,6 +69,7 @@ function fill(text: string, data?: Data): string {
 }
 
 export function addRenown(s: GameState, v: number): void {
+  if (v > 0 && hasPrivilege(s, 'herauts')) v *= 1.1;   // privilège des Hérauts
   s.renown = Math.max(0, Math.round((s.renown + v) * 10) / 10);
 }
 
@@ -90,7 +96,10 @@ const atHome = (a: Adventurer) => a.runId === null && !['quete', 'hospitalise', 
 export function decorateQuest(s: GameState, q: Quest): void {
   if (q.type === 'aide' || q.clientType === 'guilde') return;
   let mult = 1;
-  if (s.world.palier !== 'bourg' && q.clientType === 'villageois' && q.type !== 'escorte' && chance(s, 'quetes', W().noblesPart)) {
+  // La route de Valroy, la ville royale, amène des commandes nobles (v1.1), même dans un bourg.
+  const roy = tradeFactor(s, 'nobles');
+  const nobles = s.world.palier !== 'bourg' ? W().noblesPart * (1 + P.villes.noblesMax * roy) : W().noblesPart * P.villes.noblesBourg * roy;
+  if (q.clientType === 'villageois' && q.type !== 'escorte' && !q.route && chance(s, 'quetes', nobles)) {
     q.clientType = 'nobles';
     q.client = pick(s, 'noms', NAMES.nobles as string[]);
     mult *= W().noblesMult;
@@ -131,6 +140,9 @@ function crownQuest(s: GameState): void {
 export function onQuestEnd(s: GameState, run: QuestRun, ok: boolean, team: Adventurer[]): void {
   const q = run.quest;
   if (q.type === 'aide') return;
+  if (q.sharedWith) onSharedDone(s, q.sharedWith, ok);
+  onCityEscortEnd(s, run, ok);
+  onRouteQuestDone(s, q, ok);
   onQuestDone(s, q, ok, team);
   const R = P.renommee;
   if (ok) {
@@ -167,6 +179,12 @@ export function onQuestEnd(s: GameState, run: QuestRun, ok: boolean, team: Adven
  * (ajusté en tranche 3 : la guilde ne peut pas tout prendre, et la pleine pénalité vidait la renommée).
  */
 export function onQuestExpired(s: GameState, q: Quest): void {
+  if (q.examFor !== undefined) {
+    const a = s.adventurers.find((x) => x.id === q.examFor);
+    if (a) log(s, 'aventuriers', 'important', `L'épreuve de rang ${q.rang} de ${advLink(a)} expire sans avoir été tentée. Tu peux en organiser une nouvelle depuis sa fiche.`);
+    return;
+  }
+  if (q.caravane) onCaravanExpired(s, q);
   if (q.clientType === 'guilde' || q.type === 'aide') return;
   if (rangIndex(q.rang) <= guildReach(s) - 1) addRenown(s, -P.renommee.echec[q.rang] * P.renommee.expiration);
 }
@@ -480,6 +498,13 @@ function runAction(s: GameState, id: string, d: Data, until: number): boolean {
 
 // ---------- Décisions (5.4.2, 7.7.1) ----------
 
+/** Décision avec un délai propre (privilèges, tournoi, contrats partagés, rachat). */
+export function offerDecision(s: GameState, kind: string, title: string, text: string, options: DecisionOption[], defaut: string, delayH: number, data?: Data): Decision {
+  const dec = openDecision(s, kind, title, text, options, defaut, data);
+  dec.deadline = s.tick + delayH;
+  return dec;
+}
+
 function openDecision(s: GameState, kind: string, title: string, text: string, options: DecisionOption[], defaut: string, data?: Data): Decision {
   const dec: Decision = { id: s.nextId++, kind, title, text, options, defaut, tick: s.tick, deadline: s.tick + W().delaiDecisionH, data };
   s.world.decisions.push(dec);
@@ -577,6 +602,10 @@ export function decide(s: GameState, id: number, optionId: string, auto = false)
       }
       break;
     }
+    case 'privilege': grantPrivilege(s, opt.id); break;
+    case 'tournoi': if (opt.id !== 'non') registerTournament(s, opt.id as 'meilleurs' | 'espoirs'); break;
+    case 'contrat_partage': if (opt.id === 'accepter') acceptShared(s, String(d.rival)); break;
+    case 'rachat': if (opt.id === 'racheter') buyout(s, String(d.rival)); break;
     case 'assaut':
       if (s.world.assault) {
         s.world.assault.barricade = opt.id === 'barricade' || opt.id === 'tout';
@@ -698,7 +727,8 @@ function rivalsTakeQuests(s: GameState): void {
       let p = clamp(W().rivaleQueteChance * (r.renown / 50), 0.01, 0.12);
       if (r.profil === 'prestige' && (q.clientType === 'nobles' || q.clientType === 'couronne')) p *= 2;
       if (r.profil === 'mercenaires' && rangIndex(q.rang) <= 1) p *= 1.5;
-      if (r.profil === 'chasseurs' && (q.type === 'chasse' || q.type === 'extermination' || q.type === 'cueillette')) p *= 1.5;
+      if (r.profil === 'chasseurs' && (q.type === 'chasse' || q.type === 'extermination')) p *= 1.5;
+      if (r.profil === 'chasseurs' && q.type === 'cueillette') continue;   // le Chêne cueille pour lui-même, pas pour la ville
       if (q.legend) p *= 0.3;
       if (!chance(s, 'monde', p)) continue;
       s.board = s.board.filter((x) => x !== q);
@@ -739,6 +769,7 @@ function noteTrip(s: GameState, r: Rival, zone: string, text: string): void {
 
 /** Une quête prise par une rivale a les mêmes effets que si la guilde l'avait faite : bêtes tuées, plantes cueillies. */
 function rivalDoesQuest(s: GameState, r: Rival, q: Quest): void {
+  if (q.route) reopenRoute(s, q.route, r.nom);
   if (!q.target || !q.zone) return;
   const n = q.count ?? 3;
   if (q.type === 'chasse' || q.type === 'extermination') {
@@ -762,7 +793,8 @@ function rivalExpeditions(s: GameState, r: Rival): void {
   const expected = Math.min(r.size, R.tailleMax) * R.sortiesParMembre * (r.profil === 'chasseurs' ? R.bonusChasseurs : 1);
   const n = Math.floor(expected) + (chance(s, 'monde', expected % 1) ? 1 : 0);
   for (let i = 0; i < n; i++) {
-    const zone = pick(s, 'monde', RIVAL_ZONES[r.profil]);
+    const home = rivalCity(r);   // v1.1 : chaque guilde chasse autour de sa ville
+    const zone = pick(s, 'monde', home && CITIES[home] ? CITIES[home].zonesRivale : RIVAL_ZONES[r.profil]);
     const plants = plantsOf(zone).filter((pl) => popOf(s, zone, pl) > R.seuilChasse);
     if (plants.length && chance(s, 'monde', R.cueillette)) {
       const pl = pick(s, 'monde', plants);
@@ -796,6 +828,8 @@ function rivalAction(s: GameState, r: Rival): void {
     news(s, 'guildes', `${r.nom} lance une guerre des prix : l'Auberge et la Taverne du Pont baissent leurs tarifs de 20 % pour deux semaines.`);
     log(s, 'monde', 'important', `Guerre des prix : ${r.nom} fait baisser les tarifs de l'Auberge et de la Taverne du Pont.`);
   } else if (act === 'debauchage') {
+    if (!canPoach(s, r)) { r.renown += 2; return; }   // pacte de non-débauchage
+    onPoachAttempt(r);
     const target = s.adventurers.filter((a) => a.runId === null && a.status === 'actif' && !a.poachedBy).sort((a, b) => b.respect - a.respect)[0];
     if (!target) return;
     if (target.loyalty < 50) {
@@ -809,6 +843,7 @@ function rivalAction(s: GameState, r: Rival): void {
       log(s, 'aventuriers', 'info', `${advLink(target)} a refusé une offre de ${r.nom}. Sa loyauté envers la guilde paie.`);
     }
   } else if (act === 'diffamation') {
+    onDefamation(r);
     addRenown(s, -P.renommee.diffamation);
     news(s, 'guildes', `${r.nom} répand des rumeurs malveillantes sur la guilde.`);
     openDecision(s, 'diffamation', 'Rumeur diffamatoire', `${r.nom} raconte partout que la guilde exploite ses aventuriers. Ta renommée en souffre (−${P.renommee.diffamation}).`,
@@ -828,6 +863,7 @@ function dailyRivals(s: GameState): void {
     r.size = Math.round(8 + r.renown / 4);
     if (r.renown <= 0) {
       r.bankruptSince = s.tick;
+      proposeBuyout(s, r);
       news(s, 'guildes', `${r.nom} met la clé sous la porte.`);
       log(s, 'monde', 'important', `${r.nom} fait faillite.`);
       continue;
@@ -842,8 +878,9 @@ function dailyRivals(s: GameState): void {
   for (const r of w.rivals) {
     if (r.bankruptSince === null || s.tick - r.bankruptSince < 28 * H) continue;
     const nom = pick(s, 'noms', (NAMES.rivales as string[]).filter((n) => !w.rivals.some((x) => x.nom === n)));
-    Object.assign(r, makeRival(s, `${r.id}+`, nom, r.profil, 15));
-    news(s, 'guildes', `Une nouvelle guilde ouvre ses portes : ${nom}.`);
+    const ville = newRivalCity(s, r);
+    Object.assign(r, makeRival(s, `${r.id}+`, nom, r.profil, 15), { ville, relation: 0, pacteUntil: undefined });
+    news(s, 'guildes', `Une nouvelle guilde ouvre ses portes${ville ? ` à ${CITIES[ville].nom}` : ''} : ${nom}.`);
   }
 }
 
@@ -903,7 +940,10 @@ function assaultWave(s: GameState): void {
   let won = false;
   if (team.length > 0) {
     const leader = [...team].sort((a, b) => b.level - a.level)[0];
-    const res = fight(s, team, as.species, count, leader, 0, { defMult: as.barricade ? 1.2 : 1 });
+    // Rivales alliées : elles envoient leurs combattants (+10 % de défense chacune, v1.1).
+    const allies = assaultAllies(s);
+    if (allies.length && as.wave === 1) log(s, 'monde', 'important', `Les guildes alliées viennent prêter main-forte : ${allies.map((r) => r.nom).join(', ')}.`);
+    const res = fight(s, team, as.species, count, leader, 0, { defMult: (as.barricade ? 1.2 : 1) * (1 + 0.1 * allies.length) });
     won = res.outcome === 'victoire';
     for (const d of res.dead) if (s.adventurers.includes(d)) killAdventurer(s, d, `en défendant la ville contre les ${sp.pluriel}`);
   }
@@ -1056,6 +1096,9 @@ export function morningWorld(s: GameState): void {
   warWeekly(s);
   conscriptsReturn(s);
   dailyRivals(s);
+  dailyDiplomacy(s);
+  dailyWorks(s);
+  dailyCities(s);
   dailyEpidemic(s);
   crownQuest(s);
 
@@ -1064,7 +1107,9 @@ export function morningWorld(s: GameState): void {
   // Renommée : chaque aventurier mécontent ternit un peu l'image de la guilde (6.1.1)
   addRenown(s, -0.2 * s.adventurers.filter((a) => a.status === 'mecontent').length);
 
-  w.history.push({ day, danger: s.danger, prosperity: Math.round(s.prosperity), renown: Math.round(s.renown) });
+  const morale = s.adventurers.length ? Math.round(s.adventurers.reduce((a, x) => a + x.morale, 0) / s.adventurers.length) : 0;
+  w.history.push({ day, danger: s.danger, prosperity: Math.round(s.prosperity), renown: Math.round(s.renown), morale, adventurers: s.adventurers.length,
+    rivals: Object.fromEntries(w.rivals.filter((r) => r.bankruptSince === null).map((r) => [r.nom, Math.round(r.renown)])) });
   if (w.history.length > 224) w.history.splice(0, w.history.length - 224);
   if (weekdayOf(s.tick) === 1) {
     w.popHistory.push({ day, pops: JSON.parse(JSON.stringify(s.populations)) });
@@ -1075,6 +1120,7 @@ export function morningWorld(s: GameState): void {
 /** Chaque heure : échéances des décisions, vagues d'assaut nocturnes. */
 export function hourlyWorld(s: GameState): void {
   hourlyDecisions(s);
+  hourlyTournament(s);
   const as = s.world.assault;
   if (as && hourOf(s.tick) === 23 && s.tick >= as.startTick) assaultWave(s);
 }

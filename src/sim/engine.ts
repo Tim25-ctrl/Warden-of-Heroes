@@ -24,6 +24,11 @@ import { buyModule, hourlyRooms, morningRooms, repairFurniture, restockCheck, se
 import { checkTeams, eveningSocial } from './social';
 import { createStaff, fire, hire, payrollAndProgress, renewStaffCandidates } from './staff';
 import { createProf, dailyProfOffers, fireProf, hireProf, profPayroll } from './training';
+import { dailyRanks, organizeExam } from './ranks';
+import { rangForLevel } from './adventurers';
+import { buyWork } from './charter';
+import { giftRival, pactRival } from './diplomacy';
+import { sendCaravan } from './cities';
 import type { BedType, ClassId, Command, DifficultyId, DishId, GameState, LogEntry, RemedeId } from './types';
 
 export interface NewGameOptions {
@@ -34,7 +39,7 @@ export interface NewGameOptions {
 const zeroRemedes = () => Object.fromEntries(Object.keys(REMEDES).map((k) => [k, 0])) as Record<RemedeId, number>;
 
 /** Version du format de sauvegarde. Les sauvegardes depuis MIN_SAVE_VERSION sont converties au chargement. */
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 export const MIN_SAVE_VERSION = 4;
 
 /** Convertit une sauvegarde d'une version précédente (v4 : prix en curseurs autour d'une référence). */
@@ -59,6 +64,13 @@ export function migrateSave(s: GameState): GameState {
     delete old.dortoirs.curseurs; delete old.refectoire.curseurs; delete old.infirmerie.curseurSoins; delete old.infirmerie.curseurVente;
     delete old.terrain.libreCurseur; delete old.cotisationCurseur;
     s.version = 5;
+  }
+  if (s.version === 5) {
+    // Insignes de rang (v1.1) : chacun garde le rang de son niveau.
+    for (const a of [...s.adventurers, ...s.doorCandidates]) {
+      a.rang = rangForLevel(a.level); a.rankQuests = 0; a.griefRang = 0;
+    }
+    s.version = 6;
   }
   return s;
 }
@@ -211,6 +223,7 @@ export function createGame(o: NewGameOptions): GameState {
 
 function midnight(s: GameState): void {
   payrollAndProgress(s);
+  dailyRanks(s);
   profPayroll(s);
   const closing = s.tick - 1;
   if (weekdayOf(closing) === P.temps.jourDuRoi) {
@@ -364,6 +377,11 @@ export function applyCommand(s: GameState, c: Command): string | null {
     case 'repay': return repay(s, c.lender, c.amount);
     case 'setDifficulty': setDifficulty(s, c.id); break;
     case 'setGaspard': s.gaspard.mode = c.mode; break;
+    case 'organizeExam': return organizeExam(s, c.id, c.offered);
+    case 'buyWork': return buyWork(s, c.id);
+    case 'giftRival': return giftRival(s, c.id);
+    case 'pactRival': return pactRival(s, c.id);
+    case 'sendCaravan': return sendCaravan(s, c.ville, c.res, c.fee);
     case 'gaspardAck': gaspardAck(s, c.id); break;
     case 'pantheonPick': return pickForPantheon(s, c.id);
     case 'ackEpilogue': s.legend.epilogueSeen = true; s.legend.defeatSeen = true; break;

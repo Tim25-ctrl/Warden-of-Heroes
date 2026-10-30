@@ -213,7 +213,8 @@
       "_note": "Greffier (v1.1) : estime le danger sans erreur, écarte davantage les quêtes hors de portée, tient un tableau plus grand.",
       "places": 2,
       "horsPortee": 0.05
-    }
+    },
+    "cueilletteMin": 2
   },
   "combat": {
     "coefDegats": 0.3,
@@ -452,5 +453,240 @@
     "contratEchec": 2,
     "depart": 1,
     "expiration": 0.5
+  },
+  "rangs": {
+    "_note": "Insignes de rang et épreuves (GDD 3.9.1, v1.1). sceauMax : rang maximal (indice F=0 … S=6) par Sceau de la guilde.",
+    "niveaux": {
+      "E": 4,
+      "D": 8,
+      "C": 13,
+      "B": 18,
+      "A": 23,
+      "S": 28
+    },
+    "quetes": 3,
+    "sceauMax": [
+      3,
+      4,
+      5,
+      6,
+      6
+    ],
+    "droits": {
+      "E": 50,
+      "D": 200,
+      "C": 500,
+      "B": 1500,
+      "A": 4000,
+      "S": 10000
+    },
+    "renommee": {
+      "E": 1,
+      "D": 2,
+      "C": 3,
+      "B": 5,
+      "A": 8,
+      "S": 12
+    },
+    "especes": {
+      "E": [
+        "loup",
+        "araignee"
+      ],
+      "D": [
+        "ours",
+        "crabe"
+      ],
+      "C": [
+        "goule",
+        "troll"
+      ],
+      "B": [
+        "wyverne"
+      ],
+      "A": [
+        "golem"
+      ],
+      "S": [
+        "golem"
+      ]
+    },
+    "expirationJours": 5,
+    "attenteJours": 7,
+    "attenteEchecJours": 7,
+    "griefJour": 2,
+    "griefMax": 40
+  },
+  "oeuvres": [
+    {
+      "id": "route_vertbois",
+      "nom": "Route pavée de Vertbois",
+      "cout": 30000,
+      "sceau": 2,
+      "jours": 4,
+      "effet": "Trajet vers Vertbois −25 %",
+      "renommee": 5
+    },
+    {
+      "id": "fontaines",
+      "nom": "Puits et fontaines",
+      "cout": 50000,
+      "sceau": 2,
+      "jours": 5,
+      "effet": "Prospérité +2",
+      "renommee": 5
+    },
+    {
+      "id": "hospice",
+      "nom": "Hospice des pauvres",
+      "cout": 80000,
+      "sceau": 3,
+      "jours": 7,
+      "effet": "Prospérité +2",
+      "renommee": 10
+    },
+    {
+      "id": "statue",
+      "nom": "Statue du Fondateur",
+      "cout": 100000,
+      "sceau": 3,
+      "jours": 6,
+      "effet": "Un monument au fondateur, sur la grand-place",
+      "renommee": 20
+    },
+    {
+      "id": "marche",
+      "nom": "Marché couvert",
+      "cout": 150000,
+      "sceau": 3,
+      "jours": 8,
+      "effet": "Demande des dépouilles +10 %, prospérité +2",
+      "renommee": 5
+    },
+    {
+      "id": "remparts",
+      "nom": "Remparts de la ville",
+      "cout": 200000,
+      "sceau": 4,
+      "jours": 10,
+      "effet": "Danger régional −5",
+      "renommee": 10
+    },
+    {
+      "id": "pont",
+      "nom": "Pont de pierre sur la Brume",
+      "cout": 300000,
+      "sceau": 4,
+      "jours": 12,
+      "effet": "Trajet vers le Marais −25 %, vers les Ruines −15 %",
+      "renommee": 10
+    },
+    {
+      "id": "arc",
+      "nom": "Arc des héros",
+      "cout": 500000,
+      "sceau": 4,
+      "jours": 14,
+      "effet": "Prospérité +3",
+      "renommee": 40
+    }
+  ],
+  "privileges": [
+    {
+      "id": "bourse",
+      "nom": "Bourse royale",
+      "effet": "La Couronne paie 20 % de tes primes"
+    },
+    {
+      "id": "ecuyers",
+      "nom": "Écuyers",
+      "effet": "Les recrues arrivent avec un niveau de plus"
+    },
+    {
+      "id": "droit_chasse",
+      "nom": "Droit de chasse",
+      "effet": "La chasse ne ferme qu'en dessous de 10"
+    },
+    {
+      "id": "franchise",
+      "nom": "Franchise fiscale",
+      "effet": "Taxe royale −20 %"
+    },
+    {
+      "id": "faveur",
+      "nom": "Faveur des marchands",
+      "effet": "Primes des contrats +20 points"
+    },
+    {
+      "id": "medecins",
+      "nom": "Médecins du roi",
+      "effet": "Qualité de l'infirmerie +10"
+    },
+    {
+      "id": "herauts",
+      "nom": "Hérauts",
+      "effet": "Renommée gagnée +10 %"
+    },
+    {
+      "id": "recrutement",
+      "nom": "Bureau de recrutement",
+      "effet": "Candidats à la porte +20 %"
+    }
+  ],
+  "diplomatie": {
+    "_note": "Relations avec les rivales et tournoi (GDD 5.5.1, 5.4.6, v1.1).",
+    "cadeau": 2000,
+    "cadeauRelation": 15,
+    "pacte": 10000,
+    "pacteJours": 112,
+    "partageRecompense": 1.5,
+    "rachatBase": 15000,
+    "rachatParMembre": 200,
+    "rachatMax": 60000,
+    "rachatRenommee": 20,
+    "tournoi": {
+      "saison": 1,
+      "jour": 20,
+      "inscription": 1000,
+      "prix1": 6000,
+      "prix2": 2500,
+      "renommee1": 25,
+      "renommee2": 10,
+      "renommee3": 5,
+      "xpParCombat": 0.1,
+      "blessure": 0.3
+    }
+  },
+  "villes": {
+    "_note": "Villes voisines, routes commerciales, routes coupées et caravanes (GDD 5.8, v1.1). Commerce de 0 à 100 : +8 par escorte réussie, −6 par échec, il perd 2 % de sa valeur chaque jour (−2 points par jour quand la route est coupée). L'avantage de la ville vaut effetMax × commerce / 100.",
+    "partEscortes": 0.5,
+    "recompense": 1.2,
+    "rencontres": 3,
+    "commerceDepart": 20,
+    "commerceOk": 8,
+    "commerceEchec": -6,
+    "commerceErosion": 0.02,
+    "commerceCoupeeJour": 2,
+    "effetMax": 0.15,
+    "noblesMax": 1,
+    "noblesBourg": 0.5,
+    "coupure": {
+      "intervalleJours": 30,
+      "chanceJour": 0.05,
+      "dureeMax": 21,
+      "recompense": 1.5,
+      "renommee": 5,
+      "commerce": 10,
+      "expirationJours": 8
+    },
+    "caravane": {
+      "max": 2,
+      "poidsMax": 80,
+      "prime": 1.5,
+      "primeCommerce": 0.5,
+      "autre": 1.1,
+      "expirationJours": 7,
+      "escorte": 0.5
+    }
   }
 }

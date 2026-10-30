@@ -203,7 +203,7 @@ export function generateContractOffers(s: GameState): void {
       qty: clamp(Math.round(randInt(s, 'marche', 300, 900) / price), 2, 12),
       delivered: 0,
       minQuality: chance(s, 'marche', 0.7) ? 'abimee' : 'intacte',
-      premium: Math.round(range(s, 'marche', P.marche.contrats.primeMin, P.marche.contrats.primeMax) * 20) / 20,
+      premium: Math.round(range(s, 'marche', P.marche.contrats.primeMin, P.marche.contrats.primeMax) * 20) / 20 + (s.privileges?.includes('faveur') ? 0.2 : 0),
       deadline: s.tick + 24 * randInt(s, 'marche', P.marche.contrats.delaiJours[0], P.marche.contrats.delaiJours[1]),
       offerUntil: s.tick + 24 * 3,
     };

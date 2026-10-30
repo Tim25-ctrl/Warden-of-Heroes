@@ -41,7 +41,8 @@ function updateClosedHunts(s: GameState): void {
       const key = `${z}:${id}`;
       const p = popOf(s, z, id);
       const isClosed = closed.includes(key);
-      if (!isClosed && p < P.populations.chasseFermee) {
+      const seuil = s.privileges?.includes('droit_chasse') ? 10 : P.populations.chasseFermee;   // privilège Droit de chasse
+      if (!isClosed && p < seuil) {
         closed.push(key);
         log(s, 'monde', 'info', `La chasse aux ${sp.pluriel} est fermée ${ZONES[z].lieu} : ils se font trop rares. Plus de quête contre eux tant qu'ils ne se sont pas reconstitués.`);
       } else if (isClosed && p >= P.populations.chasseRouverte) {

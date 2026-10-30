@@ -2,7 +2,7 @@
 import { useState } from 'preact/hooks';
 import {
   BEDS, DENREES, DISHES, DORM_LEVELS, ETATS, INF_LEVELS, KITCHEN_LEVELS, MESS_LEVELS, MODULES, P, PROFS, RECIPES, REMEDES, RESOURCES, SLOTS,
-  TERRAIN_LEVELS,
+  TERRAIN_LEVELS, ZONES, isPlant,
 } from '../../sim/data';
 import {
   bedDayPrice, bedPrice, bedRef, bedsAvailable, bedsUsed, careRef, carePrice, chefSkill, currentService, dishPrice, dishQuality,
@@ -17,8 +17,9 @@ import { dormPlacesUsed, moduleBuyable, ROOM_NAMES, upgradeCost, upgradeLock } f
 import { maxProfs, profSalary } from '../../sim/training';
 import type { BedType, DenreeId, DishId, EtatId, GameState, RemedeId, RoomId, SlotId } from '../../sim/types';
 import { ACTIVITY_LABELS, GaugeRow, Gauge, Kpi, Money, NumField, PriceInput, Tabs, useNav } from '../components';
-import { game } from '../store';
+import { game, lastError } from '../store';
 import { BuildingCanvas, type RoomHit } from './BuildingCanvas';
+import { MorningReport } from '../Morning';
 
 const LEVELS: Record<RoomId, { niveau: number; cout: number }[]> = {
   dortoirs: DORM_LEVELS, refectoire: MESS_LEVELS, cuisine: KITCHEN_LEVELS, infirmerie: INF_LEVELS, terrain: TERRAIN_LEVELS,
@@ -77,6 +78,9 @@ function Works({ s, room }: { s: GameState; room: RoomId }) {
   return <><Upgrade s={s} room={room} />{s[room].level > 0 && <Modules s={s} room={room} />}</>;
 }
 
+/** La qualité en un mot, pour lire le chiffre d'un coup d'œil. */
+const qualityWord = (q: number) => (q >= 80 ? 'excellente' : q >= 60 ? 'bonne' : q >= 40 ? 'correcte' : 'médiocre');
+
 // ---------- Dortoirs ----------
 
 function DormPanel({ s }: { s: GameState }) {
@@ -96,11 +100,11 @@ function DormPanel({ s }: { s: GameState }) {
       {tab === 'apercu' && (
         <>
           <div class="kpis">
-            <Kpi k="Qualité" v={Math.round(dormQuality(s))} title="30 + 8 × niveau + aménagements + (propreté − 50) / 2" />
+            <Kpi k="Confort" v={Math.round(dormQuality(s))} title="Ce que les aventuriers pensent de tes dortoirs : niveau, aménagements et propreté (30 + 8 par niveau + aménagements + (propreté − 50) / 2). Plus il est haut, plus ils récupèrent et paient volontiers." hint={qualityWord(dormQuality(s))} />
             <Kpi k="Nuitées aujourd'hui" v={st?.served ?? 0} />
             <Kpi k="Recette du jour" v={<Money v={st?.revenue ?? 0} />} />
-            <Kpi k="Refus pour prix" v={st?.refusals ?? 0} />
-            <Kpi k="Dorment ailleurs" v={st?.toCompetitor ?? 0} />
+            <Kpi k="Refus pour prix" v={st?.refusals ?? 0} title="Aventuriers qui ont trouvé ton prix trop cher aujourd'hui." />
+            <Kpi k="Dorment ailleurs" v={st?.toCompetitor ?? 0} title="Aventuriers partis dormir au Sanglier Borgne (trop cher chez toi, ou plus de lit)." />
           </div>
           <GaugeRow label="Propreté" value={d.proprete} />
           <p class="hint">{valets} valet{valets > 1 ? 's' : ''} pour {used} places (un valet entretient {P.personnel.placesParValet} places).</p>
@@ -160,10 +164,10 @@ function MessPanel({ s, openKitchen }: { s: GameState; openKitchen: () => void }
         <>
           <div class="kpis">
             <Kpi k="Service" v={sv ? sv.nom : 'fermé'} />
-            <Kpi k="Places" v={seats(s)} />
+            <Kpi k="Places" v={seats(s)} title="Nombre d'aventuriers qui peuvent manger en même temps. Agrandis le réfectoire pour en avoir plus." />
             <Kpi k="Repas aujourd'hui" v={st?.served ?? 0} />
             <Kpi k="Recette du jour" v={<Money v={(st?.revenue ?? 0) + (s.stats.services.boissons?.revenue ?? 0)} />} />
-            <Kpi k="Mangent ailleurs" v={st?.toCompetitor ?? 0} />
+            <Kpi k="Mangent ailleurs" v={st?.toCompetitor ?? 0} title="Aventuriers partis manger à la Taverne du Pont : trop cher, plus de place ou rupture au garde-manger." />
           </div>
           {r.damage > 0 && (
             <div class="row" style={{ marginBottom: 8 }}>
@@ -201,9 +205,9 @@ function KitchenPanel({ s }: { s: GameState }) {
       {tab === 'apercu' && (
         <>
           <div class="kpis">
-            <Kpi k="Production" v={`${kitchenRate(s)} portions/h`} title="Cuisinier : 6 + compétence / 10, commis : +4. Moitié moins pendant les travaux." />
+            <Kpi k="Production" v={`${kitchenRate(s)} portions/h`} title="Portions préparées chaque heure : 6 + compétence / 10 par cuisinier, +4 par commis. Moitié moins pendant les travaux." />
             <Kpi k="Portions prêtes" v={r.portionsReady} />
-            <Kpi k="Meilleur cuisinier" v={chefSkill(s)} />
+            <Kpi k="Meilleur cuisinier" v={chefSkill(s)} title="Sa compétence fait la qualité des plats et débloque les plus fins (ragoût 20, rôti 40, festin 65)." />
             <Kpi k="Plats au menu" v={`${mealsOnMenu} / ${menuSize(s)}`} />
             <Kpi k="Garde-manger" v={`${pantryTotal(s)} / ${pantryCapacity(s)}`} />
           </div>
@@ -307,6 +311,40 @@ function KitchenPanel({ s }: { s: GameState }) {
 
 // ---------- Infirmerie ----------
 
+/** Herbes des recettes qui manquent : la guilde peut commander une cueillette (prime) en un clic (v1.1). */
+function HerbOrders({ s }: { s: GameState }) {
+  const plants = [...new Set(RECIPES.flatMap((r) => Object.keys(r.ingredients)).filter((k) => isPlant(k)))];
+  const low = plants.filter((pl) => stockOfRes(s, pl) < 6);
+  const err = lastError();
+  if (!low.length) return <p class="hint" style={{ marginTop: 10 }}>Les herbes des recettes sont en stock.</p>;
+  return (
+    <>
+      <h4 style={{ marginTop: 12 }}>Herbes à faire cueillir</h4>
+      <p class="hint">Publie une cueillette au tableau (une prime : la somme est bloquée, rendue si personne ne la fait).</p>
+      {low.map((pl) => {
+        const zone = Object.keys(ZONES).find((z) => ZONES[z].plantes[pl] !== undefined);
+        const count = 8;
+        const budget = Math.max(50, Math.round((RESOURCES[pl].prix * count * 1.5) / 10) * 10);
+        const pending = s.board.some((q) => q.type === 'cueillette' && q.target === pl && q.clientType === 'guilde');
+        return (
+          <div class="row" style={{ padding: '4px 0', borderBottom: '1px solid var(--line-soft)' }}>
+            <span style={{ minWidth: 160 }}><strong>{RESOURCES[pl].nom}</strong> <small>en stock : {stockOfRes(s, pl)}</small></span>
+            <small class="soft">{zone ? ZONES[zone].nom : ''}</small>
+            <span class="spacer" />
+            {pending ? <span class="tag sage">cueillette au tableau</span> : (
+              <button class="btn small" disabled={!zone || budget > s.treasury}
+                onClick={() => zone && game.command({ type: 'createPrime', questType: 'cueillette', zone, target: pl, count, reward: budget, days: 6 })}>
+                Faire cueillir {count} ({money(budget)})
+              </button>
+            )}
+          </div>
+        );
+      })}
+      {err && <p class="hint" style={{ color: 'var(--seal)' }}>{err}</p>}
+    </>
+  );
+}
+
 function InfirmeriePanel({ s }: { s: GameState }) {
   const [tab, setTab] = useState<'apercu' | 'tarifs' | 'remedes' | 'apothicairerie' | 'credit' | 'travaux'>(s.infirmerie.level ? 'apercu' : 'travaux');
   const inf = s.infirmerie;
@@ -324,7 +362,7 @@ function InfirmeriePanel({ s }: { s: GameState }) {
       {tab === 'apercu' && (
         <>
           <div class="kpis">
-            <Kpi k="Qualité" v={Math.round(infQuality(s))} title="30 + 6 × niveau + 0,3 × compétence des soigneurs" />
+            <Kpi k="Qualité des soins" v={Math.round(infQuality(s))} title="Ce que les aventuriers pensent de ton infirmerie : niveau et compétence des soigneurs (30 + 6 par niveau + 0,3 × compétence)." hint={qualityWord(infQuality(s))} />
             <Kpi k="Lits occupés" v={`${hospitalized(s)} / ${infBeds(s)}`} />
             <Kpi k="Soigneurs" v={healers.length} />
             <Kpi k="Soins aujourd'hui" v={st?.served ?? 0} />
@@ -395,6 +433,7 @@ function InfirmeriePanel({ s }: { s: GameState }) {
                 );
               })}</tbody>
             </table>
+            <HerbOrders s={s} />
           </>
       )}
       {tab === 'credit' && (
@@ -429,7 +468,7 @@ function TerrainPanel({ s }: { s: GameState }) {
       {tab === 'apercu' && (
         <>
           <div class="kpis">
-            <Kpi k="Qualité" v={Math.round(terrainQuality(s))} />
+            <Kpi k="Qualité" v={Math.round(terrainQuality(s))} title="Ce que les élèves pensent du terrain (30 + 8 par niveau). Elle rend les séances plus efficaces et plus chères." hint={qualityWord(terrainQuality(s))} />
             <Kpi k="Professeurs" v={`${t.profs.length} / ${maxProfs(s)}`} />
             <Kpi k="Élèves aujourd'hui" v={st?.served ?? 0} />
             <Kpi k="Recette du jour" v={<Money v={st?.revenue ?? 0} />} />
@@ -489,9 +528,10 @@ export function Siege({ s }: { s: GameState }) {
         <h2>Le Siège</h2>
         <span class="hint">Clique sur une salle pour la gérer, ou sur un aventurier pour ouvrir sa fiche.</span>
       </div>
+      <MorningReport s={s} />
       <BuildingCanvas s={s} selected={shown}
         onSelect={(r) => { if (r === 'quete') nav.go('tableau'); else if (r === 'ville') nav.go('aventuriers'); else setRoom(r); }}
-        onOpen={nav.openAdventurer} />
+        onOpen={nav.openAdventurer} onStaff={() => nav.go('personnel')} />
       {shown === 'dortoirs' && <DormPanel s={s} />}
       {shown === 'refectoire' && <MessPanel s={s} openKitchen={() => setRoom('cuisine')} />}
       {shown === 'cuisine' && <KitchenPanel s={s} />}

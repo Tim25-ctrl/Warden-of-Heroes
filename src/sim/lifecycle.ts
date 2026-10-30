@@ -7,6 +7,7 @@ import { advLink, money } from './format';
 import { earn, log, spend, think, flow } from './journal';
 import { chance, randInt, range } from './rng';
 import { onDeath, onLeave } from './social';
+import { hasPrivilege } from './charter';
 import type { Adventurer, GameState, Money } from './types';
 import { addRenown, onAdventurerDeath, poachedDeparture, recruitShareFactor } from './world';
 import { onMemorial } from './legend';
@@ -128,7 +129,7 @@ export function dailyAdventurers(s: GameState): void {
 // ---------- Envie de partir (3.12.2) ----------
 
 export function departureDesire(a: Adventurer): number {
-  return 0.8 * (50 - a.morale) + 0.5 * (a.griefPrix + a.griefFiscal) - 0.4 * a.loyalty;
+  return 0.8 * (50 - a.morale) + 0.5 * (a.griefPrix + a.griefFiscal + (a.griefRang ?? 0)) - 0.4 * a.loyalty;
 }
 
 export function evaluateDepartures(s: GameState): void {
@@ -179,10 +180,10 @@ export function spawnCandidates(s: GameState): void {
   const fCot = clamp(1.5 - 0.5 * (cotisationPrice(s) / cotisationRef(s)), 0.2, 1.5);
   const fPrix = clamp(1.6 - 0.6 * weekPriceRatio(s), 0.3, 1.3);
   const fTax = s.taxRate > 0.3 ? 0.5 : s.taxRate <= 0.1 ? 1.2 : 1;
-  const expected = P.aventuriers.candidatsParJour * fCot * fPrix * fTax * recruitShareFactor(s);
+  const expected = P.aventuriers.candidatsParJour * fCot * fPrix * fTax * recruitShareFactor(s) * (hasPrivilege(s, 'recrutement') ? 1.2 : 1);
   const n = Math.floor(expected) + (chance(s, 'aventuriers', expected % 1) ? 1 : 0);
   for (let i = 0; i < n; i++) {
-    const a = createAdventurer(s, { level: randInt(s, 'aventuriers', 1, 4), goldMin: P.aventuriers.orRecrueMin, goldMax: P.aventuriers.orRecrueMax });
+    const a = createAdventurer(s, { level: randInt(s, 'aventuriers', 1, 4) + (hasPrivilege(s, 'ecuyers') ? 1 : 0), goldMin: P.aventuriers.orRecrueMin, goldMax: P.aventuriers.orRecrueMax });
     if (s.pantheonNames.length && chance(s, 'aventuriers', 0.03)) {
       const hero = s.pantheonNames[randInt(s, 'aventuriers', 0, s.pantheonNames.length - 1)];
       a.history.notable.push(`descendant de ${hero}`);

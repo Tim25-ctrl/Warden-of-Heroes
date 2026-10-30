@@ -4,6 +4,7 @@ import {
   TERRAIN_LEVELS, TRAINING,
 } from './data';
 import { hourOf } from './format';
+import { cityDiscount } from './cities';
 import { damaged, modAdd, modMult, season } from './mods';
 import { diff } from './legend';
 import { spend } from './journal';
@@ -216,7 +217,7 @@ export function foodUnitPrice(s: GameState, d: DenreeId): number {
   // Saisons (5.2) : denrées −20 % en automne, légumes ×1,5 en hiver. Pénurie et autres événements (5.4.3).
   const sea = season(s);
   const saison = (sea === 2 ? P.monde.automneDenrees : 1) * (sea === 3 && d === 'legumes' ? P.monde.hiverLegumes : 1);
-  return DENREES[d].prix * IP(s) * saison * modMult(s, `denree:${d}`) * (1 - intendantDiscount(s));
+  return DENREES[d].prix * IP(s) * saison * modMult(s, `denree:${d}`) * (1 - intendantDiscount(s)) * cityDiscount(s, 'denrees');
 }
 
 export function orderCost(s: GameState, d: DenreeId, qty: number): Money {
@@ -286,7 +287,7 @@ export function applyRefusal(s: GameState, a: Adventurer, R: number): void {
 export function infQuality(s: GameState): number {
   const heal = s.staff.filter((m) => m.role === 'soigneur' && !isAbsent(s, m));
   const c = heal.length ? heal.reduce((a, m) => a + m.c, 0) / heal.length : 0;
-  return clamp(30 + 6 * s.infirmerie.level + 0.3 * c, 0, 100);
+  return clamp(30 + 6 * s.infirmerie.level + 0.3 * c + (s.privileges?.includes('medecins') ? 10 : 0), 0, 100);
 }
 export function infBeds(s: GameState): number {
   if (s.infirmerie.level === 0) return 0;
@@ -315,7 +316,7 @@ export function salePrice(s: GameState, r: RemedeId): Money {
   return Math.max(1, Math.round(s.infirmerie.prixVente * saleBase(r) / saleBase('potion')));
 }
 export function remedyBuyPrice(s: GameState, r: RemedeId): Money {
-  return Math.max(1, Math.round(REMEDES[r].prix * IP(s) * (1 - intendantDiscount(s))));
+  return Math.max(1, Math.round(REMEDES[r].prix * IP(s) * (1 - intendantDiscount(s)) * cityDiscount(s, 'remedes')));
 }
 
 // ---------- Terrain (1.7) ----------

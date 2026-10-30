@@ -10,7 +10,14 @@ import { money } from '../src/sim/format';
 import { salaryOf } from '../src/sim/staff';
 import { boardQuests, guildReach, relinkRuns } from '../src/sim/quests';
 import { huntClosed } from '../src/sim/populations';
-import { RESOURCES, SPECIES, ZONES } from '../src/sim/data';
+import { grantPrivilege, hasPrivilege, workState } from '../src/sim/charter';
+import { giftRival, relationOf } from '../src/sim/diplomacy';
+import { examOf, examRang, isCandidate, onExamDone } from '../src/sim/ranks';
+import { CITIES, CITY_IDS, RESOURCES, SPECIES, ZONES } from '../src/sim/data';
+import { cityState, cutRoute, onCityEscortEnd, reopenRoute, rivalCity, routeOpen, tradeFactor } from '../src/sim/cities';
+import { foodUnitPrice } from '../src/sim/economy';
+import { expireQuests, makeCityEscort } from '../src/sim/quests';
+import type { QuestRun } from '../src/sim/types';
 import type { GameState } from '../src/sim/types';
 
 describe('formules du GDD', () => {
@@ -112,6 +119,38 @@ describe('règles de jeu', () => {
     expect(dishUnlocked(s, 'biere')).toBe(true);
     expect(s.refectoire.menu).toContain('biere');
     expect(menuSize(s)).toBe(3);
+  });
+  it("les insignes s'obtiennent par une épreuve (v1.1)", () => {
+    const s = createGame({ seed: 8 });
+    const a = s.adventurers.find((x) => x.level <= 3)!;
+    expect(a.rang).toBe('F');
+    expect(isCandidate(s, a)).toBe(false);
+    a.level = 9; a.rankQuests = 3;
+    expect(isCandidate(s, a)).toBe(true);
+    expect(examRang(s, a)).toBe('D');            // il saute le rang E : son niveau vaut D
+    s.treasury = 100000;
+    expect(applyCommand(s, { type: 'organizeExam', id: a.id, offered: true })).toBeNull();
+    const q = examOf(s, a)!;
+    expect(q.rang).toBe('D');
+    expect(q.reward).toBe(0);
+    onExamDone(s, a, q, true);
+    expect(a.rang).toBe('D');
+    expect(a.rankQuests).toBe(0);
+  });
+  it('œuvres, privilèges et relations (v1.1)', () => {
+    const s = createGame({ seed: 12 });
+    s.rank = 2; s.treasury = 200000;
+    expect(applyCommand(s, { type: 'buyWork', id: 'route_vertbois' })).toBeNull();
+    expect(s.treasury).toBe(170000);
+    expect(workState(s, 'route_vertbois')).toBe('chantier');
+    stepDays(s, 5);
+    expect(workState(s, 'route_vertbois')).toBe('fini');
+    grantPrivilege(s, 'herauts');
+    expect(hasPrivilege(s, 'herauts')).toBe(true);
+    const r = s.world.rivals[0];
+    expect(giftRival(s, r.id)).toBeNull();
+    expect(relationOf(r)).toBeGreaterThan(10);
+    expect(giftRival(s, r.id)).toMatch(/semaine/);
   });
   it('la chasse ferme sous 15 et rouvre à 25 (v1.1)', () => {
     const s = createGame({ seed: 6 });
@@ -346,5 +385,69 @@ describe('la légende (tranche 4)', () => {
     const e = epilogue(s);
     expect(e.bilan.length).toBeGreaterThan(0);
     expect(e.destins.length).toBeGreaterThan(0);
+  });
+});
+
+describe('les villes voisines (v1.1)', () => {
+  const fakeRun = (q: ReturnType<typeof makeCityEscort>, convoyHp = 100) => ({ quest: q, convoyHp } as unknown as QuestRun);
+  it('chaque rivale siège dans une ville, et les escortes lointaines vont jusqu\'à elle', () => {
+    const s = createGame({ seed: 70 });
+    expect(s.world.rivals.map(rivalCity)).toEqual(['valroy', 'port', 'chenaie']);
+    const q = makeCityEscort(s, 'port');
+    expect(q.dest).toBe('port');
+    expect(q.zone).toBe(CITIES.port.route);
+    expect(q.rang).toBe('C');
+    expect(q.title).toContain('Port-Salant');
+  });
+  it('une escorte réussie nourrit le commerce, qui rend les denrées moins chères', () => {
+    const s = createGame({ seed: 71 });
+    const before = foodUnitPrice(s, 'cereales');
+    const c0 = cityState(s, 'port').commerce;
+    for (let i = 0; i < 10; i++) onCityEscortEnd(s, fakeRun(makeCityEscort(s, 'port')), true);
+    expect(cityState(s, 'port').commerce).toBe(Math.min(100, c0 + 80));
+    expect(tradeFactor(s, 'denrees')).toBeCloseTo(cityState(s, 'port').commerce / 100);
+    expect(foodUnitPrice(s, 'cereales')).toBeLessThan(before);
+    onCityEscortEnd(s, fakeRun(makeCityEscort(s, 'port')), false);
+    expect(cityState(s, 'port').commerce).toBe(Math.min(100, c0 + 80) - 6);
+  });
+  it('une route coupée bloque les escortes, une quête la rouvre', () => {
+    const s = createGame({ seed: 72 });
+    stepDays(s, 2);
+    expect(cutRoute(s, 'chenaie')).toBe(true);
+    expect(routeOpen(s, 'chenaie')).toBe(false);
+    expect(tradeFactor(s, 'remedes')).toBe(0);
+    const rq = s.board.find((q) => q.route === 'chenaie');
+    expect(rq).toBeDefined();
+    expect(rq!.client).toBe(CITIES.chenaie.conseil);
+    stepDays(s, 3);
+    expect(s.board.some((q) => q.dest === 'chenaie')).toBe(false);
+    const r0 = s.renown;
+    reopenRoute(s, 'chenaie', null);
+    expect(routeOpen(s, 'chenaie')).toBe(true);
+    expect(s.renown).toBeGreaterThan(r0);
+    expect(s.board.some((q) => q.route === 'chenaie')).toBe(false);
+  });
+  it('une caravane emporte les marchandises, les vend à la ville ou les rapporte', () => {
+    const s = createGame({ seed: 73 });
+    s.resserre.push({ res: 'carapace', qty: 10, quality: 'intacte', fresh: 1 });
+    const t0 = s.treasury;
+    expect(applyCommand(s, { type: 'sendCaravan', ville: 'brisemine', res: ['carapace'], fee: 5000 })).toBeNull();
+    expect(s.treasury).toBe(t0 - 5000);
+    expect(s.resserre.some((l) => l.res === 'carapace')).toBe(false);
+    const q = s.board.find((x) => x.caravane)!;
+    expect(q.dest).toBe('brisemine');
+    expect(q.caravane!.reduce((a, l) => a + l.qty, 0)).toBe(10);
+    // Personne ne la prend : les marchandises et le prix de l'escorte reviennent.
+    q.expires = s.tick;
+    expireQuests(s);
+    expect(s.resserre.find((l) => l.res === 'carapace')?.qty).toBe(10);
+    expect(s.treasury).toBe(t0);
+    // Une caravane arrivée vend mieux qu'en ville (carapaces demandées à Brisemine).
+    applyCommand(s, { type: 'sendCaravan', ville: 'brisemine', res: ['carapace'], fee: 5000 });
+    const q2 = s.board.find((x) => x.caravane)!;
+    const t1 = s.treasury;
+    onCityEscortEnd(s, fakeRun(q2), true);
+    expect(s.treasury - t1).toBeGreaterThan(10 * RESOURCES.carapace.prix);
+    expect(CITY_IDS.length).toBe(4);
   });
 });

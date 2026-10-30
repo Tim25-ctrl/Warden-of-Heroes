@@ -163,8 +163,8 @@ export function GrandLivre({ s }: { s: GameState }) {
         <Kpi k="Trésorerie" v={<Money v={s.treasury} />} />
         <Kpi k="Solde moyen (7 j)" v={<Money v={Math.round(avgNet)} signed />} />
         <Kpi k="Prochain Jour du Roi" v={toKing === 0 ? 'ce soir' : `dans ${toKing} j`} />
-        <Kpi k="Taxe royale estimée" v={money(taxe)} title="(5 po + 3 % du chiffre d'affaires de la semaine)" />
-        <Kpi k="Entretien hebdomadaire" v={money(entretien)} title="3 % de la valeur des bâtiments" />
+        <Kpi k="Taxe royale estimée" v={money(taxe)} title="Payée à la Couronne chaque Jour du Roi : 5 po + 3 % des recettes de la semaine, plus 50 % par Sceau au-delà du premier." />
+        <Kpi k="Entretien hebdomadaire" v={money(entretien)} title="Réparations des bâtiments, chaque Jour du Roi : un petit pourcentage de leur valeur." />
       </div>
       <div class="panel"><h3>Recettes et dépenses, jour par jour</h3><FlowChart s={s} /></div>
       {s.ledger.length > 0 && (

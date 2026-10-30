@@ -8,6 +8,7 @@ import { advLink, dayOf, hourOf, money, SEASONS, seasonOf, weekdayOf, yearOf } f
 import { earn, log, spend } from './journal';
 import { pick, rand } from './rng';
 import { addRel, rel, relStatus } from './social';
+import { offerPrivileges } from './charter';
 import type {
   Adventurer, Difficulty, DifficultyId, GameState, GaspardState, GuildBook, LegendState, Loans, Money, Rang, RoomId,
 } from './types';
@@ -119,6 +120,7 @@ function herald(s: GameState): void {
   if (s.rank === 2 && !C(s).taxed) unlock(s, 'sans_impot', true);
   if (s.rank === 4 && s.difficulty.id === 'impitoyable') unlock(s, 'impitoyable', true);
   advise(s, 'promotion');
+  offerPrivileges(s);
   if (s.rank >= SEALS.length && s.legend.victoryTick === null) {
     s.legend.victoryTick = s.tick;
     log(s, 'guilde', 'critique', 'Victoire : la guilde a obtenu le plus haut des Sceaux royaux. La partie continue, sans fin.');

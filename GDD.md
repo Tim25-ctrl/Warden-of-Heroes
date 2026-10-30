@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.1 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
+> **Statut du document :** v2.3 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -1347,6 +1347,36 @@ Les quêtes dans les **Ruines** peuvent rapporter des **objets anciens**, trouv�
 - **Ajusté en v1.1 :** le coefficient passe de 0,25 à 0,35, et les quêtes de haut rang, plus longues, forment davantage : XP ×1,3 pour une quête de rang C, ×1,6 en B, ×1,9 en A, ×2,2 en S. Les meilleurs aventuriers plafonnaient vers le niveau 18 au bout d'un an et demi (D-124).
 - **Correspondance indicative entre niveau et rang de quête :** F = 1 à 3, E = 4 à 7, D = 8 à 12, C = 13 à 17, B = 18 à 22, A = 23 à 27, S = 28 à 30.
 
+#### 3.9.1 Les insignes de rang et les épreuves (ajout v1.1)
+
+Jusqu'ici, le rang d'un aventurier découlait de son niveau. Désormais, chaque aventurier porte un **insigne de rang** officiel (F à S), remis par la guilde : le niveau ne suffit plus, c'est le gardien qui décide quand un aventurier passe l'**épreuve** du rang suivant (D-142).
+
+**Devenir candidat.** Un aventurier peut passer une épreuve quand les trois conditions sont réunies :
+- il a le **niveau** du rang visé : E 4, D 8, C 13, B 18, A 23, S 28 ;
+- il a réussi **3 quêtes de son rang ou plus** depuis sa dernière promotion ;
+- le **Sceau de la guilde** l'autorise : Sceau de Cuivre jusqu'au rang C, Fer jusqu'à B, Argent jusqu'à A, Or et Mithril jusqu'à S.
+
+L'épreuve vise **le rang de son niveau** (dans la limite du Sceau), et au moins le rang suivant : un aventurier qui a pris de l'avance peut **sauter des rangs** en une seule épreuve.
+
+**L'épreuve.** Sur décision du gardien, une quête d'épreuve est affichée au tableau, réservée au candidat : il la mène, avec les compagnons de son choix (pour une épreuve, la limite de rang ne s'applique pas à eux : ils viennent en soutien). Il s'agit d'affronter **un seul groupe** de bêtes du rang visé (E : loups ou araignées ; D : ours-hiboux ou crabes-rocs ; C : goules ou trolls ; B : une wyverne ; A : un golem runique ; S : deux golems runiques). La guilde repère elle-même les bêtes : l'épreuve ne dépend pas de leur population, même si la chasse y est fermée. Pas de récompense. L'épreuve expire au bout de 5 jours si elle n'est pas tentée (le journal le signale ; les droits ne sont pas rendus).
+
+**Les droits d'épreuve** sont payés par le candidat à la guilde (recette « Droits d'épreuve ») : E 50 pc, D 2 po, C 5 po, B 15 po, A 40 po, S 100 po. Pas de cérémonie payante pour la guilde. Si le candidat n'a pas de quoi payer, le gardien peut **offrir l'épreuve** : la guilde paie, et le candidat gagne 5 de loyauté.
+
+| Issue | Effets |
+|-------|--------|
+| **Réussite** | Insigne du rang supérieur ; moral +10, respect +5, fierté +5, loyauté +5 ; renommée de la guilde +1 (E), +2 (D), +3 (C), +5 (B), +8 (A), +12 (S). Annoncé au journal et dans les Chroniques |
+| **Échec** | Il garde son rang (effets habituels d'une quête échouée) ; nouvelle épreuve possible après 7 jours |
+
+**Ce que change l'insigne :**
+- **Accès aux quêtes :** un aventurier n'accepte que les quêtes **jusqu'à son rang + 1** (rang de l'insigne, pas du niveau). Un aventurier fier refuse toujours les quêtes de deux rangs sous le sien.
+- **Le goût du défi** (4.5) et la **portée de la guilde** (4.3.4) se calculent sur les insignes.
+- **L'attente :** un candidat pour qui aucune épreuve n'est organisée depuis plus de 7 jours accumule un **grief de reconnaissance** (+2 par jour, 40 au plus). Il pèse sur l'envie de partir comme les griefs de prix et de taxe, et retombe à 0 à la promotion.
+- **Les recrues** arrivent avec l'insigne de leur ancienne guilde (le rang de leur niveau), dans la limite de ton Sceau.
+
+**Interface :** colonne Rang dans la liste des aventuriers (« ! » candidat, « ⚔ » épreuve prévue), badge « candidat », et dans la fiche le bouton **Organiser l'épreuve** (droits à sa charge) ou **Offrir l'épreuve**, avec l'état des trois conditions. Gaspard signale le premier candidat.
+
+> **Réglages après simulation :** avec 4 quêtes, des plafonds d'un rang plus bas et une promotion d'un seul cran, les rangs prenaient un énorme retard sur les niveaux (des niveaux 25 encore au rang D), et le dragon (rang S, réservé aux insignes A et plus) n'était plus jamais tenté. Les épreuves visant des bêtes devenues rares échouaient, et les compagnons ne pouvaient pas suivre un candidat à une épreuve de rang A ou S.
+
 ### 3.10 La prise de décision
 
 L'IA choisit une nouvelle activité **à la fin de la précédente**. Elle ne la remet pas en cause en cours de route, sauf urgence. Cela évite les comportements erratiques.
@@ -2009,6 +2039,15 @@ Le joueur peut **casser chaque chaîne** : publier des primes d'extermination, d
 - La fiabilité n'est **jamais affichée** : au joueur de juger s'il se prépare ou non.
 - **Précisé en tranche 3 :** les 25 % de rumeurs inexactes se partagent à parts égales entre les **fausses alertes** (l'événement n'a pas lieu) et les **détails faux** (l'événement a lieu, mais ailleurs que prévu).
 
+#### 5.4.6 Le Tournoi des insignes (ajout v1.1)
+
+Une fois par an, au 20ᵉ jour de l'été, la ville organise le **Tournoi des insignes** : un tournoi à élimination directe entre les champions des guildes (D-144).
+- **Annonce** une semaine avant (décision) : tu inscris *tes trois meilleurs*, *tes jeunes espoirs* (les trois meilleurs de rang C ou moins, qui progressent davantage), ou tu *ne participes pas*. Inscription : 10 po.
+- **Les rivales** envoient chacune un champion, d'autant plus fort que leur renommée est haute. Il y a 8 places : les places vides sont prises par des duellistes de la ville.
+- **Les combats** comparent la puissance des deux champions, avec une bonne part de hasard (le moins fort gagne une fois sur quatre environ quand l'écart est faible). Un combattant battu peut sortir blessé (plaie légère, 30 %).
+- **Récompenses** : vainqueur 60 po et 25 de renommée pour sa guilde, finaliste 25 po et 10, demi-finaliste 5 de renommée. Chaque champion de la guilde gagne de l'expérience (un dixième de niveau par combat), du respect et du moral ; le vainqueur gagne un haut fait.
+- Le résultat paraît dans les Chroniques et le Livre de la guilde. Une rivale qui gagne le tournoi gagne 25 de renommée.
+
 ### 5.5 Les guildes rivales
 
 Deux guildes rivales, **simulées de façon abstraite** (sans agents individuels) :
@@ -2031,6 +2070,7 @@ Deux guildes rivales, **simulées de façon abstraite** (sans agents individuels
 > - **Quêtes prises :** une quête du tableau réalisée par une rivale a désormais ses effets : bêtes tuées, plantes cueillies.
 > - **Marché :** 40 % de leurs prises arrivent sur le marché de la ville (2.5.1).
 > - **Carte :** des fanions aux couleurs de chaque rivale marquent leurs sorties des 3 derniers jours (7.5.6). Résultat : la carte et les cours évoluent sans le joueur, mais les rivales ne font que contenir les proliférations ; c'est la guilde qui fait vraiment baisser le danger.
+> **Ajusté en v1.1 : rivales situées** (D-149). Chaque guilde siège dans une ville voisine (5.8) et chasse autour : l'Aube depuis Valroy (Collines, Ruines, Pics), les Crocs Libres depuis Port-Salant (Marais, Ville, Vertbois), la Confrérie du Chêne depuis Chênaie-sur-Orve (Vertbois, Collines, Marais). Une nouvelle guilde qui remplace une guilde en faillite s'installe à Brisemine si la ville est libre, sinon dans la ville de la guilde disparue.
 - **Les débauchages** (3.12.2) viennent d'elles.
 
 **Leurs actions** (environ une toutes les 2 semaines par rivale) :
@@ -2050,6 +2090,24 @@ Une rivale peut **faire faillite** si sa Renommée tombe à 0. Une nouvelle guil
 > - **Actions :** une tous les 10 à 18 jours par rivale. Le **débauchage** vise l'aventurier le plus respecté. S'il a moins de 50 de loyauté, il part dans 2 jours, sauf si sa loyauté remonte à 50 entre-temps. Face à une rivale, une prime de rétention donne jusqu'à +15 de loyauté en plus.
 > - **Recrues :** le flux de candidats est multiplié par √(attrait de la guilde / attrait moyen des rivales), entre ×0,6 et ×1,4, avec Attrait = (10 + Renommée) × facteur de taxe × facteur de tarifs.
 > - **Taux de référence :** les aventuriers ne protestent contre la taxe qu'au-delà du taux de référence régional + 5 points.
+
+#### 5.5.1 Relations avec les rivales (ajout v1.1)
+
+Chaque rivale a une **relation** avec ta guilde, de −100 (hostile) à +100 (alliée), qui part de 0 et revient doucement vers 0 (2 points par semaine). Elle s'affiche dans les Chroniques : *hostile* sous −30, *froide* jusqu'à 0, *cordiale* jusqu'à 30, *alliée* au-delà (D-143).
+
+| Ce qui la change | Effet |
+|------------------|-------|
+| Elle tente de débaucher un de tes aventuriers | −5 |
+| Elle répand une rumeur diffamatoire | −5 |
+| Tu lui offres un **cadeau diplomatique** (20 po, une fois par semaine) | +15 |
+| Un **contrat partagé** réussi | +10 (échoué : −10) |
+| Tu la **rachètes** quand elle fait faillite | — (elle disparaît) |
+
+**Ce que tu peux faire (Chroniques, panneau des guildes) :**
+- **Pacte de non-débauchage** (relation cordiale ou mieux, 100 po, un an) : elle ne tente plus de débaucher tes aventuriers.
+- **Contrat partagé** : une rivale cordiale ou alliée te propose, une fois par saison, une grosse commande à mener ensemble (une quête à ton tableau, récompense ×1,5, dont un tiers lui revient). Tu acceptes ou tu refuses (décision).
+- **Aide contre l'assaut** : pendant un assaut sur la ville, chaque rivale alliée envoie ses combattants : la défense de chaque vague est renforcée de 10 % par rivale alliée.
+- **Rachat** : quand une rivale fait faillite, tu peux la racheter (décision, 150 po + 2 po par membre, plafonné à 600 po). Ses 3 à 5 meilleurs aventuriers rejoignent ta guilde et tu gagnes 20 de renommée ; une nouvelle guilde ne la remplace qu'un mois plus tard.
 
 ### 5.6 L'assaut sur la ville
 
@@ -2098,6 +2156,29 @@ Contacts = nombre de malades qui ont fréquenté la même salle ce jour-là (ré
   - Un employé tombe malade avec une probabilité de 75 % du p de base. Il est absent 3 jours, et son poste ne compte plus (soins, cuisine, ménage, inspection, remises de l'intendant).
   - Une équipe revenue malade du Marais déclenche une épidémie dans 15 % des cas.
   - Délai de 56 jours entre deux épidémies.
+
+### 5.8 Les villes voisines (ajout v1.1)
+
+Quatre villes entourent la région, au bout de routes commerciales qui traversent une zone (D-148). Elles sont dessinées au bord de la Carte (7.5.6).
+
+| Ville | Caractère | Route par | Trajet | Escortes | Guilde qui y siège | Achète bien | Avantage de la route |
+|-------|-----------|-----------|--------|----------|--------------------|-------------|----------------------|
+| **Chênaie-sur-Orve** | Bourg forestier | Vertbois | 10 h | rang E | La Confrérie du Chêne | Plantes, os | Remèdes achetés moins cher |
+| **Valroy** | Ville royale | Collines du Croc | 14 h | rang D | La Compagnie de l'Aube | Raretés, peaux | Plus de commandes nobles, même dans un bourg |
+| **Port-Salant** | Port | Marais des Brumes | 16 h | rang C | Les Crocs Libres | Viandes, organes | Denrées du garde-manger moins chères |
+| **Brisemine** | Cité minière | Pics des Wyvernes | 26 h | rang B | aucune, au départ | Os et écailles, objets, peaux | Équipement moins cher chez le forgeron |
+
+**Escortes lointaines.** La moitié des escortes vont désormais jusqu'à une ville voisine plutôt qu'à un village : trajet de la ville, trois rencontres possibles au lieu de deux, récompense ×1,2, rang fixé par la ville. Les autres escortes vont toujours aux villages des zones.
+
+**Commerce** (de 0 à 100, départ 20). Chaque escorte réussie vers une ville ajoute 8 points, chaque échec en retire 6, et le commerce perd 2 % de sa valeur chaque jour : il ne reste haut que si la guilde envoie des convois régulièrement. L'avantage de la ville vaut, à 100 de commerce : −15 % sur les remèdes, les denrées ou l'équipement, ou +100 % de commandes nobles (en Ville et en Cité ; dans un bourg, la route de Valroy amène jusqu'à 7,5 % de commandes nobles). Libellés : *au point mort* sous 15, *modeste* sous 40, *actif* sous 70, *florissant* au-delà.
+
+**Routes coupées** (D-150). Au plus une route coupée à la fois, au moins 30 jours entre deux coupures, 5 % de chances par jour ensuite. L'espèce la plus nombreuse de la zone traversée bloque la route : les escortes vers la ville sont annulées (les caravanes reviennent à l'Entrepôt, leur escorte est remboursée), l'avantage de la ville est suspendu et le commerce perd 2 points par jour. Le conseil de la ville publie une quête de chasse **« Rouvrir la route »** (récompense ×1,5, 8 jours, republiée si elle expire). Si la guilde la réussit : renommée +5 et commerce +10. Une rivale peut aussi s'en charger. Sinon, la milice de la ville dégage la route au bout de 21 jours.
+
+**Caravanes de la guilde** (D-151). Depuis la fiche d'une ville sur la Carte, le joueur charge des marchandises de l'Entrepôt (80 de poids au plus) et paie leur escorte : le prix conseillé est la moitié d'une escorte ordinaire vers cette ville, et le joueur peut le changer. La caravane devient une escorte au tableau (7 jours), hors limite des primes, deux caravanes au plus à la fois.
+- **Prix de vente :** la ville paie au moins le cours de la ville (jamais moins que le prix de base, car ses cours ne s'effondrent pas), ×1,5 pour les catégories qu'elle demande, jusqu'à ×2 quand le commerce est florissant, ×1,1 pour le reste.
+- **Arrivée :** la vente entre dans les coffres au retour de l'escorte (ligne « Caravanes de la guilde » du Livre de comptes).
+- **Échec :** si le convoi est détruit, les marchandises sont perdues ; si l'escorte rebrousse chemin ou n'est pas prise, elles reviennent à l'Entrepôt (le prix d'une escorte non prise est remboursé).
+- **Intérêt :** vendre ailleurs ce que le marché de la ville ne paie plus (cours effondrés par l'offre), surtout les marchandises rares, en échange d'un risque.
 
 ---
 
@@ -2280,6 +2361,38 @@ Une **chronique générée automatiquement**, consultable à tout moment et **ex
 
 ---
 
+### 6.10 Les œuvres de la guilde (ajout v1.1)
+
+En fin de partie, la trésorerie s'accumule sans emploi. Les **œuvres** sont des chantiers que la guilde finance **en ville** (pas de nouveau bâtiment au siège) : elles coûtent cher, rapportent de la renommée et laissent un effet durable. Chacune ne se construit qu'une fois, en quelques jours (D-145).
+
+| Œuvre | Coût | Sceau | Durée | Effet |
+|-------|------|-------|-------|-------|
+| Route pavée de Vertbois | 300 po | Fer | 4 j | Trajet vers Vertbois −25 % ; renommée +5 |
+| Puits et fontaines | 500 po | Fer | 5 j | Prospérité +2 (cible) ; renommée +5 |
+| Hospice des pauvres | 800 po | Argent | 7 j | Prospérité +2 ; renommée +10 |
+| Statue du Fondateur | 1 000 po | Argent | 6 j | Renommée +20 |
+| Marché couvert | 1 500 po | Argent | 8 j | Demande de toutes les dépouilles +10 % (meilleurs cours) ; prospérité +2 |
+| Remparts de la ville | 2 000 po | Or | 10 j | Danger régional −5 ; renommée +10 |
+| Pont de pierre sur la Brume | 3 000 po | Or | 12 j | Trajet vers le Marais −25 % et vers les Ruines −15 % ; renommée +10 |
+| Arc des héros | 5 000 po | Or | 14 j | Renommée +40 ; prospérité +3 |
+
+Elles se commandent depuis la **Charte** (nouvel onglet *Œuvres*) et paraissent au Livre de la guilde.
+
+### 6.11 Les privilèges de Sceau (ajout v1.1)
+
+À chaque nouveau Sceau, la Couronne propose **trois privilèges tirés au hasard** parmi huit ; tu en choisis un (décision, 3 jours ; sans réponse, le premier est retenu). Chaque partie prend ainsi sa propre personnalité (D-146).
+
+| Privilège | Effet |
+|-----------|-------|
+| Bourse royale | La Couronne paie 20 % de tes primes |
+| Écuyers | Les recrues arrivent avec un niveau de plus |
+| Droit de chasse | La chasse ne ferme qu'en dessous de 10 (au lieu de 15) |
+| Franchise fiscale | Taxe royale −20 % |
+| Faveur des marchands | Primes des contrats +20 points |
+| Médecins du roi | Qualité de l'infirmerie +10 |
+| Hérauts | Renommée gagnée +10 % |
+| Bureau de recrutement | Candidats à la porte +20 % |
+
 ## 7. Interface et tableau de bord
 
 ### 7.1 Principes
@@ -2302,6 +2415,8 @@ Une **chronique générée automatiquement**, consultable à tout moment et **ex
 | **Couleurs de sens** | Rouge sceau = danger et perte · Vert sauge = gain et santé · Ambre = alerte · Bleu encre = information · Or = renommée |
 | **Classes** | Une couleur et une icône par classe, reprises partout (liste, carte, vue en coupe) |
 | **Rangs de quête** | Un cachet de couleur de F à S |
+
+> **Refonte graphique (v1.1, D-147) :** deux ambiances liées au thème de l'appareil. Le thème clair **« Enluminure »** : parchemin, encre brune, liserés d'or, titres en Cinzel. Le thème sombre **« Taverne à la chandelle »** : bois sombre, laiton, lumière chaude, titres en Alegreya SC. Texte en Alegreya Sans (polices embarquées, jouable hors ligne), taille de base 15 px. Les emojis sont remplacés par un jeu d'icônes cohérent (Tabler). La barre du haut montre des pastilles avec une icône et un mot clair (« Calme », « Ville »), le menu est rangé en trois groupes (la guilde, le monde, les livres). La **vue en coupe** est illustrée : toit de tuiles, poutres et planchers, lits, tables et bougies, âtre animé, mannequins dans la cour, fenêtres qui suivent le jour et la nuit ; les aventuriers sont des pions à la couleur de leur classe, une pensée s'affiche de temps en temps dans une bulle, et un clic sur un employé ouvre le Personnel. Nouveaux : l'encart **« Ce matin à la guilde »** (Siège et Résumé), la fiche aventurier en **onglets** (État, Insigne, Équipement, Relations, Pensées), des **« ? »** qui expliquent les indicateurs, un **glossaire** dans les Options, les courbes de renommée face aux rivales, du moral et des effectifs dans les Chroniques, un filtre par type au Tableau, et des icônes par catégorie au Journal.
 
 ### 7.3 Disposition de l'écran (ordinateur)
 
@@ -2418,6 +2533,7 @@ L'écran principal. Le bâtiment est montré **en coupe**, comme une maison de p
 - **Calques activables :** populations de monstres, plantes, quêtes en cours. *v1.1 :* calque **Guildes rivales** (fanions des sorties des 3 derniers jours) et liste de leurs sorties dans la fiche de chaque zone.
 - **Clic sur une zone :** espèces présentes et courbe de leur population, plantes, quêtes de la zone.
 - **Clic sur une équipe :** journal de sa quête (4.10).
+- *v1.1 :* les **quatre villes voisines** (5.8) au bord de la carte, reliées à leur zone par une route commerciale en pointillés dorés (rouge et ✕ quand elle est coupée), avec le fanion de la guilde qui y siège et une barre de commerce. Les équipes d'une escorte lointaine suivent la route jusqu'à la ville ; une caravane de la guilde porte un petit chariot. **Clic sur une ville :** guilde qui y siège et relation, route, état de la route, commerce et avantage, escortes au tableau, et panneau **Caravane de la guilde** (marchandises de l'Entrepôt, prix en ville et à destination, prix de l'escorte, gain estimé). Le rapport du matin signale une route coupée et une caravane arrivée.
 
 #### 7.5.7 Les Chroniques de la ville
 
@@ -2652,7 +2768,7 @@ Les effets des événements sont décrits sous forme déclarative, par exemple `
 | Stockage | Base de données du navigateur (IndexedDB) |
 | Emplacements | 3 emplacements manuels, plus 2 sauvegardes automatiques en rotation |
 | Sauvegarde automatique | Chaque jour de jeu à minuit. En mode Chronique : chaque heure de jeu, et dès que la page passe en arrière-plan |
-| Format | JSON compressé, avec un **numéro de version** et des migrations automatiques entre versions. *Pendant le développement (tranches 1 à 3) : pas de migration ; une sauvegarde d'une version précédente est affichée « ancienne version » et ne peut pas être chargée.* **v1.1 :** format 5 ; une sauvegarde au format 4 (version 1.0) est convertie au chargement : prix gardés tels qu'affichés, cuisine au niveau du réfectoire, troisième guilde rivale ajoutée |
+| Format | JSON compressé, avec un **numéro de version** et des migrations automatiques entre versions. *Pendant le développement (tranches 1 à 3) : pas de migration ; une sauvegarde d'une version précédente est affichée « ancienne version » et ne peut pas être chargée.* **v1.1 :** format 5 ; une sauvegarde au format 4 (version 1.0) est convertie au chargement : prix gardés tels qu'affichés, cuisine au niveau du réfectoire, troisième guilde rivale ajoutée. Format 6 (insignes de rang) : une sauvegarde au format 5 donne à chacun l'insigne du rang de son niveau |
 | Export / import | Fichier `.guilde`, pour une copie de secours ou un changement d'appareil |
 | Taille visée | Moins de 2 Mo par sauvegarde |
 
@@ -2965,6 +3081,30 @@ Suite à la revue écran par écran (Siège, Comptoir, Carte, Grand Livre) : pri
 - **Extinction des espèces :** en fin de partie, la guilde (avec ou sans rivales) faisait tomber la plupart des populations à 0, d'où un danger nul. Un essai d'immigration (une espèce presque disparue revient peu à peu) bouleversait la fin de partie (Mithril 2 sur 8, 35 morts) : écarté au profit de la **chasse fermée** (2.7, D-139).
 - **Effets de bord de la chasse fermée, corrigés :** les migrations, exemptées du délai de 21 jours, se déclenchaient 34 fois par partie (le délai les garde) ; avec un tableau plus fourni, la Compagnie de l'Aube prenait la quête du dragon, désormais réservée à la guilde (D-140) ; les escortes échouant plus souvent, la Cité n'était plus atteinte, d'où l'apport de la guilde porté à +24 (D-141).
 
+#### 8.11.8 Insignes de rang et épreuves (v1.1, 2026-10-30)
+
+Système décrit en 3.9.1 (D-142). **Robot du simulateur :** il organise l'épreuve dès qu'un aventurier est candidat ; il l'offre si le candidat ne peut pas payer, une fois sa caisse au-dessus de 50 po.
+
+**Résultats** (robot prudent, 16 graines × 560 jours) : revenu net vers J30 ≈ 10,7 à 12,4 po ✔ · première salle au niveau 3 vers J57-61 ✔ · Sceau d'Or 16 sur 16, médiane J161-164 ✔ · Sceau de Mithril 15 sur 16, médiane J425-469 ✔ · ≈ 28 morts en 5 ans ✔ · aucune faillite ✔. Les 4 premières salles arrivent vers J14 (cible J8-12, limite).
+
+#### 8.11.9 Refonte graphique et nouveaux systèmes (v1.1, 2026-10-30)
+
+Refonte graphique (7.2, D-147), cueillettes toujours présentes au tableau (au moins deux, commandées par l'herboriste ; la Confrérie du Chêne ne les prend plus ; l'apothicairerie peut commander une cueillette d'un clic), relations avec les rivales (5.5.1), Tournoi des insignes (5.4.6), œuvres de la guilde (6.10) et privilèges de Sceau (6.11).
+
+**Robot du simulateur :** il finance une œuvre quand il lui reste plus de 1 000 po après l'achat ; il laisse la Couronne choisir le privilège proposé en premier et inscrit ses meilleurs au tournoi.
+
+**Résultats** (8 graines × 560 jours) : revenu net vers J30 ≈ 12 po ✔ · première salle au niveau 3 vers J60 ✔ · Sceau d'Or 8 sur 8, médiane J164 ✔ · Sceau de Mithril 7 sur 8, médiane J460 ✔ · ≈ 32 morts en 5 ans ✔ · aucune faillite ✔. Dans une partie type : trois privilèges, sept œuvres achevées, un tournoi chaque été (la guilde le gagne à partir de la 3ᵉ année). Les relations s'équilibrent entre −20 et 0 sans gestes du joueur : les tentatives de débauchage et les diffamations ne coûtent que 5 points chacune, et la relation revient vers 0 de 2 points par semaine.
+
+#### 8.11.10 Villes voisines (v1.1, 2026-10-30)
+
+Villes voisines, escortes lointaines, commerce, routes coupées et caravanes (5.8, D-148 à D-151).
+
+**Robot du simulateur :** il envoie une caravane quand l'Entrepôt contient de quoi rapporter, à une ville, deux fois le prix conseillé de l'escorte de plus qu'en ville.
+
+**Réglages :** le commerce montait sans frein jusqu'à 100 dans toutes les villes (+12 par escorte réussie, −0,3 par jour) : il perd maintenant 2 % de sa valeur chaque jour, pour +8 par escorte réussie. L'escorte d'une caravane coûtait autant qu'une escorte ordinaire : aucune caravane n'était rentable, son prix conseillé est passé à la moitié. Une ville payait moins que la ville quand les cours y étaient montés : elle paie désormais au moins le cours local. Enfin, la Confrérie du Chêne chassait aussi en ville (rats) : elle garde ses anciennes zones (Vertbois, Collines, Marais), sans quoi les premières salles arrivaient plus tard.
+
+**Résultats** (8 graines × 560 jours) : revenu net vers J30 ≈ 11 po ✔ · 4 salles vers J12 ✔ · première salle au niveau 3 vers J60 ✔ · Sceau d'Or 8 sur 8, médiane J164 ✔ · Sceau de Mithril 7 sur 8, médiane J453 ✔ · ≈ 19 morts en 5 ans ✔ · aucune faillite ✔. Dans une partie type : environ 370 escortes vers les villes, 2 à 7 routes coupées, 3 à 9 caravanes. En fin de partie, le commerce va de 0 à 98 selon les villes : Port-Salant est le plus suivi (de 57 à 98), Brisemine, la plus lointaine, reste souvent au point mort.
+
 ### 8.12 Table centrale des paramètres
 
 Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans `parametres.json` et sont réglées à l'aide du simulateur d'équilibrage.
@@ -3048,6 +3188,11 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | **Monde** | Convergence de la Prospérité | 5 % par jour | 5.1.2 |
 | | Apport de la guilde à la Prospérité | Recettes 7 j + dépenses en ville / 50 po, plafond +24 | 5.1.2 |
 | **Populations** | Chasse fermée / rouverte | sous 15 / à 25 | 2.7 |
+| **Insignes** | Niveaux des rangs E à S | 4, 8, 13, 18, 23, 28 | 3.9.1 |
+| | Quêtes de son rang avant l'épreuve | 3 | 3.9.1 |
+| | Rang maximal par Sceau | Cuivre C, Fer B, Argent A, Or et Mithril S | 3.9.1 |
+| | Droits d'épreuve (E à S) | 50 pc, 2, 5, 15, 40, 100 po | 3.9.1 |
+| | Grief de reconnaissance | +2 par jour après 7 jours d'attente, 40 au plus | 3.9.1 |
 | | Danger Menaçant : récompenses | ×1,2 | 5.1.1 |
 | | Quêtes nobles (palier Ville) | 15 %, ×1,3 | 5.3 |
 | | Rumeurs exactes / fausses alertes / détails faux | 75 / 12,5 / 12,5 % | 5.4.5 |
@@ -3082,6 +3227,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | **Prime** | Quête créée ou bonifiée par le joueur et financée par la guilde (4.4) |
 | **Prix de référence** | Le « juste prix » d'un service selon sa qualité et la Prospérité (1.3.3) |
 | **Prospérité** | Indice de 0 à 100 de la richesse de la ville (5.1.2) |
+| **Commerce** | Lien de 0 à 100 entre la ville et une ville voisine, nourri par les escortes (5.8) |
 | **Q** | Qualité d'un service, de 0 à 100 |
 | **R** | Ratio entre le prix affiché et le prix de référence (1.3.4) |
 | **Rachat (préemption)** | Droit de la guilde d'acheter en priorité le butin de ses aventuriers (2.4.1) |
@@ -3239,6 +3385,16 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-139 | 2026-10-30 | Chasse fermée sous 15 de population, rouverte à 25 ; les migrations repeuplent d'abord les espèces disparues ou fermées. Fin des extinctions en fin de partie. | 2.7 |
 | D-140 | 2026-10-30 | Les rivales ne prennent pas la quête du dragon : c'est l'épreuve de la Couronne pour la guilde du joueur. | 5.4.1, 5.5 |
 | D-141 | 2026-10-30 | Apport de la guilde à la Prospérité plafonné à +24 (au lieu de +20). | 5.1.2 |
+| D-142 | 2026-10-30 | Insignes de rang décernés par la guilde après une épreuve, droits payés par l'aventurier (ou offerts), accès aux quêtes jusqu'à son rang + 1, grief de reconnaissance. | 3.9.1 |
+| D-143 | 2026-10-30 | Relations avec les rivales (−100 à +100) : cadeaux, pacte de non-débauchage, contrats partagés, aide contre l'assaut, rachat en faillite. | 5.5.1 |
+| D-144 | 2026-10-30 | Tournoi des insignes annuel (20ᵉ jour de l'été) entre champions des guildes. | 5.4.6 |
+| D-145 | 2026-10-30 | Œuvres de la guilde en ville : huit chantiers de 300 à 5 000 po, renommée et effets durables. | 6.10 |
+| D-146 | 2026-10-30 | Un privilège au choix parmi trois à chaque nouveau Sceau (huit privilèges). | 6.11 |
+| D-147 | 2026-10-30 | Refonte graphique : thème clair « Enluminure », thème sombre « Taverne à la chandelle », vue en coupe illustrée, icônes, rapport du matin, aides et glossaire ; au moins deux cueillettes au tableau. | 7.2, 7.5 |
+| D-148 | 2026-10-30 | Quatre villes voisines (Chênaie-sur-Orve, Valroy, Port-Salant, Brisemine), destinations d'escortes lointaines, avec un niveau de commerce qui donne un avantage durable. | 5.8, 7.5.6 |
+| D-149 | 2026-10-30 | Chaque guilde rivale siège dans une ville voisine et chasse autour ; une nouvelle guilde s'installe à Brisemine. | 5.5, 5.8 |
+| D-150 | 2026-10-30 | Routes coupées : une quête de chasse rouvre la route, sinon la milice au bout de 21 jours. | 5.8 |
+| D-151 | 2026-10-30 | Caravanes de la guilde : vendre les marchandises de l'Entrepôt dans une ville voisine, escorte payée par la guilde. | 5.8, 2.4 |
 
 ### Relecture de cohérence (v1.0)
 

@@ -5,6 +5,10 @@ import { odFactor } from '../../sim/market';
 import type { Decision, GameState } from '../../sim/types';
 import { dangerTier, GAZETTE, PALIER_NAMES, referenceTaxRate, repairCost, SEASON_EFFECTS } from '../../sim/world';
 import { game, lastError } from '../store';
+import { P } from '../../sim/data';
+import { relationLabel, relationOf } from '../../sim/diplomacy';
+import { rivalCity } from '../../sim/cities';
+import { CITIES } from '../../sim/data';
 
 const H = 24;
 
@@ -26,6 +30,34 @@ export function LineChart({ series, height = 120, max = 100 }: { series: { label
         ))}
       </svg>
       <div class="row legend">{series.map((sr) => <span><i style={{ background: sr.color }} />{sr.label}</span>)}</div>
+    </div>
+  );
+}
+
+const RIVAL_LINE: Record<string, string> = { prestige: 'var(--gold)', mercenaires: 'var(--c-voleur)', chasseurs: 'var(--c-rodeur)' };
+
+/** Courbes (refonte v1.1) : ta renommée face aux rivales, le moral et les effectifs, sur 8 semaines. */
+function GuildCharts({ s }: { s: GameState }) {
+  const h = s.world.history.slice(-56);
+  const rivals = s.world.rivals.filter((r) => r.bankruptSince === null);
+  const renowns = [...h.map((x) => x.renown), ...h.flatMap((x) => Object.values(x.rivals ?? {}))];
+  const maxR = Math.max(100, ...renowns) * 1.05;
+  const maxA = Math.max(10, ...h.map((x) => x.adventurers ?? 0)) * 1.1;
+  return (
+    <div class="grid2">
+      <div class="panel">
+        <h3>La guilde face aux rivales</h3>
+        <LineChart max={maxR} series={[
+          { label: 'Ta guilde', color: 'var(--accent)', values: h.map((x) => x.renown) },
+          ...rivals.map((r) => ({ label: r.nom, color: RIVAL_LINE[r.profil], values: h.map((x) => x.rivals?.[r.nom] ?? NaN).filter((v) => !Number.isNaN(v)) })),
+        ]} />
+        <p class="hint">Renommée en points. Les rivales gagnent la leur en prenant des quêtes au tableau et par leurs coups d'éclat.</p>
+      </div>
+      <div class="panel">
+        <h3>Moral et effectifs</h3>
+        <LineChart series={[{ label: 'Moral moyen', color: 'var(--sage)', values: h.filter((x) => x.morale !== undefined).map((x) => x.morale!) }]} />
+        <LineChart max={maxA} height={90} series={[{ label: 'Aventuriers', color: 'var(--blue)', values: h.filter((x) => x.adventurers !== undefined).map((x) => x.adventurers!) }]} />
+      </div>
     </div>
   );
 }
@@ -105,6 +137,8 @@ export function Chroniques({ s }: { s: GameState }) {
         </div>
       </div>
 
+      <GuildCharts s={s} />
+
       <div class="grid2">
         <div class="panel">
           <h3>On raconte que…</h3>
@@ -128,15 +162,25 @@ export function Chroniques({ s }: { s: GameState }) {
         <div class="panel">
           <h3>Les guildes</h3>
           <table class="data">
-            <thead><tr><th>Guilde</th><th class="num">Renommée</th><th class="num">Membres</th><th class="num">Tarifs</th><th class="num">Taxe</th></tr></thead>
+            <thead><tr><th>Guilde</th><th class="num">Renommée</th><th class="num">Membres</th><th>Relation</th><th class="num">Taxe</th></tr></thead>
             <tbody>
-              <tr><td><strong>Ta guilde</strong></td><td class="num">{Math.round(s.renown)}</td><td class="num">{s.adventurers.length}</td><td class="num">—</td><td class="num">{Math.round(s.taxRate * 100)} %</td></tr>
+              <tr><td><strong>Ta guilde</strong></td><td class="num">{Math.round(s.renown)}</td><td class="num">{s.adventurers.length}</td><td>—</td><td class="num">{Math.round(s.taxRate * 100)} %</td></tr>
               {w.rivals.map((r) => (
-                <tr><td>{r.nom}{r.bankruptSince !== null && <span class="tag seal"> en faillite</span>}<div class="hint">{r.profil === 'prestige' ? 'Prestigieuse, proche de la noblesse' : r.profil === 'chasseurs' ? 'Chasseurs et cueilleurs des bois et des marais' : 'Mercenaires bon marché'}</div></td>
-                  <td class="num">{Math.round(r.renown)}</td><td class="num">{r.size}</td><td class="num">×{r.tarifs.toFixed(1)}</td><td class="num">{Math.round(r.taux * 100)} %</td></tr>
+                <tr><td>{r.nom}{r.bankruptSince !== null && <span class="tag seal"> en faillite</span>}<div class="hint">{r.profil === 'prestige' ? 'Prestigieuse, proche de la noblesse' : r.profil === 'chasseurs' ? 'Chasseurs et cueilleurs des bois et des marais' : 'Mercenaires bon marché'}{rivalCity(r) ? ` · siège à ${CITIES[rivalCity(r)!].nom}` : ''}</div></td>
+                  <td class="num">{Math.round(r.renown)}</td><td class="num">{r.size}</td>
+                  <td>{r.bankruptSince === null && <>
+                    <span class={`tag ${relationLabel(relationOf(r)).tone}`} title={`Relation : ${Math.round(relationOf(r))} (de −100 à +100)`}>{relationLabel(relationOf(r)).nom}</span>
+                    {(r.pacteUntil ?? 0) > s.tick && <span class="tag blue" title={`Jusqu'au ${stamp(r.pacteUntil!)}`}>pacte</span>}
+                    <div class="row" style={{ marginTop: 4, gap: 4 }}>
+                      <button class="btn ghost small" disabled={(r.giftTick ?? -1e9) > s.tick - 7 * H} title="Relation +15, une fois par semaine" onClick={() => game.command({ type: 'giftRival', id: r.id })}>Cadeau ({money(P.diplomatie.cadeau)})</button>
+                      {relationOf(r) > 0 && (r.pacteUntil ?? 0) <= s.tick && <button class="btn ghost small" title="Un an sans tentative de débauchage" onClick={() => game.command({ type: 'pactRival', id: r.id })}>Pacte ({money(P.diplomatie.pacte)})</button>}
+                    </div>
+                  </>}</td>
+                  <td class="num">{Math.round(r.taux * 100)} %</td></tr>
               ))}
             </tbody>
           </table>
+          <p class="hint">Une rivale cordiale propose parfois un contrat partagé ; une rivale alliée vient défendre la ville pendant un assaut. Un pacte l'empêche de débaucher tes aventuriers.</p>
           <p class="hint">Taux de taxe de référence de la région : {Math.round(referenceTaxRate(s) * 100)} %. Au-delà, tes aventuriers grognent. Les recrues choisissent leur guilde selon la renommée, la taxe et les tarifs.</p>
           {recent('guildes', 14).slice(0, 6).map((n) => <p class="news"><small>J{dayOf(n.tick)}</small> {n.text}</p>)}
         </div>

@@ -12,6 +12,7 @@ import evenements from './data/evenements.json';
 import infirmerie from './data/infirmerie.json';
 import terrain from './data/terrain.json';
 import equipement from './data/equipement.json';
+import villes from './data/villes.json';
 import type {
   AttrId, BedType, BuyerId, ClassId, DenreeId, DishId, EtatId, ProfType, Rang, RemedeId, RoomId, SkillId, SlotId, StaffRole,
 } from './types';
@@ -40,6 +41,15 @@ export interface Zone {
 }
 export const ZONES: Record<string, Zone> = Object.fromEntries((zones as unknown as Zone[]).map((z) => [z.id, z]));
 export const ZONE_IDS = (zones as unknown as Zone[]).map((z) => z.id);
+
+/** Villes voisines (GDD 5.8, ajout v1.1) : destinations des escortes et sièges des guildes rivales. */
+export interface City {
+  id: string; nom: string; court: string; titre: string; route: string; trajet: number; rang: Rang;
+  guilde: string | null; zonesRivale: string[]; demande: string[]; effet: 'remedes' | 'nobles' | 'denrees' | 'equipement';
+  effetTexte: string; conseil: string;
+}
+export const CITIES: Record<string, City> = Object.fromEntries((villes as unknown as City[]).map((c) => [c.id, c]));
+export const CITY_IDS = (villes as unknown as City[]).map((c) => c.id);
 
 export interface Denree { nom: string; prix: number; conservation: number; interne?: boolean }
 export const DENREES = cuisine.denrees as Record<DenreeId, Denree>;

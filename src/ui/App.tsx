@@ -1,5 +1,9 @@
 // Structure de l'application (GDD 7.3) : barre du haut, navigation, écran, journal.
 import { useEffect, useRef, useState } from 'preact/hooks';
+import {
+  IconBook, IconBuildingCastle, IconCertificate, IconChefHat, IconClipboardList, IconHome, IconMap2, IconNews, IconNotebook,
+  IconReportMoney, IconScale, IconSettings, IconUsers,
+} from '@tabler/icons-preact';
 import { dayOf, money } from '../sim/format';
 import type { AbsenceReport } from '../sim/engine';
 import type { GameState, LogEntry } from '../sim/types';
@@ -24,28 +28,30 @@ import { Tableau } from './screens/Tableau';
 import { absenceReport, closeReport, game, useGame } from './store';
 import { TopBar } from './TopBar';
 
+type NavIcon = typeof IconHome;
 /** Mode consultation (7.9) : les écrans essentiels sur téléphone. */
-const NAV_CONSULTATION: [Screen, string, string][] = [
-  ['resume', '🏠', 'Résumé'],
-  ['chroniques', '📰', 'Chroniques'],
-  ['journal', '📜', 'Journal'],
-  ['aventuriers', '👤', 'Aventuriers'],
-  ['tableau', '📋', 'Tableau'],
-  ['options', '⚙', 'Options'],
+const NAV_CONSULTATION: [Screen, NavIcon, string, string?][] = [
+  ['resume', IconHome, 'Résumé'],
+  ['chroniques', IconNews, 'Chroniques'],
+  ['journal', IconNotebook, 'Journal'],
+  ['aventuriers', IconUsers, 'Aventuriers'],
+  ['tableau', IconClipboardList, 'Tableau'],
+  ['options', IconSettings, 'Options'],
 ];
 
-const NAV: [Screen, string, string][] = [
-  ['siege', '🏰', 'Siège'],
-  ['aventuriers', '👤', 'Aventuriers'],
-  ['personnel', '🧑‍🍳', 'Personnel'],
-  ['tableau', '📜', 'Tableau'],
-  ['comptoir', '⚖', 'Comptoir'],
-  ['chroniques', '📰', 'Chroniques'],
-  ['carte', '🗺', 'Carte'],
-  ['charte', '🔱', 'Charte'],
-  ['guilde', '📖', 'Livre de la guilde'],
-  ['livre', '📒', 'Livre de comptes'],
-  ['options', '⚙', 'Options'],
+/** Menu en trois groupes (refonte v1.1) : la guilde, le monde, les livres. */
+const NAV: [Screen, NavIcon, string, string?][] = [
+  ['siege', IconBuildingCastle, 'Siège', 'La guilde'],
+  ['aventuriers', IconUsers, 'Aventuriers'],
+  ['personnel', IconChefHat, 'Personnel'],
+  ['tableau', IconClipboardList, 'Tableau', 'Le monde'],
+  ['comptoir', IconScale, 'Comptoir'],
+  ['carte', IconMap2, 'Carte'],
+  ['chroniques', IconNews, 'Chroniques'],
+  ['charte', IconCertificate, 'Charte', 'Les livres'],
+  ['guilde', IconBook, 'Livre de la guilde'],
+  ['livre', IconReportMoney, 'Livre de comptes'],
+  ['options', IconSettings, 'Options'],
 ];
 
 function StartScreen() {
@@ -250,11 +256,14 @@ export function App() {
       <div class={`app ${journalOpen && !consultation ? '' : 'journal-closed'} ${consultation ? 'consult' : ''} ${s.gaspard?.queue.length ? 'has-gaspard' : ''}`}>
         <TopBar s={s} speed={speed} />
         <nav class="nav" aria-label="Écrans">
-          {(consultation ? NAV_CONSULTATION : NAV).map(([id, ico, label]) => (
-            <button class={screen === id ? 'on' : ''} aria-current={screen === id ? 'page' : undefined} onClick={() => setScreen(id)} title={label}>
-              <span class="ico" aria-hidden="true">{ico}</span><span class="label">{label}</span>
-              {badges[id] ? <span class="badge">{badges[id]}</span> : null}
-            </button>
+          {(consultation ? NAV_CONSULTATION : NAV).map(([id, Ico, label, group]) => (
+            <>
+              {group && <span class="nav-group">{group}</span>}
+              <button class={screen === id ? 'on' : ''} aria-current={screen === id ? 'page' : undefined} onClick={() => setScreen(id)} title={label}>
+                <Ico size={20} stroke={1.75} class="ico" aria-hidden="true" /><span class="label">{label}</span>
+                {badges[id] ? <span class="badge">{badges[id]}</span> : null}
+              </button>
+            </>
           ))}
         </nav>
         <main class="main">

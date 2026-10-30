@@ -7,6 +7,7 @@ import { DIFFICULTY_NAMES } from '../../sim/legend';
 import type { DifficultyId } from '../../sim/types';
 import { askNotificationPermission, getPrefs, NOTIF_LABELS, setPrefs, type NotifCat } from '../prefs';
 import { game } from '../store';
+import { GLOSSARY } from '../glossary';
 
 export function Options({ s }: { s: GameState }) {
   const [saves, setSaves] = useState<SaveEntry[]>([]);
@@ -115,6 +116,11 @@ export function Options({ s }: { s: GameState }) {
             </div>
           </details>
         </div>
+      </div>
+      <div class="panel">
+        <h3>Glossaire</h3>
+        <p class="hint">Les mots du gardien, expliqués simplement. Les petits « ? » des écrans en disent plus sur chaque chiffre.</p>
+        <dl class="glossary">{GLOSSARY.map(([w, d]) => <><dt>{w}</dt><dd>{d}</dd></>)}</dl>
       </div>
     </div>
   );

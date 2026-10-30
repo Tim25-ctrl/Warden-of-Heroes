@@ -192,6 +192,23 @@ export function NumField({ value, onCommit, min, max, step, width, label, live }
   );
 }
 
-export function Kpi({ k, v, title }: { k: string; v: ComponentChildren; title?: string }) {
-  return <div class="kpi" title={title}><div class="k">{k}</div><div class="v">{v}</div></div>;
+/** Petit « ? » : l'explication s'affiche au survol, ou au toucher sur téléphone. */
+export function Help({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span class="help">
+      <button class="help-btn" title={text} aria-label={`Aide : ${text}`} onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>?</button>
+      {open && <span class="help-pop" role="note" onClick={() => setOpen(false)}>{text}</span>}
+    </span>
+  );
+}
+
+export function Kpi({ k, v, title, hint }: { k: string; v: ComponentChildren; title?: string; hint?: ComponentChildren }) {
+  return (
+    <div class="kpi">
+      <div class="k">{k}{title && <Help text={title} />}</div>
+      <div class="v">{v}</div>
+      {hint && <div class="kpi-hint">{hint}</div>}
+    </div>
+  );
 }

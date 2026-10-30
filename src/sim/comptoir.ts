@@ -9,6 +9,8 @@ import { excludeAdventurer } from './lifecycle';
 import { addLot, lotValue, resserreCapacity, resserreWeight, sellInTown, stockOfRes, storeOrSell } from './market';
 import { chance, range } from './rng';
 import { addRel, afterQuestTeam, onQuestTogether } from './social';
+import { onExamDone } from './ranks';
+import { primeRefund } from './charter';
 import type { Adventurer, GameState, Money, Quest, QuestRun, ResLot } from './types';
 import { onQuestEnd, referenceTaxRate } from './world';
 
@@ -153,6 +155,7 @@ export function processReturn(s: GameState, run: QuestRun): void {
     refund = q.bonus + (guildFunded ? q.reward : 0);
   }
   if (refund > 0) earn(s, 'primesRendues', refund);
+  if (guildFunded) primeRefund(s, guildPay - q.bonus);   // privilège Bourse royale
 
   // Partage : parts égales, sauf chef indélicat (4.9)
   const shares = new Map<number, number>(team.map((m) => [m.id, 1]));
@@ -229,6 +232,8 @@ export function processReturn(s: GameState, run: QuestRun): void {
     m.buffs = [];
     wear(s, m, run.combats);
     m.activity = sold > 0 ? { kind: 'vendre', until: s.tick + 1, place: 'ville' } : { kind: 'flaner', until: s.tick, place: 'comptoir' };
+    if (ok && rangIndex(q.rang) >= rangIndex(m.rang)) m.rankQuests += 1;
+    if (q.examFor === m.id) onExamDone(s, m, q, ok);
     if (ok) {
       m.history.questsOk += 1;
       m.respect = clamp(m.respect + (rangIndex(q.rang) <= 1 ? 2 : rangIndex(q.rang) <= 3 ? 3 : 5) * (hasTrait(m, 'honnete') ? 1.2 : 1), 0, 100);

@@ -1,9 +1,10 @@
 // Quêtes : génération, primes, formation des équipes, déroulement (GDD chapitre 4).
-import { attackOf, capacityOf, defenseOf, hasTrait, practice, profileOf, pvMax, rangForLevel, rangIndex, sacCount, skill } from './adventurers';
+import { attackOf, capacityOf, defenseOf, hasTrait, practice, profileOf, pvMax, rangIndex, sacCount, skill } from './adventurers';
 import { addAilment, canQuest } from './ailments';
 import { fight, type CombatResult } from './combat';
 import { processReturn } from './comptoir';
-import { CLASSES, DISHES, isPlant, NAMES, P, RESOURCES, SPECIES, ZONE_IDS, ZONES } from './data';
+import { CITIES, CITY_IDS, CLASSES, DISHES, isPlant, NAMES, P, RESOURCES, SPECIES, ZONE_IDS, ZONES } from './data';
+import { onCaravanLost, questTrajet, routeOpen } from './cities';
 import { applyPurchase, clamp, consumeDish, dishPrice, dishRef, dishServable, IP, judge, onDuty } from './economy';
 import { advLink, hourOf, money } from './format';
 import { earn, log, spend, think, flow } from './journal';
@@ -207,7 +208,20 @@ function makeCueillette(s: GameState, zoneIn?: string, plantIn?: string, countIn
   { const foe = zoneThreat(s, zone); return finishDanger(s, q, foe, foe ? avgGroup(foe) : 0, 1, 0.5); }
 }
 
+/** Escorte vers une ville voisine (v1.1) : plus longue, plus de rencontres, mieux payée. */
+export function makeCityEscort(s: GameState, dest: string, clientType: ClientType = 'marchands'): Quest {
+  const c = CITIES[dest];
+  const q = base(s, 'escorte', c.rang, c.route, clientType);
+  q.dest = dest;
+  q.title = `Escorter un convoi jusqu'à ${c.nom}`;
+  q.reward = Math.round(reward(s, c.rang, 'escorte') * P.villes.recompense);
+  const foe = zoneThreat(s, c.route);
+  return finishDanger(s, q, foe, foe ? avgGroup(foe) : 0, P.villes.rencontres, 1);
+}
+
 function makeEscorte(s: GameState): Quest {
+  const open = CITY_IDS.filter((id) => routeOpen(s, id));
+  if (open.length && chance(s, 'quetes', P.villes.partEscortes)) return makeCityEscort(s, pick(s, 'quetes', open));
   const zone = pickZone(s, ['collines', 'marais', 'ruines', 'pics']);
   const rang: Rang = zone === 'collines' ? 'E' : zone === 'marais' ? 'D' : zone === 'ruines' ? 'C' : 'B';
   const q = base(s, 'escorte', rang, zone, 'marchands');
@@ -261,7 +275,7 @@ function roll(s: GameState, expected: number): number {
  * et, une fois la guilde aguerrie, la plupart des quêtes trop modestes pour elle (ajusté en v1.1).
  */
 export function guildReach(s: GameState): number {
-  const ranks = s.adventurers.map((a) => rangIndex(rangForLevel(a.level))).sort((a, b) => b - a);
+  const ranks = s.adventurers.map((a) => rangIndex(a.rang)).sort((a, b) => b - a);
   const k = P.quetes.portee.equipe;
   return (ranks[Math.min(k, ranks.length) - 1] ?? 0) + 1;
 }
@@ -290,6 +304,11 @@ export function generateQuests(s: GameState, firstDay = false): void {
       quest = cand;
     }
     if (quest) { decorateQuest(s, quest); s.board.push(quest); }
+  }
+  // v1.1 : l'herboriste de la ville commande toujours quelques cueillettes (au moins 2 au tableau).
+  for (let tries = 0; tries < 6 && s.board.filter((x) => x.type === 'cueillette' && x.clientType !== 'guilde').length < q.cueilletteMin; tries++) {
+    const c = makeCueillette(s);
+    if (c) { c.client = c.client || "l'herboriste"; decorateQuest(s, c); s.board.push(c); }
   }
   // Une extermination par espèce qui prolifère (2.7)
   for (const z of ZONE_IDS) {
@@ -328,8 +347,9 @@ export function dangerDots(q: Quest): number {
 // ---------- Primes du joueur (4.4) ----------
 
 export function activePrimes(s: GameState): number {
-  return s.board.filter((q) => q.clientType === 'guilde' || q.bonus > 0).length
-    + s.runs.filter((r) => r.quest.clientType === 'guilde' || r.quest.bonus > 0).length;
+  // Les caravanes de la guilde ont leur propre limite (v1.1).
+  const isPrime = (q: Quest) => !q.caravane && (q.clientType === 'guilde' || q.bonus > 0);
+  return s.board.filter(isPrime).length + s.runs.filter((r) => isPrime(r.quest)).length;
 }
 export const maxPrimes = (s: GameState) => P.quetes.primesBase + s.rank;
 
@@ -398,7 +418,10 @@ function perceivedChance(s: GameState, team: Adventurer[], q: Quest, leader: Adv
 }
 
 function acceptsQuest(s: GameState, a: Adventurer, q: Quest): boolean {
-  const gap = rangIndex(rangForLevel(a.level)) - rangIndex(q.rang);
+  // v1.1 : l'insigne fixe ce qu'un aventurier peut entreprendre, jusqu'à son rang + 1.
+  // Une épreuve fait exception : le candidat la tente, ses compagnons le soutiennent.
+  if (q.examFor === undefined && rangIndex(q.rang) > rangIndex(a.rang) + 1) return false;
+  const gap = rangIndex(a.rang) - rangIndex(q.rang);
   if (a.fierte >= 60 && gap >= 2 && !broke(a)) return false;
   if (hasTrait(a, 'superstitieux') && q.zone === 'ruines') return false;
   void s;
@@ -424,7 +447,7 @@ function expectedLoot(q: Quest): Money {
 }
 
 function durationDays(q: Quest): number {
-  const travel = (2 * ZONES[q.zone].trajet) / 24;
+  const travel = (2 * questTrajet(q)) / 24;
   if (q.type === 'protection') return travel + (q.nights ?? 3);
   if (q.type === 'extermination') return travel + (q.hours ?? 48) / 24;
   if (q.type === 'exploration') return travel + ((q.rooms ?? 4) * 2) / 24 + 0.5;
@@ -450,6 +473,8 @@ function bestQuestFor(s: GameState, core: Adventurer[], pool: Adventurer[], team
   const leader = core[0];
   let best: { q: Quest; team: Adventurer[]; attrait: number } | null = null;
   for (const q of s.board.filter(canTake)) {
+    // Une épreuve de rang n'est tentée que par son candidat (et ses compagnons).
+    if (q.examFor !== undefined && !core.some((m) => m.id === q.examFor)) continue;
     if (!core.every((m) => acceptsQuest(s, m, q))) continue;
     const maxSize = hasTrait(leader, 'solitaire') && !fixed ? Math.min(2, q.maxMembers) : q.maxMembers;
     if (core.length > maxSize) continue;
@@ -466,9 +491,10 @@ function bestQuestFor(s: GameState, core: Adventurer[], pool: Adventurer[], team
     let attrait = (questValue(q) / team.length + (0.5 * expectedLoot(q)) / team.length) / durationDays(q);
     if ((q.clientType === 'guilde' || q.bonus > 0) && leader.loyalty >= 60) attrait *= 1 + P.quetes.bonusLoyaute;
     // Ajusté en v1.1 : on cherche les défis de son rang (prestige, expérience), pas seulement l'or à la journée.
-    const gap = rangIndex(q.rang) - rangIndex(rangForLevel(leader.level));
+    const gap = rangIndex(q.rang) - rangIndex(leader.rang);
     const ar = P.quetes.attraitRang;
     attrait *= gap >= 1 ? ar.dessus : gap === 0 ? ar.egal : gap === -1 ? ar.dessous1 : ar.dessous2;
+    if (q.examFor !== undefined) attrait = Number.MAX_SAFE_INTEGER;   // son épreuve passe avant tout
     if (!best || attrait > best.attrait) best = { q, team, attrait };
   }
   return best;
@@ -546,13 +572,14 @@ function travelHours(s: GameState, run: QuestRun, team: Adventurer[]): number {
   const survie = team.reduce((a, m) => a + skill(m, 'survie'), 0) / Math.max(1, team.length);
   const slow = run.quest.type === 'escorte' && run.stage !== 'retour' ? 1.5 : 1;
   const meteo = modMult(s, 'trajet') * modMult(s, `trajet:${run.quest.zone}`);
-  return Math.max(1, Math.round(ZONES[run.quest.zone].trajet * Math.max(0.6, 1 - survie / 50) * slow * meteo));
+  return Math.max(1, Math.round(questTrajet(run.quest) * Math.max(0.6, 1 - survie / 50) * slow * meteo));
 }
 
 function trackingHours(s: GameState, run: QuestRun, team: Adventurer[]): number {
   const baseH = run.quest.zone === 'ville' ? P.quetes.pistageVille : P.quetes.pistageForet;
   const pist = team.reduce((mx, m) => Math.max(mx, skill(m, 'pistage')), 0);
-  const pop = Math.max(5, popOf(s, run.quest.zone, run.quest.target ?? ''));
+  // Épreuve de rang (v1.1) : la guilde a repéré les bêtes à l'avance, la rareté de l'espèce ne joue pas.
+  const pop = run.quest.examFor !== undefined ? P.quetes.populationNormale : Math.max(5, popOf(s, run.quest.zone, run.quest.target ?? ''));
   return Math.max(1, Math.round(baseH * (1 - pist / 40) * (P.quetes.populationNormale / pop)));
 }
 
@@ -799,6 +826,7 @@ function stepRun(s: GameState, run: QuestRun): void {
   if (team.length === 0) {
     s.runs = s.runs.filter((r) => r !== run);
     const q = run.quest;
+    onCaravanLost(s, q);
     if (q.type === 'extermination') q.teams = q.teams.filter((id) => id !== run.id);
     s.board = s.board.filter((x) => x.id !== q.id || (x.type === 'extermination' && x.teams.length > 0));
     return;
@@ -847,7 +875,7 @@ function stepRun(s: GameState, run: QuestRun): void {
         return;
       }
       run.stage = 'objectif';
-      if (q.type === 'escorte') { succeed(s, run, `${teamLabel(s, run)} livre le convoi à ${ZONES[q.zone].village}.`); return; }
+      if (q.type === 'escorte') { succeed(s, run, `${teamLabel(s, run)} livre le convoi à ${q.dest ? CITIES[q.dest].nom : ZONES[q.zone].village}.`); return; }
       run.stageHours = q.type === 'exploration' || q.type === 'cueillette' ? 2 : q.type === 'protection' ? 1 : trackingHours(s, run, runMembers(s, run));
     }
   } else if (run.stage === 'objectif') {

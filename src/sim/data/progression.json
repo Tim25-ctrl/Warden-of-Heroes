@@ -42,6 +42,7 @@
     "indomptables":      { "nom": "Indomptables", "cat": "Les aventuriers", "texte": "Une équipe réussit 20 quêtes." },
     "fideles":           { "nom": "Fidèles", "cat": "Les aventuriers", "texte": "10 aventuriers à loyauté 90 ou plus." },
     "retenu":            { "nom": "Retenu", "cat": "Les aventuriers", "texte": "Garder un aventurier qu'une rivale voulait débaucher." },
+    "tournoi":           { "nom": "Champion des insignes", "cat": "Le monde", "texte": "Remporter le Tournoi des insignes." },
     "tueur_dragon":      { "nom": "Tueur de dragon", "cat": "Le monde", "texte": "Terrasser le jeune dragon des Pics." },
     "legende_vivante":   { "nom": "Légende vivante", "cat": "Le monde", "texte": "Vaincre une bête légendaire." },
     "rempart":           { "nom": "Rempart", "cat": "Le monde", "texte": "Repousser un assaut sans perdre une seule vague." },
@@ -70,6 +71,7 @@
     "dette":        { "texte": "Tu es dans le rouge. Dans {n} jours, la Couronne saisit tout. La banque ou l'usurier peuvent t'aider, mais l'usurier mord.", "ecran": "livre", "alerte": true },
     "sceau":        { "texte": "Le héraut repassera quand tu rempliras les conditions du prochain sceau. Va voir la Charte.", "ecran": "charte" },
     "promotion":    { "texte": "Un nouveau sceau sur la charte ! Ton grand-père aurait été fier. Enfin… moi, je le suis.", "ecran": "charte", "alerte": true },
+    "epreuve":      { "texte": "{nom} mérite son insigne de rang {rang}. Organise son épreuve depuis sa fiche : un aventurier qu'on fait attendre finit par se vexer.", "ecran": "aventuriers" },
     "proliferation":{ "texte": "Les bêtes prolifèrent quelque part. Une prime d'extermination calmerait le jeu avant qu'elles ne viennent frapper à nos portes.", "ecran": "tableau" }
   }
 }

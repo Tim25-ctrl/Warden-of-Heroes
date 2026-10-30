@@ -5,6 +5,7 @@ import { dayOf, money } from '../../sim/format';
 import { questValue } from '../../sim/quests';
 import type { BedType, DishId, GameState } from '../../sim/types';
 import { PriceInput, RichText } from '../components';
+import { MorningReport } from '../Morning';
 import { game } from '../store';
 import { DecisionCard } from './Chroniques';
 
@@ -17,6 +18,7 @@ export function Consultation({ s }: { s: GameState }) {
   return (
     <div class="consultation">
       <div class="screen-head"><h2>Résumé</h2><span class="hint">Jour {dayOf(s.tick)} · {s.adventurers.length} aventuriers · {money(s.treasury)}</span></div>
+      <MorningReport s={s} />
 
       {s.world.decisions.length > 0 && (
         <div class="panel accent"><h3>Décisions en attente</h3>{s.world.decisions.map((d) => <DecisionCard s={s} d={d} />)}</div>

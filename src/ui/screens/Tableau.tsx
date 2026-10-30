@@ -97,7 +97,10 @@ function Regions({ s }: { s: GameState }) {
 export function Tableau({ s }: { s: GameState }) {
   const [tab, setTab] = useState<'tableau' | 'regions'>('tableau');
   const [open, setOpen] = useState<number | null>(null);
-  const combat = s.board.filter((q) => q.type !== 'aide');
+  const [kind, setKind] = useState<string>('tout');
+  const allCombat = s.board.filter((q) => q.type !== 'aide');
+  const combat = kind === 'tout' ? allCombat : allCombat.filter((q) => q.type === kind);
+  const kinds = [...new Set(allCombat.map((q) => q.type))];
   const aides = s.board.filter((q) => q.type === 'aide');
   const workers = s.adventurers.filter((a) => a.job);
   return (
@@ -111,6 +114,10 @@ export function Tableau({ s }: { s: GameState }) {
         <>
           <div class="panel">
             <h3>Quêtes</h3>
+            <div class="row" style={{ marginBottom: 10 }}>
+              <button class={`chip ${kind === 'tout' ? 'on' : ''}`} onClick={() => setKind('tout')}>Toutes ({allCombat.length})</button>
+              {kinds.map((k) => <button class={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{QUEST_TYPE_NAMES[k]} ({allCombat.filter((q) => q.type === k).length})</button>)}
+            </div>
             {combat.length === 0 ? <p class="empty">Aucune affiche pour l'instant. De nouvelles quêtes arrivent chaque matin.</p>
               : <div class="board">{combat.map((q) => <Notice s={s} q={q} />)}</div>}
           </div>

@@ -2,6 +2,7 @@
 import { hasTrait } from './adventurers';
 import { GEAR, P, TIERS } from './data';
 import { IP } from './economy';
+import { cityDiscount } from './cities';
 import { advLink, money } from './format';
 import { log, think, flow } from './journal';
 import { townSpend } from './mods';
@@ -20,7 +21,7 @@ export function gearPrice(s: GameState, tier: number, kind: GearKind): Money {
   if (!t) return Infinity;
   const base = kind === 'weapon' ? t.arme : t.armure;
   const mat = t.materiau ? 0.5 + 0.5 * odFactor(s, t.materiau) : 1;
-  return Math.round(base * IP(s) * mat);
+  return Math.round(base * IP(s) * mat * cityDiscount(s, 'equipement'));   // route de Brisemine (v1.1)
 }
 
 export function repairCost(s: GameState, g: Gear, kind: GearKind): Money {

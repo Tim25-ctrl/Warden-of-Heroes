@@ -4,6 +4,7 @@ import { clamp } from './economy';
 import { advLink } from './format';
 import { log } from './journal';
 import { pick, rand, randInt, type Stream } from './rng';
+import { initialRang } from './ranks';
 import type { Adventurer, AttrId, ClassId, GameState, Profile, Rang, SkillId } from './types';
 
 export const TIER_BONUS = [0, ...TIERS.map((t) => t.bonus)];
@@ -214,9 +215,11 @@ export function createAdventurer(s: GameState, o: NewAdventurerOptions): Adventu
     leaveTick: null,
     thoughts: [],
     history: { questsOk: 0, questsFail: 0, kills: 0, notable: [], fraudsCaught: 0 },
+    rang: 'F', rankQuests: 0, griefRang: 0,
   };
   const target = o.level ?? 1;
   while (a.level < target) levelUp(s, a);
+  a.rang = initialRang(s, a.level);   // l'insigne de son ancienne guilde, dans la limite du Sceau
   if (a.level >= 4) a.weapon.tier = a.armor.tier = 2;
   a.hp = pvMax(a);
   return a;

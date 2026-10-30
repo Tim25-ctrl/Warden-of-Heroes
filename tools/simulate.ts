@@ -10,8 +10,11 @@ import { canHireProf, profSalary } from '../src/sim/training';
 import { upgradeCost } from '../src/sim/rooms';
 import type { BedType, DishId, GameState, RoomId } from '../src/sim/types';
 import { bedRef, careRef, cotisationRef, dishRef, saleRef, sessionRef } from '../src/sim/economy';
-import { DORM_LEVELS, INF_LEVELS, MESS_LEVELS, P, ROOM_IDS, TERRAIN_LEVELS, TIERS } from '../src/sim/data';
+import { CITIES, CITY_IDS, DORM_LEVELS, INF_LEVELS, MESS_LEVELS, P, RESOURCES, ROOM_IDS, TERRAIN_LEVELS, TIERS } from '../src/sim/data';
 import { PROG, sealConditions } from '../src/sim/legend';
+import { examFee, examOf, examRang, isCandidate } from '../src/sim/ranks';
+import { WORKS, workState } from '../src/sim/charter';
+import { activeCaravans, caravanFeeRef, caravanPreview, cityState, routeOpen } from '../src/sim/cities';
 
 const args = process.argv.slice(2);
 const arg = (name: string, def: string) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : def; };
@@ -87,6 +90,7 @@ function checkInvariants(s: GameState, issues: string[]): void {
 }
 
 /** Joueur-robot : réagit une fois par jour, à 07h. */
+let caravans = 0;
 function bot(s: GameState): void {
   answerDecisions(s);
   const beds = s.dortoirs.beds.paillasse + s.dortoirs.beds.commun + s.dortoirs.beds.individuelle + s.dortoirs.beds.suite;
@@ -150,6 +154,24 @@ function bot(s: GameState): void {
   if (count('inspecteur') === 0 && s.adventurers.length >= 15 && s.treasury > 20000) hireBest(s, 'inspecteur');
   if (count('courtier') === 0 && s.adventurers.length >= 15 && s.treasury > 15000) hireBest(s, 'courtier');
   if (count('courtier') > 0 && !s.policy.courtierRachat) applyCommand(s, { type: 'setCourtierRachat', enabled: true });
+  // Œuvres (v1.1) : le robot finance une œuvre quand il lui reste plus de 1 000 po après l'achat.
+  for (const w of WORKS) if (workState(s, w.id) === 'libre' && s.rank >= w.sceau && s.treasury > w.cout + 100000) { applyCommand(s, { type: 'buyWork', id: w.id }); break; }
+  // Caravanes (v1.1) : quand l'Entrepôt contient de quoi rapporter, à la ville, deux fois le prix de l'escorte de plus qu'en ville.
+  if (activeCaravans(s) === 0) {
+    for (const v of CITY_IDS.filter((id) => routeOpen(s, id))) {
+      const res = [...new Set(s.resserre.filter((l) => CITIES[v].demande.includes(RESOURCES[l.res].categorie)).map((l) => l.res))];
+      const fee = caravanFeeRef(s, v);
+      const p = caravanPreview(s, v, res);
+      if (res.length && p.value - p.local > 2 * fee && s.treasury > fee + 20000) { applyCommand(s, { type: 'sendCaravan', ville: v, res, fee }); caravans++; break; }
+    }
+  }
+  // Épreuves de rang (v1.1) : le robot les organise dès qu'un aventurier est candidat, et les offre s'il ne peut pas payer.
+  for (const a of s.adventurers) {
+    if (!isCandidate(s, a) || examOf(s, a)) continue;
+    const fee = examFee(examRang(s, a)!);
+    if (a.gold < fee && s.treasury < 5000) continue;   // il n'offre l'épreuve qu'une fois sa caisse un peu remplie
+    applyCommand(s, { type: 'organizeExam', id: a.id, offered: a.gold < fee });
+  }
   if (count('greffier') === 0 && s.adventurers.length >= 15 && s.treasury > 15000) hireBest(s, 'greffier');
   if (s.refectoire.level >= 2 && !s.refectoire.menu.includes('panier')) applyCommand(s, { type: 'setMenu', menu: [...s.refectoire.menu, 'panier'] });
   if (s.refectoire.level >= 3 && !s.refectoire.menu.includes('roti') && s.staff.some((m) => m.role === 'cuisinier' && m.c >= 40)) {
@@ -191,7 +213,7 @@ interface Result {
   firstRoom: number; fourRooms: number; firstLevel3: number; avgMorale: number; avgHp: number; teams: number;
   revenue: Record<string, number>; expenses: Record<string, number>; flows: Record<string, number>; types: Record<string, number>; frauds: number; outside: number;
   prosperity: number; palier: string; palierDay: number; renown: number; events: Record<string, number>; assaults: number; epidemics: number;
-  rivals: string; issues: string[]; danger: number; sealDays: number[]; achievements: number; book: number;
+  rivals: string; villes: string; cuts: number; cityEsc: number; caravans: number; issues: string[]; danger: number; sealDays: number[]; achievements: number; book: number;
   allL5: number; rooms: string; maxAdv: number; morale: number[]; conds: string; missing: string; gone: Record<string, number>;
 }
 
@@ -210,6 +232,8 @@ function run(seed: number): Result {
   let firstRoom = 0, fourRooms = 0, firstLevel3 = 0, net30 = 0, outside = 0;
   const types: Record<string, number> = {};
   const seenRuns = new Set<number>();
+  let cuts = 0, cityEsc = 0, lastCut = 0;
+  caravans = 0;
   const issues: string[] = [];
   const events: Record<string, number> = {};
   let palierDay = 0, assaults = 0, epidemics = 0, allL5 = 0, maxAdv = 0;
@@ -272,7 +296,8 @@ function run(seed: number): Result {
       if (s.rank >= 3) for (const c of sealConditions(s)) { const k = `${s.rank + 1}:${c.label.replace(/ (.*)$/, '')}`; if (c.ok && !condDay[k]) condDay[k] = day(s); else if (!c.ok && !(k in condDay)) condDay[k] = 0; }
     }
     if (s.tick % 24 === 3) outside += s.adventurers.filter((a) => a.activity.kind === 'dehors').length;
-    for (const r of s.runs) if (!seenRuns.has(r.id) && r.stage !== 'preparation') { seenRuns.add(r.id); types[r.quest.type] = (types[r.quest.type] ?? 0) + 1; }
+    for (const r of s.runs) if (!seenRuns.has(r.id) && r.stage !== 'preparation') { seenRuns.add(r.id); types[r.quest.type] = (types[r.quest.type] ?? 0) + 1; if (r.quest.dest) cityEsc++; }
+    if ((s.world.lastCut ?? 0) !== lastCut) { lastCut = s.world.lastCut ?? 0; cuts++; }
     if (!firstRoom && roomsBuilt(s) >= 3) firstRoom = day(s);
     if (!allL5 && ROOM_IDS.every((r) => s[r].level >= 5)) allL5 = day(s);
     maxAdv = Math.max(maxAdv, s.adventurers.length);
@@ -310,7 +335,8 @@ function run(seed: number): Result {
     missing: sealConditions(s).filter((c) => !c.ok).map((c) => c.label).join(' ; '),
     conds: Object.entries(condDay).map(([k, v]) => `${k} ${v ? 'J' + v : '—'}`).join(' · '),
     allL5, rooms: `${s.dortoirs.level}${s.refectoire.level}${s.cuisine.level}${s.infirmerie.level}${s.terrain.level}`, maxAdv, morale,
-    rivals: s.world.rivals.map((r) => `${r.nom} ${Math.round(r.renown)}`).join(', '), issues, frauds: s.fraud.detected, outside,
+    rivals: s.world.rivals.map((r) => `${r.nom} ${Math.round(r.renown)}`).join(', '), issues, cuts, cityEsc, caravans,
+    villes: CITY_IDS.map((id) => `${CITIES[id].court} ${Math.round(cityState(s, id).commerce)}${routeOpen(s, id) ? '' : ' (coupée)'}`).join(', '), frauds: s.fraud.detected, outside,
   };
 }
 
@@ -344,6 +370,7 @@ console.log('\nMonde (fin de partie) :');
 for (const r of results) console.log(`  graine ${r.seed} : prospérité ${r.prosperity.toFixed(0)} (${r.palier}${r.palierDay ? `, Ville au J${r.palierDay}` : ''}), danger ${r.danger}, renommée ${r.renown.toFixed(0)}, assauts ${r.assaults}, épidémies ${r.epidemics} · rivales : ${r.rivals}`);
 for (const r of results) console.log(`  graine ${r.seed} : sceaux aux jours ${r.sealDays.length ? r.sealDays.join(', ') : 'aucun'} · ${r.achievements} hauts faits · ${r.book} chapitres au Livre · salles ${r.rooms}${r.allL5 ? ` (toutes niv 5 au J${r.allL5})` : ''} · ${r.maxAdv} aventuriers au plus · moral par mois ${r.morale.join(' ')}`);
 for (const r of results) console.log(`  graine ${r.seed} : conditions (sceau n° : condition, jour) ${r.conds}`);
+for (const r of results) console.log(`  graine ${r.seed} : commerce ${r.villes} · ${r.cityEsc} escortes vers les villes · ${r.cuts} routes coupées · ${r.caravans} caravanes`);
 for (const r of results) if (r.missing) console.log(`  graine ${r.seed} : manque à la fin pour le sceau suivant : ${r.missing}`);
 console.log('Événements (moyenne par partie) :', Object.entries(sumRec((r) => r.events)).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', '));
 const allIssues = results.flatMap((r) => r.issues.map((i) => `graine ${r.seed}, ${i}`));

@@ -81,6 +81,11 @@ export interface Adventurer {
   loyalty: number;
   griefPrix: number;
   griefFiscal: number;
+  rang: Rang;                          // insigne de rang décerné par la guilde (v1.1)
+  rankQuests: number;                  // quêtes de son rang réussies depuis sa dernière promotion
+  griefRang: number;                   // grief de reconnaissance : candidat qu'on fait attendre
+  candidateSince?: number;
+  examCooldown?: number;               // pas de nouvelle épreuve avant ce tick (après un échec)
   gold: Money;
   debt: Money;                 // soins à crédit
   creditCap: Money | null;     // plafond propre (sinon celui de la politique)
@@ -147,6 +152,11 @@ export interface Quest {
   id: number;
   type: QuestType;
   rang: Rang;
+  examFor?: number;                    // épreuve de rang réservée à cet aventurier (v1.1)
+  sharedWith?: string;                 // contrat partagé avec cette rivale (v1.1)
+  dest?: string;                       // escorte vers une ville voisine (v1.1)
+  route?: string;                      // quête qui rouvre la route de cette ville (v1.1)
+  caravane?: ResLot[];                 // marchandises de la guilde convoyées (v1.1)
   zone: string;
   clientType: ClientType;
   client: string;
@@ -327,6 +337,8 @@ export interface GameState {
   dortoirs: Dortoirs;
   refectoire: Refectoire;
   cuisine: Cuisine;
+  privileges?: string[];                // privilèges de Sceau (v1.1)
+  works?: { id: string; endTick: number; done: boolean }[];   // œuvres de la guilde (v1.1)
   infirmerie: Infirmerie;
   terrain: Terrain;
   modules: string[];
@@ -426,6 +438,11 @@ export type Command =
   | { type: 'setDifficulty'; id: DifficultyId }
   | { type: 'setGaspard'; mode: GaspardState['mode'] }
   | { type: 'gaspardAck'; id: number }
+  | { type: 'organizeExam'; id: number; offered: boolean }
+  | { type: 'buyWork'; id: string }
+  | { type: 'giftRival'; id: string }
+  | { type: 'pactRival'; id: string }
+  | { type: 'sendCaravan'; ville: string; res: string[]; fee: Money }
   | { type: 'pantheonPick'; id: number }
   | { type: 'ackEpilogue' };
 
@@ -450,7 +467,11 @@ export interface Decision {
 export interface Rival {
   id: string; nom: string; profil: 'prestige' | 'mercenaires' | 'chasseurs'; renown: number; size: number;
   tarifs: number; taux: number; nextAction: number; bankruptSince: number | null;
+  relation?: number; pacteUntil?: number; giftTick?: number; lastShared?: number;   // relations (v1.1)
+  ville?: string;                      // ville où siège la guilde (v1.1)
 }
+
+export interface CityState { commerce: number; coupeeDepuis: number | null; cause?: string }
 
 export interface NewsItem { tick: number; rubrique: 'une' | 'marche' | 'guildes' | 'exploits'; text: string }
 
@@ -465,7 +486,10 @@ export interface WorldState {
   mods: WorldMod[];
   events: ActiveEvent[];
   lastFired?: Record<string, number>;
-  closedHunts?: string[];                  // « zone:espèce » dont la chasse est fermée, l'espèce étant devenue rare (v1.1)
+  closedHunts?: string[];
+  tournament?: { day: number; mode: 'meilleurs' | 'espoirs' };   // Tournoi des insignes à venir (v1.1)                  // « zone:espèce » dont la chasse est fermée, l'espèce étant devenue rare (v1.1)
+  villes?: Record<string, CityState>;   // commerce et état des routes des villes voisines (v1.1)
+  lastCut?: number;                     // dernière route coupée
   rivalTrips?: { tick: number; rival: string; zone: string; text: string }[];   // sorties des rivales, 3 derniers jours (carte)     // dernier déclenchement de chaque événement (délai avant qu'il revienne)
   scheduled: { eventId: string; tick: number; data?: Record<string, string | number>; real: boolean }[];
   rumors: Rumor[];
@@ -479,7 +503,7 @@ export interface WorldState {
   counters: Record<string, number>;          // chaînes : jours consécutifs au-dessus d'un seuil
   escortes: { tick: number; ok: boolean }[];
   townSpend: number[];                       // dépenses des aventuriers en ville, par jour (7 jours)
-  history: { day: number; danger: number; prosperity: number; renown: number }[];
+  history: { day: number; danger: number; prosperity: number; renown: number; morale?: number; adventurers?: number; rivals?: Record<string, number> }[];
   popHistory: { day: number; pops: Record<string, Record<string, number>> }[];
   conscripts: { adv: Adventurer; returnTick: number }[];
   damaged: Partial<Record<RoomId, boolean>>;  // salles endommagées par un assaut (capacité −50 %)

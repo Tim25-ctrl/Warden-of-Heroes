@@ -1,7 +1,8 @@
 // La Charte de la guilde et les hauts faits (GDD 7.5.10), avec le Panthéon (6.7).
 import { useState } from 'preact/hooks';
 import { CLASSES } from '../../sim/data';
-import { stamp } from '../../sim/format';
+import { money, stamp } from '../../sim/format';
+import { PRIVILEGES, WORKS, workBlocked, workState } from '../../sim/charter';
 import { ACHIEVEMENTS, DIFFICULTY_NAMES, nextSeal, sealConditions, sealOf, SEALS } from '../../sim/legend';
 import type { GameState } from '../../sim/types';
 import { Gauge, Tabs } from '../components';
@@ -113,13 +114,52 @@ function Pantheon({ s }: { s: GameState }) {
   );
 }
 
+/** Œuvres pour la ville et privilèges de Sceau (GDD 6.10, 6.11). */
+function Works({ s }: { s: GameState }) {
+  const err = lastError();
+  return (
+    <div class="grid2">
+      <div class="panel">
+        <h3>Œuvres pour la ville</h3>
+        <p class="hint">De grands chantiers que la guilde finance en ville : chacun ne se construit qu'une fois, rapporte de la renommée et laisse un effet durable.</p>
+        {WORKS.map((w) => {
+          const st = workState(s, w.id);
+          const why = workBlocked(s, w);
+          const site = s.works?.find((x) => x.id === w.id);
+          return (
+            <div class="row" style={{ padding: '8px 0', borderBottom: '1px solid var(--line-soft)', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <strong>{w.nom}</strong> <small>{money(w.cout)} · {w.jours} jours</small>
+                <div class="hint">{w.effet}{w.renommee ? ` · renommée +${w.renommee}` : ''}</div>
+              </div>
+              {st === 'fini' ? <span class="tag sage">achevée</span>
+                : st === 'chantier' ? <span class="tag amber">en chantier, fin {stamp(site!.endTick)}</span>
+                : <button class="btn small seal" disabled={!!why} title={why ?? ''} onClick={() => game.command({ type: 'buyWork', id: w.id })}>{why && s.rank < w.sceau ? why.replace('Exige le ', '') : 'Financer'}</button>}
+            </div>
+          );
+        })}
+        {err && <p class="hint" style={{ color: 'var(--seal)' }}>{err}</p>}
+      </div>
+      <div class="panel">
+        <h3>Privilèges de Sceau</h3>
+        <p class="hint">À chaque nouveau Sceau, la Couronne propose trois privilèges ; tu en choisis un, pour toute la partie.</p>
+        {(s.privileges ?? []).length === 0 ? <p class="empty">Aucun privilège pour l'instant : le premier viendra avec le Sceau de Fer.</p>
+          : (s.privileges ?? []).map((id) => { const p = PRIVILEGES.find((x) => x.id === id)!; return <p><span class="tag gold">{p.nom}</span> {p.effet}</p>; })}
+        <h4 style={{ marginTop: 12 }}>Les privilèges possibles</h4>
+        <ul class="plain">{PRIVILEGES.map((p) => <li class={s.privileges?.includes(p.id) ? '' : 'soft'}><strong>{p.nom}</strong> : {p.effet}</li>)}</ul>
+      </div>
+    </div>
+  );
+}
+
 export function Charte({ s }: { s: GameState }) {
-  const [tab, setTab] = useState<'sceau' | 'hauts' | 'pantheon'>('sceau');
+  const [tab, setTab] = useState<'sceau' | 'oeuvres' | 'hauts' | 'pantheon'>('sceau');
   return (
     <div>
       <div class="screen-head"><h2>La Charte de la guilde</h2><span class="hint">{sealOf(s.rank).nom} · {Math.round(s.renown)} points de renommée</span></div>
-      <Tabs value={tab} onChange={setTab} tabs={[['sceau', 'Sceaux et renommée'], ['hauts', 'Hauts faits'], ['pantheon', 'Panthéon']]} />
+      <Tabs value={tab} onChange={setTab} tabs={[['sceau', 'Sceaux et renommée'], ['oeuvres', 'Œuvres et privilèges'], ['hauts', 'Hauts faits'], ['pantheon', 'Panthéon']]} />
       {tab === 'sceau' && <Seal s={s} />}
+      {tab === 'oeuvres' && <Works s={s} />}
       {tab === 'hauts' && <Achievements s={s} />}
       {tab === 'pantheon' && <Pantheon s={s} />}
     </div>
