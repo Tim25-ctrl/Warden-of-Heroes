@@ -300,6 +300,7 @@ export function Carte({ s }: { s: GameState }) {
               return (
                 <g class={`zone ${!city && zone === id ? 'on' : ''}`} onClick={() => pickZone(id)} role="button" tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') pickZone(id); }}>
+                  <circle cx={x} cy={y} r={78} class="zone-hit" />
                   <circle cx={x} cy={y} r={84} class="zone-sel" />
                   <text x={lx} y={ly} class="lbl">{id === 'ville' ? TOWN_NAMES[s.world.palier] : ZONES[id].court}</text>
                   <g transform={`translate(${lx},${ly + 22})`}>

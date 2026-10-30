@@ -517,7 +517,7 @@ ul.plain li { padding: 2px 0; }
 .map-illustree .zone-sel { transition: opacity 0.2s; }
 .tier-chip { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; }
 .map-illustree .city-hit { fill: transparent; stroke: none; }
-.map-illustree .city:hover .city-hit { fill: rgba(201, 162, 39, 0.12); }
+.map-illustree .zone-hit { fill: transparent; stroke: none; }   /* zone cliquable invisible autour de chaque lieu */
 .map-illustree .bar-bg { fill: rgba(60, 40, 20, 0.25); }
 .map-illustree .badge-text { font-size: 18px; }
 .map-illustree .plant { font-size: 16px; fill: #2b1d12; paint-order: stroke; stroke: rgba(246, 236, 212, 0.9); stroke-width: 3px; }

@@ -10,9 +10,13 @@ import { type CleanRoom, propreteOf } from '../../sim/rooms';
 import type { Adventurer, BedType, GameState, QuestRun, StaffRole } from '../../sim/types';
 import { ACTIVITY_LABELS, plain } from '../components';
 import guildeUrl from '../../assets/guilde.jpg';
+import litsUrl from '../../assets/lits.jpg';
+import { loadSheet } from '../sprites';
 
 /** Décor illustré du siège (v1.1, D-158) : le bâtiment vide ; le jeu y dessine lits, tables et personnages. */
 const BG = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: guildeUrl }) : null;
+/** Les vrais lits du dortoir (v1.1, D-162), vus de face, tête contre le mur du fond. */
+const BED_SPRITES = loadSheet(litsUrl, ['paillasse', 'commun', 'individuelle', 'suite'] as const);
 
 export type RoomHit = 'dortoirs' | 'infirmerie' | 'refectoire' | 'comptoir' | 'cuisine' | 'terrain' | 'ville' | 'quete';
 
@@ -62,24 +66,39 @@ function grid(box: Box, n: number, cols: number, padX: number, padY: number, dx:
 interface Bed { type: BedType; x: number; y: number; w: number; h: number }
 
 /** Lits du dortoir. Quand ils ne tiennent plus dans la salle (grands niveaux), on les dessine plus petits. */
+/** Hauteur de chaque lit à l'échelle 1, et ses proportions tant que l'image n'est pas chargée. */
+const BED_H: Record<BedType, number> = { paillasse: 30, commun: 40, individuelle: 46, suite: 68 };
+const BED_RATIO: Record<BedType, number> = { paillasse: 1.05, commun: 0.82, individuelle: 0.8, suite: 0.74 };
+
+/**
+ * Lits du dortoir, rangée par rangée sur le plancher : les plus beaux devant, et chaque rangée du fond un peu plus petite
+ * et plus haute, pour la profondeur. Quand ils ne tiennent plus, tout rétrécit.
+ */
 function layoutBeds(s: GameState): Bed[] {
-  const x0 = ROOMS.dortoirs.x + 14, x1 = ROOMS.dortoirs.x + ROOMS.dortoirs.w - 14;
+  const x0 = ROOMS.dortoirs.x + 12, x1 = ROOMS.dortoirs.x + ROOMS.dortoirs.w - 12;
   const order: BedType[] = ['suite', 'individuelle', 'commun', 'paillasse'];
+  const ratio = (t: BedType) => { const sp = BED_SPRITES[t]; return sp ? sp.w / sp.h : BED_RATIO[t]; };
   let beds: Bed[] = [];
-  for (const k of [1, 0.85, 0.7, 0.6, 0.5, 0.42]) {
+  for (const k of [1, 0.86, 0.74, 0.64, 0.56, 0.48, 0.42]) {
     beds = [];
-    let x = x0;
     let row = 0;
+    let x = x0;
+    const scaleOf = (r: number) => k * (1 - 0.13 * r);
     for (const t of order) {
       for (let i = 0; i < s.dortoirs.beds[t]; i++) {
-        const w = (t === 'suite' ? 70 : t === 'individuelle' ? 46 : 30) * k;
-        const h = (t === 'suite' ? 24 : t === 'individuelle' ? 20 : 16) * k;
-        if (x + w > x1) { x = x0; row += 1; }
-        beds.push({ type: t, x, y: FLOOR_UP + 8 - h - row * 28 * k, w, h });
-        x += w + 6 * k;
+        let h = BED_H[t] * scaleOf(row);
+        let w = h * ratio(t);
+        if (x + w > x1) {
+          row += 1; x = x0 + (row % 2) * 10 * k;   // rangée suivante, un peu décalée
+          h = BED_H[t] * scaleOf(row);
+          w = h * ratio(t);
+        }
+        const base = FLOOR_UP + 10 - row * 20 * k;   // ligne où le lit pose ses pieds
+        beds.push({ type: t, x, y: base - h, w, h });
+        x += w + 3 * k;
       }
     }
-    if (beds.every((b) => b.y >= 140)) break;   // pas plus haut que l'appui des fenêtres
+    if (row <= 3 && beds.every((b) => b.y >= 104)) break;   // pas plus haut que le milieu des fenêtres
   }
   return beds;
 }
@@ -131,7 +150,7 @@ function computeTargets(s: GameState): Map<number, Target> {
     let slot: Slot = hall[0];
     if (k === 'dormir') {
       const i = beds.findIndex((b, idx) => b.type === a.activity.bed && !used.has(idx));
-      if (i >= 0) { used.add(i); slot = { x: beds[i].x + beds[i].w / 2, y: beds[i].y + beds[i].h / 2 }; }
+      if (i >= 0) { used.add(i); slot = { x: beds[i].x + beds[i].w / 2, y: beds[i].y + beds[i].h * (beds[i].type === 'suite' ? 0.62 : 0.5) }; }
     } else if (k === 'manger' || k === 'boire') slot = seatsList[seatI++ % seatsList.length];
     else if (k === 'attendre') slot = waiting[waitI++ % waiting.length];
     else if (k === 'hospitalise' || k === 'consultation') slot = infSlots[infI++ % infSlots.length];
@@ -399,17 +418,20 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
       const k = st.cuisine;
 
       // Dortoirs : de vrais lits
-      for (const b of layoutBeds(st)) {
+      // Les rangées du fond d'abord, pour que celles de devant passent devant. Le soir, les lits s'assombrissent avec la pièce.
+      const shade = 1 - ((night ? 0.34 : dusk ? 0.14 : 0) + (p.dark ? 0.12 : 0));
+      if (shade < 1) ctx.filter = `brightness(${shade})`;
+      for (const b of [...layoutBeds(st)].sort((a, c) => a.y + a.h - (c.y + c.h))) {
+        const sp = BED_SPRITES[b.type];
+        if (sp) { ctx.drawImage(sp.canvas, b.x, b.y, b.w, b.h); continue; }
         ctx.fillStyle = p.wood;
         roundRect(ctx, { x: b.x - 1, y: b.y - 1, w: b.w + 2, h: b.h + 3 }, 3);
         ctx.fill();
         ctx.fillStyle = b.type === 'paillasse' ? '#c9ad6e' : b.type === 'commun' ? '#9b7a4e' : b.type === 'suite' ? p.gold : p.accent;
         roundRect(ctx, b, 3);
         ctx.fill();
-        ctx.fillStyle = p.wall;
-        roundRect(ctx, { x: b.x + 2, y: b.y + 2, w: Math.max(5, b.w * 0.22), h: b.h - 4 }, 2);
-        ctx.fill();
       }
+      ctx.filter = 'none';
       const lits = (Object.keys(BEDS) as BedType[]).reduce((a, t) => a + bedsAvailable(st, t), 0);
       const dorment = (Object.keys(BEDS) as BedType[]).reduce((a, t) => a + bedsUsed(st, t), 0);
       cartouche(ctx, p, ROOMS.dortoirs, 'Dortoirs', `${dorment}/${lits} lits`);

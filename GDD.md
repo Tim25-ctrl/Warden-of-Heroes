@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.7 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
+> **Statut du document :** v2.8 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -2456,6 +2456,8 @@ Elles se commandent depuis la **Charte** (nouvel onglet *Œuvres*) et paraissent
 
 > **Ajusté en v1.1 (D-159) :** l'écran du siège s'appelle **« La Guilde »**. Le menu est rangé en trois groupes : *Ta guilde* (La Guilde, Aventuriers, Personnel, Comptoir), *Le monde* (Tableau, Carte, Chroniques), *Les registres* (Livre de comptes, Charte, Livre de la guilde), puis les Options à part. Les mots cliquables ont la couleur du texte, avec un soulignement discret qui prend la couleur d'accent au survol. Dans la vue en coupe, seules restent les bulles utiles (« ! » mécontent ou sur le départ, « + » blessé ou soigné, « … » en file d'attente) ; ce que fait chacun se lit au survol. Les pensées affichées sont tirées au hasard parmi les pensées récentes différentes, sans répéter les huit dernières.
 
+> **Ajouté en v1.1 : de vrais meubles** (D-162). Les objets des salles viennent de planches illustrées dans le même style (fond vert uni, objets alignés, vus de face et un peu d'en haut comme le décor, symétriques). Le jeu rend le vert transparent et découpe chaque objet au chargement (`src/ui/sprites.ts`). Premier lot : les quatre lits du dortoir (`src/assets/lits.jpg` : paillasse, lit commun, lit de chambre, lit à baldaquin), tête contre le mur du fond, en rangées sur le plancher, les plus beaux devant ; les rangées du fond sont un peu plus petites pour la profondeur. À venir, avec la même méthode : aménagements du dortoir, tables du réfectoire selon son niveau, infirmerie, cuisine, cour.
+
 > **Ajouté en v1.1 : deux illustrations** (D-158). La carte régionale et la vue en coupe du siège reposent désormais sur deux images peintes (encre et aquarelle, générées par IA à partir de prompts décrivant la disposition du jeu, puis retouchées), rangées dans `src/assets/` (`carte.jpg`, 1280 × 832 ; `guilde.jpg`, 1440 × 736). Le jeu dessine par-dessus ce qui change : lits, tables, personnages, flammes de l'âtre, mannequins, cartouches, pastilles de danger, équipes. En thème sombre, la carte est assombrie par un filtre ; la vue en coupe s'assombrit le soir et la nuit, avec la lueur des chandelles.
 
 ### 7.3 Disposition de l'écran (ordinateur)
@@ -3470,6 +3472,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-159 | 2026-10-30 | Écran « La Guilde », menu Ta guilde / Le monde / Les registres, liens discrets, bulles utiles seulement, carte sans lieu choisi d'office. | 7.5 |
 | D-160 | 2026-10-30 | Chaque ville voisine a ses environs (bêtes, plantes, milice) et son conseil publie des demandes sur ton tableau. | 5.8 |
 | D-161 | 2026-10-30 | Golems et dragon ne comptent pas dans le danger d'une zone ; plus de halo coloré sur la carte, seulement la pastille. | 2.7, 7.5.6 |
+| D-162 | 2026-10-30 | Les meubles des salles viennent de planches illustrées détourées au chargement ; premier lot : les quatre lits du dortoir. | 7.2, 7.5.1 |
 
 ### Relecture de cohérence (v1.0)
 
