@@ -7,7 +7,7 @@ import { applyCommand, createGame, step } from '../src/sim/engine';
 import { money } from '../src/sim/format';
 import { FLOWS } from '../src/sim/journal';
 import { canHireProf, profSalary } from '../src/sim/training';
-import { upgradeCost } from '../src/sim/rooms';
+import { cleaningCapacity, cleaningLoads, upgradeCost } from '../src/sim/rooms';
 import type { BedType, DishId, GameState, RoomId } from '../src/sim/types';
 import { bedRef, careRef, cotisationRef, dishRef, saleRef, sessionRef } from '../src/sim/economy';
 import { CITIES, CITY_IDS, DORM_LEVELS, INF_LEVELS, MESS_LEVELS, P, RESOURCES, ROOM_IDS, TERRAIN_LEVELS, TIERS } from '../src/sim/data';
@@ -142,14 +142,14 @@ function bot(s: GameState): void {
     }
   }
 
-  // Personnel
+  // Personnel (v1.1 : le robot accorde les augmentations demandées)
+  for (const m of s.staff) if (m.raiseAsk) applyCommand(s, { type: 'answerRaise', id: m.id, accept: true });
   const count = (role: string) => s.staff.filter((m) => m.role === role).length;
   if (s.infirmerie.level > 0 && count('soigneur') === 0 && s.treasury > 3000) hireBest(s, 'soigneur');
   if (s.infirmerie.level >= 3 && count('apothicaire') === 0 && s.treasury > 5000) hireBest(s, 'apothicaire');
   const waited = s.journal.filter((e) => e.tick > s.tick - 24 && e.text.startsWith("File d'attente")).length;
   if (waited > 0 && count('commis') + count('cuisinier') < 1 + s.refectoire.level && s.treasury > 8000) hireBest(s, 'commis');
-  const places = [0, 12, 24, 40, 60, 80][s.dortoirs.level];
-  if (count('valet') * 15 < places && s.treasury > 8000) hireBest(s, 'valet');
+  if (cleaningCapacity(s) < Object.values(cleaningLoads(s)).reduce((a, b) => a + b, 0) - 3 && s.treasury > 8000) hireBest(s, 'valet');
   if (count('intendant') === 0 && s.treasury > 30000) hireBest(s, 'intendant');
   if (count('inspecteur') === 0 && s.adventurers.length >= 15 && s.treasury > 20000) hireBest(s, 'inspecteur');
   if (count('courtier') === 0 && s.adventurers.length >= 15 && s.treasury > 15000) hireBest(s, 'courtier');

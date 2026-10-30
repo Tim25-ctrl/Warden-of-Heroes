@@ -1,26 +1,67 @@
 // Écran du personnel, des professeurs et des consignes de l'intendant (GDD 7.5.3).
 import { useState } from 'preact/hooks';
 import { PROFS, ROLES } from '../../sim/data';
-import { money, stamp, weekdayOf } from '../../sim/format';
-import { canHire, capOf, ROLE_HELP, salaryOf, STAFF_TRAITS } from '../../sim/staff';
+import { money, stamp, weekdayOf, YEAR_DAYS } from '../../sim/format';
+import { canHire, capOf, fairSalary, ROLE_HELP, salaryOf, satisfactionFactors, satisfactionTarget, STAFF_TRAITS } from '../../sim/staff';
+import { P } from '../../sim/data';
 import { canHireProf, profSalary } from '../../sim/training';
 import type { GameState, StaffMember, StaffRole } from '../../sim/types';
-import { Gauge, NumField, Tabs } from '../components';
+import { Gauge, Help, NumField, Tabs } from '../components';
 import { game } from '../store';
 
 const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
-function Row({ m, action }: { m: StaffMember; action: preact.ComponentChildren }) {
+/** Ancienneté lisible : « 3 semaines », « 1 an et 2 saisons »… */
+function seniority(s: GameState, m: StaffMember): string {
+  const days = Math.max(0, Math.floor((s.tick - m.hiredTick) / 24));
+  if (days < 14) return `${days} jour${days > 1 ? 's' : ''}`;
+  if (days < YEAR_DAYS) return `${Math.floor(days / 7)} semaines`;
+  const y = Math.floor(days / YEAR_DAYS);
+  return `${y} an${y > 1 ? 's' : ''}`;
+}
+
+function Row({ s, m, action, hired }: { s: GameState; m: StaffMember; action: preact.ComponentChildren; hired?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const fair = fairSalary(m);
+  const pay = salaryOf(m);
+  const target = Math.round(satisfactionTarget(s, m));
   return (
-    <tr>
-      <td><strong>{m.name}</strong><div class="hint">{ROLES[m.role].nom}</div></td>
-      <td class="num">{m.c}</td>
-      <td title={`Plafond de compétence : ${capOf(m)}`}><span style={{ color: 'var(--gold)' }}>{stars(m.potentiel)}</span></td>
-      <td><small>{m.trait ? STAFF_TRAITS[m.trait] : '—'}</small></td>
-      <td class="num">{money(salaryOf(m))}/j</td>
-      <td style={{ minWidth: 70 }}><Gauge value={m.loyalty} /></td>
-      <td>{action}</td>
-    </tr>
+    <>
+      <tr>
+        <td><strong>{m.name}</strong>{m.age !== undefined && <small class="hint"> · {m.age} ans</small>}
+          <div class="hint">{ROLES[m.role].nom}{hired && <> · depuis {seniority(s, m)}</>}</div>
+          {m.retireTick !== undefined && <span class="tag amber">retraite le {stamp(m.retireTick)}</span>}</td>
+        <td class="num">{m.c}</td>
+        <td title={`Plafond de compétence : ${capOf(m)}`}><span style={{ color: 'var(--gold)' }}>{stars(m.potentiel)}</span></td>
+        <td><small>{m.trait ? STAFF_TRAITS[m.trait] : '—'}</small></td>
+        <td class="num">{money(pay)}/j{hired && fair !== pay && <div class="hint" title="Ce que vaut sa compétence aujourd'hui">vaut {money(fair)}</div>}</td>
+        <td style={{ minWidth: 90 }}>
+          {hired ? <button class="link" onClick={() => setOpen(!open)} title="Voir ce qui fait sa satisfaction">
+            <Gauge value={m.loyalty} /><small>{Math.round(m.loyalty)} {target > m.loyalty + 2 ? '↗' : target < m.loyalty - 2 ? '↘' : ''}</small></button>
+            : <small class="hint">—</small>}
+        </td>
+        <td>{action}</td>
+      </tr>
+      {m.raiseAsk && (
+        <tr class="raise-row"><td colSpan={7}>
+          <strong>{m.name} demande une augmentation</strong> : {money(pay)} → {money(m.raiseAsk.amount)} par jour
+          (sa compétence est passée à {m.c}). <small class="hint">Sans réponse avant le {stamp(m.raiseAsk.since + P.personnel.augmentationReponseJours * 24)}, il le prendra comme un refus.</small>
+          <div class="row" style={{ marginTop: 4 }}>
+            <button class="btn sage small" onClick={() => game.command({ type: 'answerRaise', id: m.id, accept: true })}>Accorder</button>
+            <button class="btn ghost small" onClick={() => game.command({ type: 'answerRaise', id: m.id, accept: false })}>Refuser (satisfaction −{P.personnel.satisfaction.refus})</button>
+          </div>
+        </td></tr>
+      )}
+      {open && hired && (
+        <tr><td colSpan={7}>
+          <div class="why">
+            <strong>Satisfaction : {Math.round(m.loyalty)}</strong>, elle tend vers <strong>{target}</strong> (10 % de l'écart chaque jour).
+            <ul class="plain">{satisfactionFactors(s, m).map((f) => <li><span class={f.value < 0 ? 'neg' : f.value > 0 && f.label !== 'Base' ? 'pos' : ''}>{f.value > 0 && f.label !== 'Base' ? '+' : ''}{f.value}</span> {f.label}</li>)}</ul>
+            <small class="hint">Sous {P.personnel.seuilDemission}, il risque de démissionner (10 % de chances par jour). Pour la remonter : un salaire à la hauteur de sa compétence, une charge de travail raisonnable, et ne pas le laisser impayé.</small>
+          </div>
+        </td></tr>
+      )}
+    </>
   );
 }
 
@@ -34,9 +75,9 @@ function Staff({ s }: { s: GameState }) {
         <h3>Employés</h3>
         {s.staff.length === 0 && <p class="empty">Personne. Sans cuisinier, le réfectoire ne sert plus de repas.</p>}
         <div class="table-wrap"><table class="data">
-          <thead><tr><th>Nom</th><th class="num">Compétence</th><th>Potentiel</th><th>Trait</th><th class="num">Salaire</th><th>Loyauté</th><th /></tr></thead>
+          <thead><tr><th>Nom</th><th class="num">Compétence</th><th>Potentiel</th><th>Trait</th><th class="num">Salaire</th><th>Satisfaction <Help text="Ce que l'employé pense de sa place : salaire comparé à ce que vaut sa compétence, charge de travail, ancienneté. Clique sur la jauge pour le détail. Sous 20, il peut démissionner." /></th><th /></tr></thead>
           <tbody>{s.staff.map((m) => (
-            <Row m={m} action={confirm === m.id
+            <Row s={s} m={m} hired action={confirm === m.id
               ? <div class="row"><button class="btn seal small" onClick={() => { game.command({ type: 'fireStaff', id: m.id }); setConfirm(null); }}>Licencier ({money(salaryOf(m) * 3)})</button><button class="btn ghost small" onClick={() => setConfirm(null)}>Non</button></div>
               : <button class="btn ghost small" onClick={() => setConfirm(m.id)}>Licencier</button>} />
           ))}</tbody>
@@ -44,13 +85,13 @@ function Staff({ s }: { s: GameState }) {
       </div>
       <div class="panel">
         <h3>Candidats</h3>
-        <p class="hint">Le vivier se renouvelle chaque lundi (dans {daysToMonday} jour{daysToMonday > 1 ? 's' : ''}). La compétence progresse de 1 tous les 5 jours, jusqu'au plafond fixé par le potentiel.</p>
+        <p class="hint">Le vivier se renouvelle chaque lundi (dans {daysToMonday} jour{daysToMonday > 1 ? 's' : ''}). La compétence progresse de 1 tous les 5 jours, jusqu'au plafond fixé par le potentiel. Le salaire se fixe à l'embauche ; quand l'employé vaut 20 % de plus, il demande une augmentation. Vers 60 ans, il prend sa retraite.</p>
         {roles.map((role) => <p class="hint"><strong>{ROLES[role].nom}</strong> : {ROLE_HELP[role]}</p>)}
         <div class="table-wrap"><table class="data">
-          <thead><tr><th>Nom</th><th class="num">Compétence</th><th>Potentiel</th><th>Trait</th><th class="num">Salaire</th><th>Loyauté</th><th /></tr></thead>
+          <thead><tr><th>Nom</th><th class="num">Compétence</th><th>Potentiel</th><th>Trait</th><th class="num">Salaire demandé</th><th /><th /></tr></thead>
           <tbody>{s.staffCandidates.map((m) => {
             const why = canHire(s, m);
-            return <Row m={m} action={<button class="btn sage small" disabled={!!why} title={why ?? ''} onClick={() => game.command({ type: 'hireStaff', id: m.id })}>Engager</button>} />;
+            return <Row s={s} m={m} action={<button class="btn sage small" disabled={!!why} title={why ?? ''} onClick={() => game.command({ type: 'hireStaff', id: m.id })}>Engager</button>} />;
           })}</tbody>
         </table></div>
         {s.staffCandidates.length === 0 && <p class="empty">Plus de candidats cette semaine.</p>}

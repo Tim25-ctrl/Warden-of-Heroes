@@ -494,3 +494,28 @@ ul.plain li { padding: 2px 0; }
 .callout { border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 0.92rem; border: 1px solid var(--line); }
 .callout.bad { background: var(--seal-soft); border-color: transparent; }
 .pi.seal { color: var(--seal); }
+
+/* Explications « pourquoi » (v1.1) : satisfaction du personnel, envie de partir */
+.why { background: var(--panel-2); border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 12px; margin: 4px 0; }
+.why .neg { color: var(--seal); font-weight: 700; display: inline-block; min-width: 2.6em; text-align: right; }
+.why .pos { color: var(--sage); font-weight: 700; display: inline-block; min-width: 2.6em; text-align: right; }
+.why ul.plain li span:first-child:not(.neg):not(.pos) { display: inline-block; min-width: 2.6em; text-align: right; font-weight: 700; }
+.raise-row td { background: var(--amber-soft); }
+.meter-scale { position: relative; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--sage-soft) 0 50%, var(--amber-soft) 50% 75%, var(--seal-soft) 75% 100%); margin: 6px 0 2px; }
+.meter-scale .mark { position: absolute; top: -3px; width: 4px; height: 16px; border-radius: 2px; background: var(--ink); transform: translateX(-2px); }
+.meter-legend { position: relative; height: 1.1em; font-size: 0.75rem; color: var(--ink-soft); }
+.meter-legend span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.meter-legend span:last-child { transform: translateX(-60%); }
+.row > select, label.row select { border: 1px solid var(--line); background: var(--panel-2); border-radius: 6px; padding: 4px 8px; min-height: 32px; max-width: 100%; }
+
+/* Ta ville sur la carte (v1.1) */
+.map .road { fill: none; }
+.map .town-ring { opacity: 0.18; stroke: none; transition: opacity 0.2s; }
+.map .zone.on .town-ring, .map .zone:hover .town-ring { opacity: 0.4; }
+.map .town-wall { fill: var(--floor, #e6d6b4); stroke: var(--ink-soft); stroke-width: 1.4; }
+.map .town-tower { fill: var(--floor, #c9a978); stroke: var(--ink-soft); stroke-width: 1.2; }
+.map .town-house { fill: var(--skin, #f0d2b0); stroke: var(--ink-soft); stroke-width: 0.6; }
+.map .town-roof { fill: var(--accent); stroke: none; }
+.map .town-guild { fill: var(--wood, #6b4a2b); stroke: var(--ink-soft); stroke-width: 0.8; }
+.map .town-banner { fill: var(--accent); }
+.map .town-name { font-family: var(--font-title, inherit); }

@@ -17,7 +17,7 @@ import { diff, onKill } from './legend';
 import { chance, pick, randInt, range, weighted } from './rng';
 import { decorateQuest, onQuestExpired, questCountFactor, questMixWeights } from './world';
 import { onSaved, rel, teamCohesion, teamOf } from './social';
-import type { Adventurer, ClientType, GameState, Money, Quest, QuestRun, QuestType, Rang } from './types';
+import type { Adventurer, Attribution, ClientType, GameState, Money, Quest, QuestRun, QuestType, Rang } from './types';
 
 export const FAR_FUTURE = 1e9;
 
@@ -468,11 +468,11 @@ function canTake(q: Quest): boolean {
   return q.reservedBy === null;
 }
 
-function bestQuestFor(s: GameState, core: Adventurer[], pool: Adventurer[], teamId: number | null, fixed: boolean):
+function bestQuestFor(s: GameState, core: Adventurer[], pool: Adventurer[], teamId: number | null, fixed: boolean, contested: Quest[] = []):
   { q: Quest; team: Adventurer[]; attrait: number } | null {
   const leader = core[0];
   let best: { q: Quest; team: Adventurer[]; attrait: number } | null = null;
-  for (const q of s.board.filter(canTake)) {
+  for (const q of [...s.board.filter(canTake), ...contested]) {
     // Une épreuve de rang n'est tentée que par son candidat (et ses compagnons).
     if (q.examFor !== undefined && !core.some((m) => m.id === q.examFor)) continue;
     if (!core.every((m) => acceptsQuest(s, m, q))) continue;
@@ -500,32 +500,111 @@ function bestQuestFor(s: GameState, core: Adventurer[], pool: Adventurer[], team
   return best;
 }
 
+// ---------- Quête convoitée (v1.1, D-155) ----------
+
+export const ATTRIBUTION_NAMES: Record<Attribution, string> = {
+  adapte: "l'équipe la mieux armée pour la réussir",
+  loyal: "l'équipe la plus loyale envers la guilde",
+  respect: "l'équipe du chef le plus respecté",
+  jeunes: "l'équipe la moins gradée, pour la faire progresser",
+};
+
+/** Note d'une équipe selon la règle d'attribution choisie par le joueur : la plus haute l'emporte. */
+function attributionScore(s: GameState, team: Adventurer[], q: Quest, teamId: number | null): number {
+  const rule = s.policy.attribution ?? 'adapte';
+  const avg = (f: (a: Adventurer) => number) => team.reduce((x, a) => x + f(a), 0) / team.length;
+  if (rule === 'loyal') return avg((a) => a.loyalty);
+  if (rule === 'respect') return team[0].respect;
+  if (rule === 'jeunes') return -avg((a) => rangIndex(a.rang) * 100 + a.level);
+  return perceivedChance(s, team, q, team[0], teamId);
+}
+
+/** Deux groupes veulent la même quête ce soir : ils partent ensemble s'ils s'entendent et qu'il reste de la place, sinon la règle tranche. */
+function contest(s: GameState, run: QuestRun, team: Adventurer[], teamId: number | null): { merged: boolean; won: boolean; loser: Adventurer[] } {
+  const q = run.quest;
+  const holders = runMembers(s, run);
+  // « La Compagnie du Sanglier », ou « Osric, Clothilde et Perceval »
+  const who = (t: Adventurer[], id: number | null) => {
+    const name = teamOf(s, id)?.name;
+    if (name) return name;
+    const l = t.map(advLink);
+    return l.length > 1 ? `${l.slice(0, -1).join(', ')} et ${l[l.length - 1]}` : l[0];
+  };
+  const plural = (t: Adventurer[], id: number | null) => !teamOf(s, id) && t.length > 1;
+  const toWho = (x: string) => (x.startsWith('Les ') ? `aux ${x.slice(4)}` : x.startsWith('Le ') ? `au ${x.slice(3)}` : `à ${x}`);
+  const getAlong = holders.every((h) => team.every((m) => rel(s, h.id, m.id) > P.social.rivalSeuil));
+  if (getAlong && holders.length + team.length <= q.maxMembers && team.every((m) => acceptsQuest(s, m, q))) {
+    for (const m of team) { run.members.push(m.id); m.runId = run.id; m.lookingForQuest = false; }
+    log(s, 'quetes', 'info', `« ${q.title} » : ${who(team, teamId)} ${plural(team, teamId) ? 'rejoignent' : 'rejoint'} ${who(holders, run.teamId)}, et tout le monde part ensemble.`);
+    think(s, team[0], `On était plusieurs sur « ${q.title} » : on y va ensemble.`);
+    return { merged: true, won: true, loser: [] };
+  }
+  const mine = attributionScore(s, team, q, teamId);
+  const theirs = attributionScore(s, holders, q, run.teamId);
+  const rule = ATTRIBUTION_NAMES[s.policy.attribution ?? 'adapte'];
+  if (mine > theirs) {
+    // Le nouveau groupe l'emporte : l'ancien renonce et cherchera autre chose.
+    s.runs = s.runs.filter((r) => r !== run);
+    q.reservedBy = null;
+    for (const h of holders) { h.runId = null; h.lookingForQuest = true; }
+    log(s, 'quetes', 'info', `« ${q.title} » était voulue par ${who(holders, run.teamId)} et par ${who(team, teamId)} : la guilde la confie ${toWho(who(team, teamId))} (règle : ${rule}).`);
+    think(s, holders[0], `La guilde a donné « ${q.title} » à d'autres. Tant pis, je chercherai autre chose.`);
+    return { merged: false, won: true, loser: holders };
+  }
+  log(s, 'quetes', 'info', `« ${q.title} » était voulue par ${who(holders, run.teamId)} et par ${who(team, teamId)} : la guilde la laisse ${toWho(who(holders, run.teamId))} (règle : ${rule}).`);
+  think(s, team[0], `« ${q.title} » est allée à d'autres. Je me rabats sur autre chose.`);
+  return { merged: false, won: false, loser: team };
+}
+
 /** Chaque soir, les équipes durables puis les aventuriers isolés choisissent une quête (3.11.3, 4.5). */
 export function formTeams(s: GameState): void {
   const pool = s.adventurers
     .filter((a) => a.lookingForQuest && isAvailable(s, a))
     .sort((a, b) => b.respect - a.respect || b.level - a.level || a.id - b.id);
   const take = (team: Adventurer[]) => { for (const m of team) { const i = pool.indexOf(m); if (i >= 0) pool.splice(i, 1); } };
+  // Quêtes réservées ce soir, qu'un autre groupe peut encore disputer (une seule dispute par quête).
+  const tonight = new Map<number, QuestRun>();
+  const settled = new Set<number>();
+  const contestable = () => [...tonight.entries()].filter(([id, r]) => !settled.has(id) && s.runs.includes(r) && r.quest.type !== 'extermination' && r.quest.examFor === undefined).map(([, r]) => r.quest);
+  const refused = new Map<number, Set<number>>();   // quêtes qu'un aventurier s'est vu refuser ce soir
+  const go = (best: { q: Quest; team: Adventurer[] }, teamId: number | null) => {
+    const held = tonight.get(best.q.id);
+    if (held && s.runs.includes(held) && held.quest === best.q) {
+      settled.add(best.q.id);
+      const res = contest(s, held, best.team, teamId);
+      take(best.team);
+      if (!res.merged && res.won) { startRun(s, best.q, best.team, teamId); tonight.set(best.q.id, s.runs[s.runs.length - 1]); }
+      for (const m of res.loser) {
+        (refused.get(m.id) ?? refused.set(m.id, new Set()).get(m.id)!).add(best.q.id);
+        if (!pool.includes(m)) pool.push(m);
+      }
+      pool.sort((a, b) => b.respect - a.respect || b.level - a.level || a.id - b.id);
+      return;
+    }
+    take(best.team);
+    startRun(s, best.q, best.team, teamId);
+    tonight.set(best.q.id, s.runs[s.runs.length - 1]);
+  };
+  const open = (core: Adventurer[]) => contestable().filter((q) => !core.some((m) => refused.get(m.id)?.has(q.id)));
 
   // 1. Les équipes durables partent ensemble
   for (const t of [...s.teams].sort((a, b) => b.questsOk - a.questsOk)) {
     const core = pool.filter((a) => a.teamId === t.id);
     if (core.length < 2) continue;
-    const best = bestQuestFor(s, core, pool.filter((a) => a.teamId === null), t.id, true);
+    const best = bestQuestFor(s, core, pool.filter((a) => a.teamId === null), t.id, true, open(core));
     if (!best) continue;
-    take(best.team);
-    startRun(s, best.q, best.team, t.id);
+    go(best, t.id);
   }
   // 2. Les autres se regroupent autour du plus respecté
-  while (pool.length > 0) {
+  let guard = 0;
+  while (pool.length > 0 && guard++ < 500) {
     const leader = pool.shift()!;
-    const best = bestQuestFor(s, [leader], pool, null, false);
+    const best = bestQuestFor(s, [leader], pool, null, false, open([leader]));
     if (!best) {
       if (s.board.some(canTake)) think(s, leader, 'Rien au tableau qui soit à ma portée ce soir.');
       continue;
     }
-    take(best.team);
-    startRun(s, best.q, best.team, null);
+    go(best, null);
   }
 }
 

@@ -161,7 +161,7 @@
       "salle": "cuisine"
     },
     "valet": {
-      "nom": "Valet de dortoir",
+      "nom": "Agent d'entretien",
       "salaire": 50,
       "salle": "dortoirs"
     },

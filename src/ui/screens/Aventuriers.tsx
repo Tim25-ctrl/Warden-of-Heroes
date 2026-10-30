@@ -4,15 +4,15 @@ import {
   attackOf, capacityOf, defenseOf, gearBonus, powerOf, pvMax, TIER_NAMES, visibleTraits, xpRequired,
 } from '../../sim/adventurers';
 import { ailmentLabel } from '../../sim/ailments';
-import { ATTR_NAMES, BUFFS, CLASSES, SKILL_NAMES, TRAITS } from '../../sim/data';
+import { ATTR_NAMES, BUFFS, CLASSES, P, SKILL_NAMES, TRAITS } from '../../sim/data';
 import { relationsOf, relStatus, REL_NAMES, teamCohesion, teamOf } from '../../sim/social';
 import { cotisationPrice, tolerance } from '../../sim/economy';
 import { money, stamp } from '../../sim/format';
-import { departureDesire } from '../../sim/lifecycle';
+import { departureBreakdown, departureDesire } from '../../sim/lifecycle';
 import { rangIndex } from '../../sim/adventurers';
 import { examConditions, examFee, examOf, examRang, isCandidate, maxRangForSeal } from '../../sim/ranks';
 import type { Adventurer, AttrId, GameState, SkillId } from '../../sim/types';
-import { ACTIVITY_LABELS, ClassDot, Gauge, GaugeRow, Kpi, Money, NumField, plain, RankBadge, Tabs, useNav } from '../components';
+import { ACTIVITY_LABELS, ClassDot, Gauge, GaugeRow, Help, Kpi, Money, NumField, plain, RankBadge, Tabs, useNav } from '../components';
 import { game, lastError } from '../store';
 
 type SortKey = 'name' | 'level' | 'rang' | 'gold' | 'morale' | 'loyalty' | 'griefs';
@@ -76,12 +76,45 @@ function Insigne({ s, a }: { s: GameState; a: Adventurer }) {
           {err && <p class="hint" style={{ color: 'var(--seal)' }}>{err}</p>}
         </>
       )}
-      {a.griefRang > 0 && <GaugeRow label="Grief reconn." value={a.griefRang} max={40} color="var(--seal)" />}
+      {a.griefRang > 0 && <GaugeRow label="Rancune" value={a.griefRang} max={40} color="var(--seal)" help={HELP.griefRang} />}
     </>
   );
 }
 
 type FicheTab = 'etat' | 'insigne' | 'equipement' | 'relations' | 'pensees';
+
+/** Aides des jauges de la fiche (v1.1, D-156). */
+const HELP = {
+  sante: "Ses points de vie. À zéro, il tombe ; sans soins, une blessure grave peut le tuer. Il récupère en dormant et à l'infirmerie.",
+  energie: "Baisse quand il est éveillé, remonte en dormant (mieux dans un bon lit, et au chaud l'hiver). Trop bas, il rentre de quête plus tôt.",
+  faim: "100 : rassasié, 0 : affamé. Il mange au réfectoire, ou ailleurs s'il trouve tes repas trop chers. Le ventre vide fait baisser son moral.",
+  moral: "Son humeur. Monte avec le confort, les bons repas, les succès et les amis ; baisse avec la faim, la fatigue, les deuils et les prix trop chers. C'est la première cause des départs.",
+  fierte: "Plus il est fier, plus il refuse les quêtes trop faciles pour son rang et plus il supporte mal les prix élevés et la taxe.",
+  respect: "Son prestige auprès des autres : les plus respectés mènent les groupes, et leur prestige compte pour la renommée de la guilde.",
+  loyaute: "Son attachement à la guilde. Elle compense ses rancunes. Elle monte chaque semaine passée ici, avec un bon moral, une prime ou une épreuve offerte.",
+  griefPrix: "Monte quand il paie un service qu'il juge trop cher, quand il le refuse pour son prix, ou quand la guilde lui rachète son butin à bas prix. Baisse de 2 points par jour.",
+  griefTaxe: "Monte quand la taxe sur le butin dépasse de plus de 5 points le taux de la région, ou quand il est puni pour fraude. Baisse de 2 points par jour.",
+  griefRang: "Monte chaque jour où il remplit les conditions de son épreuve de rang sans qu'on la lui organise. Retombe à zéro avec l'épreuve.",
+};
+
+/** « Pourquoi veut-il partir ? » : l'envie de partir cause par cause, avec les seuils et quoi faire (v1.1). */
+function Departure({ s, a, envie }: { s: GameState; a: Adventurer; envie: number }) {
+  const parts = departureBreakdown(s, a);
+  const at = (v: number) => Math.max(0, Math.min(100, ((v + 40) / 120) * 100));   // échelle de −40 à 80
+  const pos = at(envie), m1 = at(P.aventuriers.seuilMecontent), m2 = at(P.aventuriers.seuilDepart);
+  const verdict = envie >= P.aventuriers.seuilDepart ? { t: 'Il veut partir', c: 'seal' } : envie >= P.aventuriers.seuilMecontent ? { t: 'Mécontent', c: 'amber' } : { t: 'Content de rester', c: 'sage' };
+  const tips = parts.filter((p) => p.value > 0 && p.conseil).sort((x, y) => y.value - x.value);
+  return (
+    <div class="why" style={{ marginBottom: 12 }}>
+      <div class="row"><strong>Envie de partir : {Math.round(envie)}</strong><span class={`tag ${verdict.c}`}>{verdict.t}</span>
+        <Help text={`Somme des causes ci-dessous. À ${P.aventuriers.seuilMecontent}, il devient mécontent ; à ${P.aventuriers.seuilDepart}, il annonce son départ et part 1 à 3 jours plus tard si rien ne change.`} /></div>
+      <div class="meter-scale" aria-hidden="true" style={{ background: `linear-gradient(90deg, var(--sage-soft) 0 ${m1}%, var(--amber-soft) ${m1}% ${m2}%, var(--seal-soft) ${m2}% 100%)` }}><span class="mark" style={{ left: `${pos}%` }} /></div>
+      <div class="meter-legend"><span style={{ left: '0%', transform: 'none' }}>reste</span><span style={{ left: `${m1}%` }}>mécontent ({P.aventuriers.seuilMecontent})</span><span style={{ left: `${m2}%` }}>part ({P.aventuriers.seuilDepart})</span></div>
+      <ul class="plain" style={{ marginTop: 6 }}>{parts.map((p) => <li><span class={p.value > 0 ? 'neg' : p.value < 0 ? 'pos' : ''}>{p.value > 0 ? '+' : ''}{p.value}</span> {p.label}</li>)}</ul>
+      {tips.length > 0 && <p class="hint" style={{ margin: 0 }}><strong>Que faire ?</strong> {tips[0].conseil}</p>}
+    </div>
+  );
+}
 
 function Fiche({ s, a }: { s: GameState; a: Adventurer }) {
   const nav = useNav();
@@ -120,25 +153,26 @@ function Fiche({ s, a }: { s: GameState; a: Adventurer }) {
           <div class="grid2" style={{ gap: 12 }}>
             <div>
               <h4>Jauges</h4>
-              <GaugeRow label="Santé" value={a.hp} max={pvMax(a)} suffix={`${Math.round(a.hp)}/${pvMax(a)}`} />
-              <GaugeRow label="Énergie" value={a.energy} />
-              <GaugeRow label="Faim" value={a.hunger} />
-              <GaugeRow label="Moral" value={a.morale} />
+              <GaugeRow label="Santé" value={a.hp} max={pvMax(a)} suffix={`${Math.round(a.hp)}/${pvMax(a)}`} help={HELP.sante} />
+              <GaugeRow label="Énergie" value={a.energy} help={HELP.energie} />
+              <GaugeRow label="Satiété" value={a.hunger} help={HELP.faim} />
+              <GaugeRow label="Moral" value={a.morale} help={HELP.moral} />
               <h4 style={{ marginTop: 10 }}>Vie sociale</h4>
-              <GaugeRow label="Fierté" value={a.fierte} color="var(--gold)" />
-              <GaugeRow label="Respect." value={a.respect} color="var(--blue)" />
-              <GaugeRow label="Loyauté" value={a.loyalty} color="var(--sage)" />
-              <GaugeRow label="Grief prix" value={a.griefPrix} max={60} color="var(--seal)" />
-              <GaugeRow label="Grief taxe" value={a.griefFiscal} max={60} color="var(--seal)" />
-              {a.griefRang > 0 && <GaugeRow label="Grief reconn." value={a.griefRang} max={40} color="var(--seal)" />}
-              <p class="hint">Envie de partir : {Math.round(envie)} (mécontent à 30, départ à 60).</p>
+              <GaugeRow label="Fierté" value={a.fierte} color="var(--gold)" help={HELP.fierte} />
+              <GaugeRow label="Respect." value={a.respect} color="var(--blue)" help={HELP.respect} />
+              <GaugeRow label="Loyauté" value={a.loyalty} color="var(--sage)" help={HELP.loyaute} />
+              <h4 style={{ marginTop: 10 }}>Rancunes</h4>
+              <GaugeRow label="Tes prix" value={a.griefPrix} max={60} color="var(--seal)" help={HELP.griefPrix} />
+              <GaugeRow label="La taxe" value={a.griefFiscal} max={60} color="var(--seal)" help={HELP.griefTaxe} />
+              <GaugeRow label="Reconnaiss." value={a.griefRang} max={40} color="var(--seal)" help={HELP.griefRang} />
             </div>
             <div>
-              <h4>Attributs</h4>
+              <Departure s={s} a={a} envie={envie} />
+              <h4>Attributs <Help text="Ses qualités de base (force, agilité, endurance…). Elles fixent ses chances en combat et dans les petits boulots, et montent un peu à chaque niveau." /></h4>
               {(Object.keys(a.attrs) as AttrId[]).map((k) => (
                 <div class="row" style={{ justifyContent: 'space-between' }}><span class="soft">{ATTR_NAMES[k]}</span><strong>{a.attrs[k]}</strong></div>
               ))}
-              <h4 style={{ marginTop: 10 }}>Compétences</h4>
+              <h4 style={{ marginTop: 10 }}>Compétences <Help text="Son savoir-faire (maniement d'armes, pistage, survie…). Elles progressent en les pratiquant en quête, et bien plus vite avec un professeur sur le terrain." /></h4>
               {(Object.keys(a.skills) as SkillId[]).map((k) => (
                 <div class="row" style={{ justifyContent: 'space-between' }}><span class="soft">{SKILL_NAMES[k]}</span><strong>{a.skills[k]}</strong></div>
               ))}
@@ -146,13 +180,13 @@ function Fiche({ s, a }: { s: GameState; a: Adventurer }) {
           </div>
           {a.states.length > 0 && (
             <>
-              <h4 style={{ marginTop: 10 }}>États</h4>
+              <h4 style={{ marginTop: 10 }}>États <Help text="Blessures, poisons et maladies en cours. Les plus graves (en rouge) demandent l'infirmerie ; un bandage ou un antidote du sac évite qu'ils s'aggravent." /></h4>
               <div class="row">{a.states.map((x) => (
                 <span class={`tag ${x.gravite >= 2 ? 'seal' : x.gravite === 1 ? 'amber' : ''}`} title={`depuis ${stamp(x.since)}${x.bandaged ? ', pansé' : ''}`}>{ailmentLabel(x)}{x.bandaged ? ' (pansé)' : ''}</span>
               ))}</div>
             </>
           )}
-          <h4 style={{ marginTop: 10 }}>Gestes de la guilde</h4>
+          <h4 style={{ marginTop: 10 }}>Gestes de la guilde <Help text="Pour retenir un aventurier : une prime fait baisser son envie de partir et monte sa loyauté ; une exonération le dispense de taxe deux semaines ; le plafond de crédit fixe ce qu'il peut devoir à l'infirmerie." /></h4>
           <div class="row">
             <button class="btn small" disabled={s.treasury < 1000} onClick={() => game.command({ type: 'retain', id: a.id, kind: 'prime', amount: 1000 })} title="Envie de partir réduite, loyauté +5">Prime de 10 po</button>
             <button class="btn small" disabled={a.exemptUntil > s.tick} onClick={() => game.command({ type: 'retain', id: a.id, kind: 'exoneration' })} title="Pas de taxe pendant 2 semaines, loyauté +5">{a.exemptUntil > s.tick ? `Exonéré jusqu'au ${stamp(a.exemptUntil)}` : 'Exonération de 2 semaines'}</button>
@@ -223,7 +257,7 @@ export function Aventuriers({ s }: { s: GameState }) {
   const gone = nav.advId !== null && !selected ? s.departed.find((d) => d.id === nav.advId) : null;
   const val = (a: Adventurer): number | string =>
     sort === 'name' ? a.name : sort === 'level' ? a.level : sort === 'rang' ? rangIndex(a.rang) * 100 + a.level : sort === 'gold' ? a.gold : sort === 'morale' ? a.morale
-      : sort === 'loyalty' ? a.loyalty : a.griefPrix + a.griefFiscal + a.griefRang;
+      : sort === 'loyalty' ? a.loyalty : departureDesire(a);
   const list = [...s.adventurers].sort((x, y) => {
     const a = val(x), b = val(y);
     return typeof a === 'string' ? a.localeCompare(b as string) : (b as number) - a;
@@ -253,7 +287,7 @@ export function Aventuriers({ s }: { s: GameState }) {
         <div class="panel">
           <div class="table-wrap">
             <table class="data">
-              <thead><tr>{th('name', 'Nom')}{th('rang', 'Rang')}{th('level', 'Niv', true)}<th>Activité</th>{th('gold', 'Or', true)}{th('morale', 'Moral')}{th('loyalty', 'Loyauté', true)}{th('griefs', 'Griefs', true)}</tr></thead>
+              <thead><tr>{th('name', 'Nom')}{th('rang', 'Rang')}{th('level', 'Niv', true)}<th>Activité</th>{th('gold', 'Or', true)}{th('morale', 'Moral')}{th('loyalty', 'Loyauté', true)}{th('griefs', 'Envie de partir', true)}</tr></thead>
               <tbody>
                 {list.map((a) => (
                   <tr class={`clickable ${selected?.id === a.id ? 'sel' : ''}`} onClick={() => nav.openAdventurer(a.id)}>
@@ -264,7 +298,7 @@ export function Aventuriers({ s }: { s: GameState }) {
                     <td class="num">{money(a.gold)}</td>
                     <td style={{ minWidth: 70 }}><Gauge value={a.morale} /></td>
                     <td class="num">{Math.round(a.loyalty)}</td>
-                    <td class="num">{Math.round(a.griefPrix + a.griefFiscal + a.griefRang)}</td>
+                    <td class="num" style={{ color: departureDesire(a) >= P.aventuriers.seuilDepart ? 'var(--seal)' : departureDesire(a) >= P.aventuriers.seuilMecontent ? 'var(--amber)' : undefined }}>{Math.round(departureDesire(a))}</td>
                   </tr>
                 ))}
               </tbody>

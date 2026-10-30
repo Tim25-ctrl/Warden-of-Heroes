@@ -4,9 +4,9 @@ import { ATTR_NAMES, RESOURCES, SPECIES, ZONE_IDS, ZONES } from '../../sim/data'
 import { onDuty } from '../../sim/economy';
 import { money, stamp } from '../../sim/format';
 import { huntClosed, popOf, zoneDanger } from '../../sim/populations';
-import { activePrimes, boardCapacity, boardQuests, dangerDots, maxPrimes, QUEST_TYPE_NAMES, questValue } from '../../sim/quests';
-import type { GameState, Quest } from '../../sim/types';
-import { ClassDot, Gauge, NumField, RankBadge, RichText, Tabs } from '../components';
+import { activePrimes, ATTRIBUTION_NAMES, boardCapacity, boardQuests, dangerDots, maxPrimes, QUEST_TYPE_NAMES, questValue } from '../../sim/quests';
+import type { Attribution, GameState, Quest } from '../../sim/types';
+import { ClassDot, Gauge, Help, NumField, RankBadge, RichText, Tabs } from '../components';
 import { game, lastError } from '../store';
 
 const DOTS = ['', 'Faible', 'Modéré', 'Sérieux', 'Élevé', 'Extrême'];
@@ -118,6 +118,13 @@ export function Tableau({ s }: { s: GameState }) {
               <button class={`chip ${kind === 'tout' ? 'on' : ''}`} onClick={() => setKind('tout')}>Toutes ({allCombat.length})</button>
               {kinds.map((k) => <button class={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{QUEST_TYPE_NAMES[k]} ({allCombat.filter((q) => q.type === k).length})</button>)}
             </div>
+            <label class="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
+              <span>Quand plusieurs veulent la même quête, la guilde la confie à</span>
+              <select value={s.policy.attribution ?? 'adapte'} onChange={(e) => game.command({ type: 'setAttribution', rule: (e.target as HTMLSelectElement).value as Attribution })}>
+                {(Object.keys(ATTRIBUTION_NAMES) as Attribution[]).map((k) => <option value={k}>{ATTRIBUTION_NAMES[k]}</option>)}
+              </select>
+              <Help text="Le soir, chaque groupe choisit sa quête. Si une quête est déjà réservée par un autre groupe, ils partent ensemble quand ils s'entendent et qu'il reste de la place ; sinon cette règle désigne qui l'obtient, et l'autre groupe se rabat sur autre chose. Le Journal dit qui l'a eue et pourquoi." />
+            </label>
             {combat.length === 0 ? <p class="empty">Aucune affiche pour l'instant. De nouvelles quêtes arrivent chaque matin.</p>
               : <div class="board">{combat.map((q) => <Notice s={s} q={q} />)}</div>}
           </div>

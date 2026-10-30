@@ -46,6 +46,11 @@ export function morningItems(s: GameState): Item[] {
   if (s.doorCandidates.length) {
     items.push({ icon: <IconUserPlus {...I} class="pi sage" />, title: `${s.doorCandidates.length} candidat${s.doorCandidates.length > 1 ? 's' : ''} à la porte`, text: s.doorCandidates.slice(0, 3).map((c) => c.name).join(', '), go: 'aventuriers' });
   }
+  // Personnel (v1.1) : demandes d'augmentation et départs en retraite.
+  const raises = s.staff.filter((m) => m.raiseAsk);
+  if (raises.length) items.push({ icon: <IconCoins {...I} class="pi amber" />, title: `${raises.length} demande${raises.length > 1 ? 's' : ''} d'augmentation`, text: raises.map((m) => m.name).join(', '), go: 'personnel', tone: 'warn' });
+  const retiring = s.staff.filter((m) => m.retireTick !== undefined);
+  if (retiring.length) items.push({ icon: <IconDoorExit {...I} class="pi" />, title: `Retraite : ${retiring.map((m) => m.name).join(', ')}`, text: 'trouve un remplaçant', go: 'personnel' });
   // Villes voisines (v1.1) : routes coupées et caravanes arrivées.
   const cut = CITY_IDS.filter((id) => !routeOpen(s, id));
   if (cut.length) {

@@ -126,6 +126,11 @@ export interface StaffMember {
   unpaidDays: number;
   hiredTick: number;
   absentUntil?: number;        // malade pendant une épidémie
+  age?: number;                // v1.1 : âge (retraite vers 60 ans)
+  salaire?: Money;             // v1.1 : salaire convenu (sinon le salaire juste de sa compétence)
+  raiseAsk?: { amount: Money; since: number };   // demande d'augmentation en attente
+  lastRaiseTick?: number;
+  retireTick?: number;         // départ en retraite annoncé
 }
 
 export interface Professor {
@@ -259,6 +264,7 @@ export interface Dortoirs {
 export interface Refectoire {
   level: number;
   works: RoomWorks | null;
+  proprete?: number;                      // v1.1 : entretenue par les agents d'entretien (70 par défaut)
   menu: DishId[];
   prix: Record<DishId, Money>;           // prix des plats, fixés par le joueur
   pantry: FoodLot[];
@@ -274,6 +280,7 @@ export interface Refectoire {
 export interface Infirmerie {
   level: number;                          // 0 : non construite
   works: RoomWorks | null;
+  proprete?: number;                      // v1.1 : entretenue par les agents d'entretien (70 par défaut)
   remedes: Record<RemedeId, number>;
   prixSoins: Money;                       // prix d'une plaie sérieuse : le reste de la grille suit
   prixVente: Money;                       // prix d'une potion : les autres remèdes suivent
@@ -305,6 +312,9 @@ export interface MarketEntry { S: number; D: number; cours: Money }
 
 export interface ServiceStats { served: number; revenue: Money; refusals: number; toCompetitor: number }
 
+/** Règle d'attribution d'une quête convoitée (v1.1). */
+export type Attribution = 'adapte' | 'loyal' | 'respect' | 'jeunes';
+
 export interface Policy {
   credit: boolean;
   creditCap: Money;
@@ -312,6 +322,7 @@ export interface Policy {
   rachatCurseur: number;
   rachatRules: RachatRule[];
   courtierRachat?: boolean;               // le courtier rachète les dépouilles pour les revendre (v1.1)
+  attribution?: Attribution;              // qui obtient une quête que plusieurs veulent (v1.1, défaut « adapte »)
   autoSell: 'off' | 'sans_usage' | 'tout';
   autoAccept: { enabled: boolean; minLevel: number; refuseMalhonnete: boolean };
   reserve: Money;
@@ -443,6 +454,8 @@ export type Command =
   | { type: 'giftRival'; id: string }
   | { type: 'pactRival'; id: string }
   | { type: 'sendCaravan'; ville: string; res: string[]; fee: Money }
+  | { type: 'answerRaise'; id: number; accept: boolean }
+  | { type: 'setAttribution'; rule: Attribution }
   | { type: 'pantheonPick'; id: number }
   | { type: 'ackEpilogue' };
 

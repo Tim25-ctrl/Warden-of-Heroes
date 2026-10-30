@@ -5,7 +5,7 @@ import { addAilment, removeAilment, worstGravity } from './ailments';
 import { fight } from './combat';
 import { DENREES, EVENTS, NAMES, P, REMEDES, RESOURCES, ROOM_IDS, SPECIES, ZONE_IDS, ZONES } from './data';
 import { chefSkill, clamp, dishPrice, dishRef, IP, roomLevelCost } from './economy';
-import { advLink, dayOf, hourOf, money, SEASONS, seasonOf, weekdayOf, yearOf } from './format';
+import { advLink, dayOf, hourOf, isSeasonStart, money, SEASON_DAYS, SEASONS, seasonOf, weekdayOf, YEAR_DAYS, yearOf } from './format';
 import { earn, log, spend, think } from './journal';
 import { conscript, killAdventurer, leave } from './lifecycle';
 import { addMod, modAdd, present } from './mods';
@@ -320,20 +320,20 @@ function schedule(s: GameState, id: string, fireTick: number): void {
 function scheduleSeason(s: GameState): void {
   const id = pickEvent(s, 'majeur');
   if (!id) return;
-  const seasonStartDay = Math.floor((dayOf(s.tick) - 1) / 28) * 28 + 1;
-  const day = seasonStartDay + randInt(s, 'monde', 4, 25);
+  const seasonStartDay = Math.floor((dayOf(s.tick) - 1) / SEASON_DAYS) * SEASON_DAYS + 1;
+  const day = seasonStartDay + randInt(s, 'monde', 2, SEASON_DAYS - 3);
   schedule(s, id, (day - 1) * H + 8);
 }
 
-/** Une ou deux crises par an, à partir du jour 60 (5.4.1). */
+/** Une crise par an (année de 56 jours, D-152), à partir du jour 60 (5.4.1). */
 function scheduleCrises(s: GameState): void {
-  const yearStart = (yearOf(s.tick) - 1) * 112 + 1;
+  const yearStart = (yearOf(s.tick) - 1) * YEAR_DAYS + 1;
   const n0 = randInt(s, 'monde', W().crisesParAn[0], W().crisesParAn[1]) * diff(s).crises;   // difficulté (6.5)
   const bonus = s.rank >= W().crisesBonusSceau.rang ? W().crisesBonusSceau.nombre : 0;   // ajout v1.1
   const n = Math.floor(n0) + (chance(s, 'monde', n0 % 1) ? 1 : 0) + bonus;
   for (let i = 0; i < n; i++) {
     const from = Math.max(yearStart + 5, W().criseJourMin);
-    const day = randInt(s, 'monde', from, yearStart + 110);
+    const day = randInt(s, 'monde', Math.min(from, yearStart + YEAR_DAYS - 3), yearStart + YEAR_DAYS - 2);
     const id = pickEvent(s, 'crise', seasonOf((day - 1) * H), day);
     if (id) schedule(s, id, (day - 1) * H + 9);
   }
@@ -583,7 +583,7 @@ export function decide(s: GameState, id: number, optionId: string, auto = false)
         news(s, 'une', 'La guilde distribue du gruau aux affamés : la foule se calme.');
       } else {
         addMod(s, 'taxe_royale', until(28), 'emeute', { mult: 1.2 });
-        news(s, 'une', "L'émeute n'est pas réprimée : la Couronne alourdit la taxe royale pour une saison.");
+        news(s, 'une', "L'émeute n'est pas réprimée : la Couronne alourdit la taxe royale pour quatre semaines.");
       }
       break;
     case 'diffamation':
@@ -1072,7 +1072,7 @@ function dailyEpidemic(s: GameState): void {
 export function morningWorld(s: GameState): void {
   const w = s.world;
   const day = dayOf(s.tick);
-  if ((day - 1) % 28 === 0 && day > 1) seasonStart(s);
+  if (isSeasonStart(day)) seasonStart(s);
   endEvents(s);
   w.townSpend.push(0);
   if (w.townSpend.length > 7) w.townSpend.splice(0, w.townSpend.length - 7);

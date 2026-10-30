@@ -114,7 +114,8 @@ export function dishFreshness(s: GameState, dish: DishId): number {
 
 export function dishQuality(s: GameState, dish: DishId): number {
   // La salle (ambiance) et la cuisine (équipement) comptent chacune pour moitié.
-  return clamp(0.5 * chefSkill(s) + 0.2 * dishFreshness(s, dish) * 100 + 2 * (s.refectoire.level + s.cuisine.level) - s.refectoire.damage, 0, 100);
+  return clamp(0.5 * chefSkill(s) + 0.2 * dishFreshness(s, dish) * 100 + 2 * (s.refectoire.level + s.cuisine.level) - s.refectoire.damage
+    + ((s.refectoire.proprete ?? 70) - 60) / 5, 0, 100);   // v1.1 : une salle sale gâche le repas
 }
 
 /** Coût d'une portion de viande de monstre au cours du jour (1 unité = 4 portions). */
@@ -287,7 +288,7 @@ export function applyRefusal(s: GameState, a: Adventurer, R: number): void {
 export function infQuality(s: GameState): number {
   const heal = s.staff.filter((m) => m.role === 'soigneur' && !isAbsent(s, m));
   const c = heal.length ? heal.reduce((a, m) => a + m.c, 0) / heal.length : 0;
-  return clamp(30 + 6 * s.infirmerie.level + 0.3 * c + (s.privileges?.includes('medecins') ? 10 : 0), 0, 100);
+  return clamp(30 + 6 * s.infirmerie.level + 0.3 * c + (s.privileges?.includes('medecins') ? 10 : 0) + ((s.infirmerie.proprete ?? 70) - 60) / 5, 0, 100);
 }
 export function infBeds(s: GameState): number {
   if (s.infirmerie.level === 0) return 0;

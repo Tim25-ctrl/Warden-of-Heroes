@@ -13,10 +13,10 @@ import {
 import { money, stamp } from '../../sim/format';
 import { apothecaryActive, hospitalized, recipeAvailable, recipeEconomics } from '../../sim/infirmary';
 import { stockOfRes } from '../../sim/market';
-import { dormPlacesUsed, moduleBuyable, ROOM_NAMES, upgradeCost, upgradeLock } from '../../sim/rooms';
+import { type CleanRoom, cleaningCapacity, cleaningLoads, dormPlacesUsed, moduleBuyable, propreteOf, ROOM_NAMES, upgradeCost, upgradeLock } from '../../sim/rooms';
 import { maxProfs, profSalary } from '../../sim/training';
 import type { BedType, DenreeId, DishId, EtatId, GameState, RemedeId, RoomId, SlotId } from '../../sim/types';
-import { ACTIVITY_LABELS, GaugeRow, Gauge, Kpi, Money, NumField, PriceInput, Tabs, useNav } from '../components';
+import { ACTIVITY_LABELS, GaugeRow, Gauge, Help, Kpi, Money, NumField, PriceInput, Tabs, useNav } from '../components';
 import { game, lastError } from '../store';
 import { BuildingCanvas, type RoomHit } from './BuildingCanvas';
 import { MorningReport } from '../Morning';
@@ -83,6 +83,22 @@ const qualityWord = (q: number) => (q >= 80 ? 'excellente' : q >= 60 ? 'bonne' :
 
 // ---------- Dortoirs ----------
 
+/** Propreté d'une salle et charge des agents d'entretien (v1.1). */
+function Cleanliness({ s, room }: { s: GameState; room: CleanRoom }) {
+  const nav = useNav();
+  const agents = s.staff.filter((m) => m.role === 'valet').length;
+  const load = Object.values(cleaningLoads(s)).reduce((a, b) => a + b, 0);
+  const cap = cleaningCapacity(s);
+  return (
+    <>
+      <div class="row" style={{ alignItems: 'center' }}><div style={{ flex: 1 }}><GaugeRow label="Propreté" value={propreteOf(s, room)} /></div>
+        <Help text="Les agents d'entretien se partagent les dortoirs, le réfectoire et l'infirmerie. S'ils suffisent, chaque salle gagne 5 points de propreté par jour ; sinon elle perd 1 point par place laissée sans entretien. Une salle sale fait baisser sa qualité." /></div>
+      <p class="hint">{agents} agent{agents > 1 ? 's' : ''} d'entretien pour toute la guilde : {cap} places entretenues sur {load}.
+        {cap < load && <> <button class="link" onClick={() => nav.go('personnel')}>Engager un agent</button></>}</p>
+    </>
+  );
+}
+
 function DormPanel({ s }: { s: GameState }) {
   const [tab, setTab] = useState<'apercu' | 'tarifs' | 'lits' | 'travaux'>('apercu');
   const d = s.dortoirs;
@@ -92,7 +108,6 @@ function DormPanel({ s }: { s: GameState }) {
   const beds = draft ?? d.pendingBeds ?? d.beds;
   const used = dormPlacesUsed(beds);
   const changed = (Object.keys(beds) as BedType[]).reduce((a, b) => a + Math.abs(beds[b] - (d.pendingBeds ?? d.beds)[b]) * BEDS[b].places, 0);
-  const valets = s.staff.filter((m) => m.role === 'valet').length;
   return (
     <div class="panel">
       <h3>Dortoirs — niveau {d.level}</h3>
@@ -106,8 +121,7 @@ function DormPanel({ s }: { s: GameState }) {
             <Kpi k="Refus pour prix" v={st?.refusals ?? 0} title="Aventuriers qui ont trouvé ton prix trop cher aujourd'hui." />
             <Kpi k="Dorment ailleurs" v={st?.toCompetitor ?? 0} title="Aventuriers partis dormir au Sanglier Borgne (trop cher chez toi, ou plus de lit)." />
           </div>
-          <GaugeRow label="Propreté" value={d.proprete} />
-          <p class="hint">{valets} valet{valets > 1 ? 's' : ''} pour {used} places (un valet entretient {P.personnel.placesParValet} places).</p>
+          <Cleanliness s={s} room="dortoirs" />
           <table class="data">
             <thead><tr><th>Lit</th><th class="num">Occupés</th><th class="num" title="Lits utilisables cette nuit (moitié moins pendant les travaux ou après des dégâts)">En service</th><th class="num">Prix</th></tr></thead>
             <tbody>{lvl.lits.map((b) => <tr><td>{BEDS[b].nom}</td><td class="num">{bedsUsed(s, b)}</td><td class="num">{bedsAvailable(s, b)}</td><td class="num">{money(bedPrice(s, b))}</td></tr>)}</tbody>
@@ -169,6 +183,7 @@ function MessPanel({ s, openKitchen }: { s: GameState; openKitchen: () => void }
             <Kpi k="Recette du jour" v={<Money v={(st?.revenue ?? 0) + (s.stats.services.boissons?.revenue ?? 0)} />} />
             <Kpi k="Mangent ailleurs" v={st?.toCompetitor ?? 0} title="Aventuriers partis manger à la Taverne du Pont : trop cher, plus de place ou rupture au garde-manger." />
           </div>
+          <Cleanliness s={s} room="refectoire" />
           {r.damage > 0 && (
             <div class="row" style={{ marginBottom: 8 }}>
               <span class="tag seal">Mobilier cassé : qualité −{r.damage}</span>
@@ -362,12 +377,13 @@ function InfirmeriePanel({ s }: { s: GameState }) {
       {tab === 'apercu' && (
         <>
           <div class="kpis">
-            <Kpi k="Qualité des soins" v={Math.round(infQuality(s))} title="Ce que les aventuriers pensent de ton infirmerie : niveau et compétence des soigneurs (30 + 6 par niveau + 0,3 × compétence)." hint={qualityWord(infQuality(s))} />
+            <Kpi k="Qualité des soins" v={Math.round(infQuality(s))} title="Ce que les aventuriers pensent de ton infirmerie : niveau, compétence des soigneurs et propreté (30 + 6 par niveau + 0,3 × compétence + (propreté − 60) / 5)." hint={qualityWord(infQuality(s))} />
             <Kpi k="Lits occupés" v={`${hospitalized(s)} / ${infBeds(s)}`} />
             <Kpi k="Soigneurs" v={healers.length} />
             <Kpi k="Soins aujourd'hui" v={st?.served ?? 0} />
             <Kpi k="Recette du jour" v={<Money v={(st?.revenue ?? 0) + (s.today.recettes.ventesInfirmerie ?? 0)} />} />
           </div>
+          <Cleanliness s={s} room="infirmerie" />
           {healers.length === 0 && <p><span class="tag seal">Aucun soigneur</span> Engage un soigneur dans l'écran Personnel, sinon personne n'est soigné.</p>}
           <h4>Aventuriers souffrants</h4>
           {sick.length === 0 ? <p class="empty">Tout le monde se porte bien.</p> : (

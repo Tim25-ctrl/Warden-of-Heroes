@@ -1,5 +1,10 @@
 // Affichage de la monnaie et du temps (GDD 1.1.1 et 0.5).
+import { P } from './data';
 import type { Money } from './types';
+
+/** Calendrier (ajusté en v1.1, D-152) : saisons de 14 jours, année de 56 jours. */
+export const SEASON_DAYS: number = P.temps.joursParSaison;
+export const YEAR_DAYS = 4 * SEASON_DAYS;
 
 /** 345 → « 3 po 4 pa 5 pc » */
 export function money(v: Money): string {
@@ -27,8 +32,12 @@ export const SEASONS = ['Printemps', 'Été', 'Automne', 'Hiver'];
 export function dayOf(tick: number): number { return Math.floor(tick / 24) + 1; }
 export function hourOf(tick: number): number { return tick % 24; }
 export function weekdayOf(tick: number): number { return ((dayOf(tick) - 1) % 7) + 1; }
-export function seasonOf(tick: number): number { return Math.floor((dayOf(tick) - 1) / 28) % 4; }
-export function yearOf(tick: number): number { return Math.floor((dayOf(tick) - 1) / 112) + 1; }
+export function seasonOf(tick: number): number { return Math.floor((dayOf(tick) - 1) / SEASON_DAYS) % 4; }
+export function yearOf(tick: number): number { return Math.floor((dayOf(tick) - 1) / YEAR_DAYS) + 1; }
+/** Jour dans la saison, de 1 à SEASON_DAYS. */
+export function dayInSeason(tick: number): number { return ((dayOf(tick) - 1) % SEASON_DAYS) + 1; }
+/** Premier jour d'une saison ? */
+export const isSeasonStart = (day: number) => (day - 1) % SEASON_DAYS === 0 && day > 1;
 
 export function phaseOf(tick: number): string {
   const h = hourOf(tick);
@@ -40,7 +49,7 @@ export function phaseOf(tick: number): string {
 
 export function clockLabel(tick: number): string {
   const d = dayOf(tick);
-  const dayInSeason = ((d - 1) % 28) + 1;
+  const dayInSeason = ((d - 1) % SEASON_DAYS) + 1;
   return `${SEASONS[seasonOf(tick)]} · J${dayInSeason} · an ${yearOf(tick)} · ${String(hourOf(tick)).padStart(2, '0')}h`;
 }
 

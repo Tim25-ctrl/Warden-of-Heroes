@@ -6,6 +6,7 @@ import { BEDS, CLASSES, PROFS, ROLES, ZONES } from '../../sim/data';
 import { bedsAvailable, bedsUsed, infBeds, kitchenRate, seats } from '../../sim/economy';
 import { hourOf } from '../../sim/format';
 import { hospitalized } from '../../sim/infirmary';
+import { type CleanRoom, propreteOf } from '../../sim/rooms';
 import type { Adventurer, BedType, GameState, QuestRun, StaffRole } from '../../sim/types';
 import { ACTIVITY_LABELS, plain } from '../components';
 
@@ -195,6 +196,58 @@ function hatch(ctx: CanvasRenderingContext2D, p: Palette, b: Box) {
   ctx.textAlign = 'right';
   ctx.fillText('Travaux en cours', b.x + b.w - 10, b.y + 24);
   ctx.textAlign = 'left';
+}
+
+/** Sol de chaque salle entretenue, où marchent les agents d'entretien. */
+const CLEAN_FLOOR: Record<CleanRoom, { x0: number; x1: number; y: number }> = {
+  dortoirs: { x0: ROOMS.dortoirs.x + 30, x1: ROOMS.dortoirs.x + ROOMS.dortoirs.w - 30, y: ROOMS.dortoirs.y + ROOMS.dortoirs.h - 12 },
+  infirmerie: { x0: ROOMS.infirmerie.x + 24, x1: ROOMS.infirmerie.x + ROOMS.infirmerie.w - 70, y: ROOMS.infirmerie.y + ROOMS.infirmerie.h - 12 },
+  refectoire: { x0: ROOMS.refectoire.x + 30, x1: ROOMS.refectoire.x + ROOMS.refectoire.w - 30, y: ROOMS.refectoire.y + ROOMS.refectoire.h - 12 },
+};
+const STAIR_X = 504;
+const CLEAN_STOP = 14;   // secondes passées dans chaque salle
+const CLEAN_WALK = 3;    // dont secondes de marche
+
+/** Où se trouve l'agent n° i : il fait le tour des salles, des plus sales aux plus propres, et balaie en va-et-vient. */
+function cleanerPos(order: CleanRoom[], i: number, now: number): [number, number] {
+  const t = now / 1000 + i * 5;
+  const k = Math.floor(t / CLEAN_STOP);
+  const into = t - k * CLEAN_STOP;
+  const room = order[(k + i) % order.length];
+  const prev = order[(k + i - 1 + order.length) % order.length];
+  const f = CLEAN_FLOOR[room];
+  const sweep = (r: CleanRoom, tt: number) => { const g = CLEAN_FLOOR[r]; return g.x0 + (0.5 + 0.5 * Math.sin(tt / 1.8 + i)) * (g.x1 - g.x0); };
+  if (into >= CLEAN_WALK || order.length < 2) return [sweep(room, t), f.y];
+  // Marche depuis la salle précédente, par l'escalier si l'étage change.
+  const a = CLEAN_FLOOR[prev];
+  const from: [number, number] = [sweep(prev, k * CLEAN_STOP), a.y];
+  const to: [number, number] = [sweep(room, (k * CLEAN_STOP + CLEAN_WALK)), f.y];
+  const u = into / CLEAN_WALK;
+  const pts: [number, number][] = a.y === f.y ? [from, to] : [from, [STAIR_X, a.y], [STAIR_X, f.y], to];
+  const seg = pts.slice(1).map((q, j) => Math.hypot(q[0] - pts[j][0], q[1] - pts[j][1]));
+  let d = u * seg.reduce((x, y) => x + y, 0);
+  for (let j = 0; j < seg.length; j++) {
+    if (d <= seg[j] || j === seg.length - 1) {
+      const v = seg[j] ? Math.min(1, d / seg[j]) : 0;
+      return [pts[j][0] + (pts[j + 1][0] - pts[j][0]) * v, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * v];
+    }
+    d -= seg[j];
+  }
+  return to;
+}
+
+/** Le balai, qui va et vient. */
+function broom(ctx: CanvasRenderingContext2D, p: Palette, x: number, y: number, now: number) {
+  const a = 0.5 + 0.35 * Math.sin(now / 220);
+  ctx.save();
+  ctx.translate(x + 5, y - 1);
+  ctx.rotate(a);
+  ctx.strokeStyle = p.wood;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 14); ctx.stroke();
+  ctx.fillStyle = p.amber;
+  ctx.beginPath(); ctx.moveTo(-3, 13); ctx.lineTo(3, 13); ctx.lineTo(5, 19); ctx.lineTo(-5, 19); ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
 /** Un pion : corps à la couleur de sa classe, tête, et parfois un pictogramme. */
@@ -599,6 +652,25 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
         const c = pos.current.get(th.id);
         if (c) thoughtBubble(ctx, p, c.x, c.y, `« ${th.text} »`);
       }
+
+      // Agents d'entretien (v1.1) : poussière dans les salles sales, et les agents qui passent avec leur balai.
+      const cleanRooms = (['dortoirs', 'refectoire', 'infirmerie'] as CleanRoom[]).filter((r) => r !== 'infirmerie' || st.infirmerie.level > 0);
+      for (const r of cleanRooms) {
+        const dirt = Math.round((55 - propreteOf(st, r)) / 4);
+        const f = CLEAN_FLOOR[r];
+        ctx.fillStyle = p.faint;
+        for (let j = 0; j < dirt; j++) {
+          const dx = f.x0 + ((j * 97 + 31) % 100) / 100 * (f.x1 - f.x0);
+          ctx.beginPath(); ctx.arc(dx, f.y + 6 - (j % 3), 1.6 + (j % 2), 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      const order = [...cleanRooms].sort((a, b) => propreteOf(st, a) - propreteOf(st, b));
+      st.staff.filter((m) => m.role === 'valet').forEach((m, i) => {
+        const [x, y] = cleanerPos(order, i, now);
+        pawn(ctx, p, x, y, p.blue);
+        broom(ctx, p, x, y, now + i * 700);
+        spots.push({ x, y, role: m.role, name: m.name, c: m.c });
+      });
 
       // Nuit : une pénombre légère
       if (night) {

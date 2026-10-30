@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.3 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
+> **Statut du document :** v2.5 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -75,8 +75,10 @@ Le joueur est le **Maître de Guilde**. Il gère le siège où logent, mangent, 
 | **Tick** | 1 heure de jeu (pas élémentaire de la simulation) |
 | **Jour** | 24 ticks, découpés en 4 phases |
 | **Semaine** | 7 jours (le 7ᵉ est le *Jour du Roi* : la taxe royale est prélevée) |
-| **Saison** | 4 semaines = 28 jours |
-| **Année** | 4 saisons = 112 jours |
+| **Saison** | 2 semaines = 14 jours (*v1.1* ; 28 jours auparavant) |
+| **Année** | 4 saisons = 56 jours (*v1.1* ; 112 jours auparavant) |
+
+> **Ajusté en v1.1 : un calendrier plus court** (D-152). Avec des saisons de 28 jours, une partie jusqu'au Sceau de Mithril (≈ 450 jours) ne durait que 4 ans : 4 tournois, 4 étés, une crise par an à peine. Les saisons durent désormais **14 jours** : une saison passe en 1 h 10 de jeu réel à vitesse ×1, une année en 4 h 40, et une partie complète couvre **≈ 7 à 8 ans**. Tout ce qui se compte en jours ne change pas (semaine, quêtes, salaires, prêts, dates des Sceaux). Ce qui se compte en saisons ou en années revient deux fois plus souvent : effets des saisons, événement majeur de saison, chapitres du Livre, Tournoi des insignes. Pour ne pas doubler les coûts et les menaces, la banque prend 4 % par saison au lieu de 8 %, une seule crise par an au lieu d'une ou deux, et le pacte de non-débauchage dure un an (56 jours) pour 50 po.
 
 #### Phases de la journée
 
@@ -183,7 +185,7 @@ Les événements du chapitre 5 peuvent modifier la taxe royale (une guerre l'aug
 
 | Prêteur | Accès | Plafond | Intérêt | Risque |
 |---------|-------|---------|---------|--------|
-| **Banque des Marchands** | Trésorerie positive | Selon le rang : 200 / 500 / 1 500 / 4 000 / 10 000 po | 8 % par saison | Refus de crédit si un retard est en cours |
+| **Banque des Marchands** | Trésorerie positive | Selon le rang : 200 / 500 / 1 500 / 4 000 / 10 000 po | 8 % par saison (*v1.1 :* 4 %, saisons de 14 jours) | Refus de crédit si un retard est en cours |
 | **Usurier du Port** | Toujours, même endetté | 300 po | 5 % **par semaine**, composé | Retard → perte de renommée et événement « visite des gros bras » |
 
 > **Précisé en tranche 4 :**
@@ -322,11 +324,17 @@ Les événements du chapitre 5 peuvent toucher les concurrents : l'auberge brûl
 | **Loyauté** | 0–100 | En dessous de 20 : risque de démission quotidien de 10 % |
 | **Trait** | 1 trait | Voir 1.4.4 |
 
+> **Ajouté en v1.1 : l'employé a une vie** (D-154). Chaque employé a aussi un **âge** (18 à 58 ans à l'embauche), une **ancienneté**, un **salaire convenu** et une **satisfaction** (l'ancienne loyauté, désormais expliquée).
+> - **Salaire convenu :** fixé à l'embauche au salaire juste de sa compétence (formule 1.4.3). Il ne bouge plus tout seul.
+> - **Demande d'augmentation :** quand sa compétence vaut 20 % de plus que son salaire, et au plus une fois tous les 28 jours, il demande à être payé à sa juste valeur. Le joueur accorde (satisfaction +10) ou refuse (−10) dans l'écran Personnel ; sans réponse en 3 jours, c'est un refus. La demande s'affiche aussi dans « Ce matin à la guilde ». Elle n'ouvre pas de décision, pour ne pas mettre le jeu en pause à tout bout de champ.
+> - **Satisfaction :** elle se rapproche chaque jour de 10 % de sa cible : 55, plus l'écart de salaire (150 × l'écart relatif au salaire juste, de −30 à +20), plus l'ancienneté (2 par an, 10 au plus), moins la surcharge (jusqu'à −20 : trop de salles pour les agents d'entretien, plus de 4 patients par soigneur), moins 15 par jour de salaire impayé, −5 s'il attend une réponse, −5 s'il est grincheux. Sous 20, il risque de démissionner (10 % par jour). Le détail s'ouvre d'un clic sur sa jauge.
+> - **Retraite :** il prend un an à chaque nouvelle année (56 jours). À partir de 60 ans, il a chaque année 35 % de chances (+15 % par an au-delà) d'annoncer sa retraite, effective une semaine plus tard.
+
 #### 1.4.2 Les rôles
 
 | Rôle | Salle | Salaire de base / jour | Capacité | Effet de la compétence |
 |------|-------|------------------------|----------|------------------------|
-| **Valet de dortoir** | Dortoirs | 5 pa | Entretient 15 places | Propreté des dortoirs |
+| **Agent d'entretien** *(ex-valet de dortoir, v1.1)* | Toute la guilde | 5 pa | Entretient 15 places × (0,8 + C / 250) | Propreté des dortoirs, du réfectoire et de l'infirmerie |
 | **Cuisinier** | Cuisine | 1 po | `6 + C/10` portions / heure | Qualité des plats, recettes accessibles |
 | **Commis de cuisine** | Cuisine | 4 pa | +4 portions / heure | Réduit le gaspillage |
 | **Soigneur** | Infirmerie | 1 po 5 pa | 1 soin léger / heure | Chance de succès, durée des soins |
@@ -348,7 +356,7 @@ Salaire = Salaire_base × (C / 50) ^ 1,3      → C = 25 : ×0,41   |   C = 50 :
 
 - **Recrutement :** un vivier de 2 à 4 candidats par rôle se renouvelle chaque lundi.
 - **Progression :** +1 de compétence tous les 5 jours travaillés, jusqu'au plafond fixé par le potentiel.
-- **Augmentation :** +10 % de salaire donne +15 de loyauté. La compétence augmente et le salaire suit (le joueur doit l'accepter, sinon la loyauté baisse).
+- **Augmentation :** +10 % de salaire donne +15 de loyauté. La compétence augmente et le salaire suit (le joueur doit l'accepter, sinon la loyauté baisse). *v1.1 : voir les demandes d'augmentation en 1.4.1.*
 - **Licenciement :** indemnité de 3 jours de salaire.
 - **Surcharge :** si la demande dépasse la capacité pendant plus de 3 jours d'affilée, loyauté −2 par jour et risque de maladie.
 - **Salaire impayé :** loyauté −10 par jour. Démission garantie après 3 jours.
@@ -403,6 +411,8 @@ Q_dortoir = clamp( 30 + 8 × Niveau + Bonus_modules + (Propreté − 50) / 2 , 0
 
 - **Propreté** (0–100) : −1 par nuit et par place non couverte par un valet (1 valet = 15 places), et +5 par nuit si l'effectif de valets est suffisant.
 - La propreté est le signal d'alerte typique du sous-effectif.
+
+> **Ajusté en v1.1 : l'entretien de toute la guilde** (D-153). Le valet de dortoir devient l'**agent d'entretien** : les agents se partagent les dortoirs (1 par place de lit), le réfectoire (0,25 par place assise) et l'infirmerie (0,5 par lit). Chaque agent tient 15 × (0,8 + C / 250) places (×1,2 s'il est travailleur). S'ils suffisent, chaque salle gagne 5 points de propreté par jour ; sinon chaque salle perd 1 point par place laissée sans entretien. La propreté du réfectoire entre dans la qualité des plats, celle de l'infirmerie dans la qualité des soins : + (Propreté − 60) / 5 (de −12 à +8). Dans la vue en coupe, les agents passent de salle en salle avec leur balai, les plus sales d'abord, et la poussière se voit au sol des salles sales.
 
 #### 1.5.4 Modules
 
@@ -1502,10 +1512,12 @@ Envie_de_partir = 0,8 × (50 − Moral) + 0,5 × (Grief_tarifaire + Grief_fiscal
 - **Débauchage :** un aventurier dont la Respectabilité dépasse 70 peut recevoir une **offre d'une guilde rivale** (Offre_rivale +20 à +40). Le joueur est prévenu et peut réagir, par exemple en améliorant son confort ou en baissant la fiscalité.
 - L'aventurier qui part emporte son or et son équipement. Ses dettes envers la guilde sont perdues.
 
+> **Ajouté en v1.1 : « Pourquoi veut-il partir ? »** (D-156). La fiche montre l'envie de partir cause par cause, en clair : moral, rancune envers les prix, envers la taxe, talent pas reconnu (insigne), attachement à la guilde. Une jauge place l'aventurier entre « reste », « mécontent » (30) et « part » (60), et une ligne « Que faire ? » donne le geste qui répond à la plus grosse cause. Les griefs s'appellent désormais des **rancunes** (« Tes prix », « La taxe », « Reconnaissance »), chaque jauge de la fiche a son « ? », et la liste des aventuriers montre l'envie de partir au lieu de la somme des griefs.
+
 #### 3.12.3 Retraite
 
 - Chaque aventurier a un **objectif de fortune** caché (de 50 à 500 jours de coût de la vie selon ses traits). Il prend sa retraite quand il l'atteint, à 55 ans, ou après des séquelles graves (3 attributs perdus).
-- Le temps passe : 1 an de jeu = 112 jours.
+- Le temps passe : 1 an de jeu = 112 jours (*v1.1 :* 56 jours, D-152).
 - **Reconversion :** un retraité de niveau 10 ou plus, avec une Respectabilité d'au moins 60 et une Loyauté d'au moins 50, peut **proposer de rester** :
   - comme **professeur** de sa classe, au niveau qu'il avait (sa Pédagogie dépend de ses traits : *Mentor* donne un gros bonus) ;
   - ou comme **membre du personnel** (intendant, inspecteur, soigneur pour un Clerc).
@@ -1689,6 +1701,13 @@ Attrait = ( Récompense_par_membre + 0,5 × Dépouilles_espérées + Valeur_XP )
 - **Nobles :** exigent un chef à Respectabilité ≥ 60.
 - Une **prime de la guilde** donne un bonus d'attrait (+10 %) aux aventuriers loyaux (Loyauté ≥ 60).
 - **Le goût du défi (ajout v1.1) :** l'attrait est multiplié selon l'écart entre le rang de la quête et celui du chef d'équipe : ×1,2 au-dessus, ×1 à son rang, ×0,7 un rang en dessous, ×0,4 deux rangs ou plus en dessous. Sans cette préférence, les vétérans enchaînaient les cueillettes de rang F, proches et vite faites, et ne progressaient plus (D-125).
+
+#### 4.5.2 bis Quand plusieurs veulent la même quête (ajout v1.1)
+
+Le soir, une quête déjà réservée peut encore être disputée par un autre groupe qui la préfère (une seule dispute par quête et par soir, jamais pour une épreuve de rang ni une extermination) (D-155).
+- **Ensemble :** si tous s'entendent (aucune rivalité entre eux) et qu'il reste de la place dans l'équipe, le second groupe rejoint le premier et tout le monde part ensemble.
+- **Sinon, la règle de la guilde tranche**, choisie au Tableau : l'équipe la mieux armée pour la réussir (chance perçue, par défaut), la plus loyale, celle du chef le plus respecté, ou la moins gradée (pour faire progresser les jeunes). Le perdant se rabat sur une autre quête.
+- Le Journal dit qui l'a eue et pourquoi. Dans une partie type, une réservation sur cinq environ est disputée, et la plupart finissent en groupe commun.
 
 #### 4.5.3 Les préparatifs
 
@@ -1936,7 +1955,7 @@ La ville a **3 paliers**. Pour changer de palier, la Prospérité doit rester au
 |-----------|-----------|--------------------------|
 | **Petit événement** | 2 à 3 par semaine (test quotidien à 35 %). *v1.1 :* un même petit événement ne revient pas avant 21 jours | Rarement |
 | **Événement majeur** | 1 par saison, à une date aléatoire | Oui, 2 à 5 jours avant |
-| **Crise** | 1 à 2 par an, à partir du jour 60, ou déclenchée par une chaîne | Oui, 2 à 5 jours avant |
+| **Crise** | 1 à 2 par an (*v1.1 :* 1 par an de 56 jours), à partir du jour 60, ou déclenchée par une chaîne | Oui, 2 à 5 jours avant |
 
 > **Corrigé en v1.1 :** rien n'empêchait un même petit événement de revenir le surlendemain (jusqu'à trois inspecteurs royaux en quatre jours), et chaque visite de l'inspecteur écrivait deux lignes au journal. Un petit événement attend désormais **21 jours** avant de pouvoir revenir, et le verdict de l'inspecteur tient dans le même message (D-137).
 
@@ -2041,7 +2060,7 @@ Le joueur peut **casser chaque chaîne** : publier des primes d'extermination, d
 
 #### 5.4.6 Le Tournoi des insignes (ajout v1.1)
 
-Une fois par an, au 20ᵉ jour de l'été, la ville organise le **Tournoi des insignes** : un tournoi à élimination directe entre les champions des guildes (D-144).
+Une fois par an, au 20ᵉ jour de l'été (*v1.1 :* au 10ᵉ jour, les saisons durant 14 jours), la ville organise le **Tournoi des insignes** : un tournoi à élimination directe entre les champions des guildes (D-144).
 - **Annonce** une semaine avant (décision) : tu inscris *tes trois meilleurs*, *tes jeunes espoirs* (les trois meilleurs de rang C ou moins, qui progressent davantage), ou tu *ne participes pas*. Inscription : 10 po.
 - **Les rivales** envoient chacune un champion, d'autant plus fort que leur renommée est haute. Il y a 8 places : les places vides sont prises par des duellistes de la ville.
 - **Les combats** comparent la puissance des deux champions, avec une bonne part de hasard (le moins fort gagne une fois sur quatre environ quand l'écart est faible). Un combattant battu peut sortir blessé (plaie légère, 30 %).
@@ -2104,8 +2123,8 @@ Chaque rivale a une **relation** avec ta guilde, de −100 (hostile) à +100 (al
 | Tu la **rachètes** quand elle fait faillite | — (elle disparaît) |
 
 **Ce que tu peux faire (Chroniques, panneau des guildes) :**
-- **Pacte de non-débauchage** (relation cordiale ou mieux, 100 po, un an) : elle ne tente plus de débaucher tes aventuriers.
-- **Contrat partagé** : une rivale cordiale ou alliée te propose, une fois par saison, une grosse commande à mener ensemble (une quête à ton tableau, récompense ×1,5, dont un tiers lui revient). Tu acceptes ou tu refuses (décision).
+- **Pacte de non-débauchage** (relation cordiale ou mieux, 100 po, un an ; *v1.1 :* 50 po pour un an de 56 jours) : elle ne tente plus de débaucher tes aventuriers.
+- **Contrat partagé** : une rivale cordiale ou alliée te propose, une fois par saison (*v1.1 :* au plus une fois tous les 28 jours), une grosse commande à mener ensemble (une quête à ton tableau, récompense ×1,5, dont un tiers lui revient). Tu acceptes ou tu refuses (décision).
 - **Aide contre l'assaut** : pendant un assaut sur la ville, chaque rivale alliée envoie ses combattants : la défense de chaque vague est renforcée de 10 % par rivale alliée.
 - **Rachat** : quand une rivale fait faillite, tu peux la racheter (décision, 150 po + 2 po par membre, plafonné à 600 po). Ses 3 à 5 meilleurs aventuriers rejoignent ta guilde et tu gagnes 20 de renommée ; une nouvelle guilde ne la remplace qu'un mois plus tard.
 
@@ -2533,6 +2552,7 @@ L'écran principal. Le bâtiment est montré **en coupe**, comme une maison de p
 - **Calques activables :** populations de monstres, plantes, quêtes en cours. *v1.1 :* calque **Guildes rivales** (fanions des sorties des 3 derniers jours) et liste de leurs sorties dans la fiche de chaque zone.
 - **Clic sur une zone :** espèces présentes et courbe de leur population, plantes, quêtes de la zone.
 - **Clic sur une équipe :** journal de sa quête (4.10).
+- *v1.1 (D-157) :* ta ville est **dessinée** (remparts, maisons plus nombreuses au fil des paliers, siège de la guilde et sa bannière), avec un halo à la couleur du danger des égouts. Des **chemins** relient les zones voisines (Ville–Vertbois, Ville–Marais, Vertbois–Collines, Vertbois–Marais, Collines–Pics, Collines–Ruines, Marais–Ruines, Ruines–Pics), et les équipes les suivent : pour les Pics, elles passent par Vertbois et les Collines. Les durées de trajet ne changent pas.
 - *v1.1 :* les **quatre villes voisines** (5.8) au bord de la carte, reliées à leur zone par une route commerciale en pointillés dorés (rouge et ✕ quand elle est coupée), avec le fanion de la guilde qui y siège et une barre de commerce. Les équipes d'une escorte lointaine suivent la route jusqu'à la ville ; une caravane de la guilde porte un petit chariot. **Clic sur une ville :** guilde qui y siège et relation, route, état de la route, commerce et avantage, escortes au tableau, et panneau **Caravane de la guilde** (marchandises de l'Entrepôt, prix en ville et à destination, prix de l'escorte, gain estimé). Le rapport du matin signale une route coupée et une caravane arrivée.
 
 #### 7.5.7 Les Chroniques de la ville
@@ -3105,6 +3125,20 @@ Villes voisines, escortes lointaines, commerce, routes coupées et caravanes (5.
 
 **Résultats** (8 graines × 560 jours) : revenu net vers J30 ≈ 11 po ✔ · 4 salles vers J12 ✔ · première salle au niveau 3 vers J60 ✔ · Sceau d'Or 8 sur 8, médiane J164 ✔ · Sceau de Mithril 7 sur 8, médiane J453 ✔ · ≈ 19 morts en 5 ans ✔ · aucune faillite ✔. Dans une partie type : environ 370 escortes vers les villes, 2 à 7 routes coupées, 3 à 9 caravanes. En fin de partie, le commerce va de 0 à 98 selon les villes : Port-Salant est le plus suivi (de 57 à 98), Brisemine, la plus lointaine, reste souvent au point mort.
 
+#### 8.11.11 Calendrier de 14 jours par saison (v1.1, 2026-10-30)
+
+Saisons de 14 jours, année de 56 jours (D-152). Ajustements liés : intérêts de la banque à 4 % par saison, une crise par an, Tournoi des insignes au 10ᵉ jour de l'été, pacte de 56 jours pour 50 po.
+
+**Résultats** (8 graines × 560 jours, soit 10 ans) : revenu net vers J30 ≈ 12,8 po ✔ · 4 salles vers J13 ✔ · première salle au niveau 3 vers J61 ✔ · Sceau d'Or 8 sur 8, médiane J174 ✔ · Sceau de Mithril 8 sur 8, médiane J414 (≈ 7 ans et demi) ✔ · ≈ 25 morts ✔ · aucune faillite ✔. Par partie, les rendez-vous rares reviennent bien plus souvent : couronnements 4,6 → 11,6, vagues de monstres 5,5 → 10,5, bêtes légendaires 5,9 → 8,9, réveils du dragon 6 → 8, guerres 3,4 → 4,6, et 10 Tournois des insignes au lieu de 5.
+
+#### 8.11.12 Personnel, entretien, quêtes convoitées (v1.1, 2026-10-30)
+
+Agents d'entretien (D-153), âge, satisfaction et augmentations du personnel (D-154), quêtes convoitées (D-155), explication de l'envie de partir (D-156), ville dessinée et chemins sur la carte (D-157).
+
+**Robot du simulateur :** il accorde toutes les augmentations demandées, et n'engage un agent d'entretien que quand il manque plus de 3 places d'entretien (sinon il engageait un deuxième agent dès les premiers jours et retardait les salles).
+
+**Résultats** (8 graines × 560 jours) : revenu net vers J30 ≈ 14 po ✔ · 4 salles vers J14 ✔ (limite) · première salle au niveau 3 vers J59 ✔ · Sceau d'Or 8 sur 8, médiane J159 ✔ · Sceau de Mithril 8 sur 8, médiane J459 ✔ · ≈ 24 morts ✔ · aucune faillite ✔. En fin de partie : propreté à 100 partout, satisfaction du personnel entre 41 et 65, aucune démission ; sur 14 jours, 18 quêtes disputées dont 15 parties en groupe commun.
+
 ### 8.12 Table centrale des paramètres
 
 Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans `parametres.json` et sont réglées à l'aide du simulateur d'équilibrage.
@@ -3121,7 +3155,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | | Trésorerie de départ | 300 po (Normal) | 1.12 |
 | **Charges** | Entretien | 1,5 % de la valeur des salles par semaine | 1.1.3 |
 | | Taxe royale | (5 po + 3 % du chiffre d'affaires) × (1 + 0,5 × (rang − 1)) | 1.1.3 |
-| | Banque / Usurier | 8 % par saison / 5 % par semaine, plafond 300 po | 1.1.3 |
+| | Banque / Usurier | 4 % par saison (v1.1) / 5 % par semaine, plafond 300 po | 1.1.3 |
 | | Délai avant faillite | 7 jours (Normal) | 1.1.4 |
 | **Tarification** | Multiplicateur de qualité MQ | 0,6 + 0,8 × Q / 100 | 1.3.1 |
 | | Indice de prix IP | 0,7 + 0,6 × Prospérité / 100 | 1.3.2 |
@@ -3181,7 +3215,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | | Salaire d'un professeur | (1 + 0,12 × Niveau ^ 1,4) × (0,7 + Pédagogie / 166) po par jour | 1.7.2 |
 | | Valeur du temps d'une séance | 1 po | 1.7.3 |
 | | Érosion sans quête D ou plus | 1 % des points par semaine | 6.1.2 |
-| | Banque : intérêts, échéance, plafond | 8 % par saison, 56 jours, 200 à 10 000 po selon le sceau | 1.1.3 |
+| | Banque : intérêts, échéance, plafond | 4 % par saison (v1.1), 56 jours, 200 à 10 000 po selon le sceau | 1.1.3 |
 | | Usurier : intérêts, échéance, plafond | 5 % par semaine, 28 jours, 300 po | 1.1.3 |
 | | Recette de l'Arène | 20 po × (1 + Prospérité / 50), ×2 au palier Cité | 1.7.4 |
 | | Recrue descendante d'un héros | 3 % | 6.7 |
@@ -3395,6 +3429,12 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-149 | 2026-10-30 | Chaque guilde rivale siège dans une ville voisine et chasse autour ; une nouvelle guilde s'installe à Brisemine. | 5.5, 5.8 |
 | D-150 | 2026-10-30 | Routes coupées : une quête de chasse rouvre la route, sinon la milice au bout de 21 jours. | 5.8 |
 | D-151 | 2026-10-30 | Caravanes de la guilde : vendre les marchandises de l'Entrepôt dans une ville voisine, escorte payée par la guilde. | 5.8, 2.4 |
+| D-152 | 2026-10-30 | Saisons de 14 jours (année de 56 jours) pour que les rendez-vous annuels reviennent plus souvent ; banque 4 % par saison, une crise par an, tournoi au 10ᵉ jour de l'été. | 0.5, 5.2, 5.4 |
+| D-153 | 2026-10-30 | Le valet de dortoir devient l'agent d'entretien de toute la guilde : propreté des dortoirs, du réfectoire et de l'infirmerie. | 1.4.2, 1.5.3 |
+| D-154 | 2026-10-30 | Le personnel a un âge, une ancienneté, un salaire convenu, une satisfaction expliquée, des demandes d'augmentation et une retraite. | 1.4.1 |
+| D-155 | 2026-10-30 | Quête convoitée : les groupes qui s'entendent partent ensemble, sinon une règle choisie au Tableau tranche. | 4.5 |
+| D-156 | 2026-10-30 | « Pourquoi veut-il partir ? » : envie de partir détaillée cause par cause, rancunes renommées, « ? » sur chaque jauge. | 3.12.2, 7.5.2 |
+| D-157 | 2026-10-30 | Carte : ta ville dessinée et des chemins entre les zones, que les équipes suivent. | 7.5.6 |
 
 ### Relecture de cohérence (v1.0)
 

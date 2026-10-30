@@ -1,9 +1,9 @@
 // Fonctionnement des salles : construction, travaux, améliorations, cuisine, livraisons, consignes (GDD 1.2 à 1.10).
 import { BEDS, DENREES, DORM_LEVELS, INF_LEVELS, KITCHEN_LEVELS, MESS_LEVELS, MODULES, P, RESOURCES, SERVICES, TERRAIN_LEVELS } from './data';
-import { freshLoss, isAbsent, kitchenRate, orderCost, pendingOf, placeOrder, stockOf } from './economy';
+import { clamp, freshLoss, infBeds, isAbsent, kitchenRate, orderCost, pendingOf, placeOrder, seats, stockOf } from './economy';
 import { hourOf, money } from './format';
 import { log, spend } from './journal';
-import type { BedType, DenreeId, GameState, RoomId } from './types';
+import type { BedType, DenreeId, GameState, RoomId, StaffMember } from './types';
 
 export const ROOM_NAMES: Record<RoomId, string> = {
   dortoirs: 'les dortoirs', refectoire: 'le réfectoire', cuisine: 'la cuisine', infirmerie: "l'infirmerie", terrain: "le terrain d'entraînement",
@@ -180,14 +180,64 @@ export function hourlyRooms(s: GameState): void {
   }
 }
 
+// ---------- Entretien de la guilde (v1.1, D-153) ----------
+
+export type CleanRoom = 'dortoirs' | 'refectoire' | 'infirmerie';
+export const CLEAN_ROOMS: CleanRoom[] = ['dortoirs', 'refectoire', 'infirmerie'];
+export const CLEAN_ROOM_NAMES: Record<CleanRoom, string> = { dortoirs: 'Dortoirs', refectoire: 'Réfectoire', infirmerie: 'Infirmerie' };
+
+/** Ce qu'il y a à entretenir dans chaque salle, en « places » : lits, places assises, lits d'infirmerie. */
+export function cleaningLoads(s: GameState): Record<CleanRoom, number> {
+  const E = P.personnel.entretien;
+  return {
+    dortoirs: dormPlacesUsed(s.dortoirs.beds),
+    refectoire: Math.ceil(seats(s) * E.parPlaceRefectoire),
+    infirmerie: s.infirmerie.level > 0 ? Math.ceil(infBeds(s) * E.parLitInfirmerie) : 0,
+  };
+}
+
+/** Places qu'un agent d'entretien tient propres, selon sa compétence. */
+export function cleanerCapacity(m: StaffMember): number {
+  return Math.round(P.personnel.placesParValet * (0.8 + m.c / 250) * (m.trait === 'travailleur' ? 1.2 : 1));
+}
+
+export function cleaningCapacity(s: GameState): number {
+  return s.staff.filter((m) => m.role === 'valet' && !isAbsent(s, m)).reduce((a, m) => a + cleanerCapacity(m), 0);
+}
+
+export function propreteOf(s: GameState, room: CleanRoom): number {
+  return room === 'dortoirs' ? s.dortoirs.proprete : room === 'refectoire' ? s.refectoire.proprete ?? 70 : s.infirmerie.proprete ?? 70;
+}
+
+function setProprete(s: GameState, room: CleanRoom, v: number): void {
+  if (room === 'dortoirs') s.dortoirs.proprete = v;
+  else if (room === 'refectoire') s.refectoire.proprete = v;
+  else s.infirmerie.proprete = v;
+}
+
+/**
+ * Chaque matin, les agents d'entretien se partagent la guilde. S'ils sont assez nombreux, chaque salle gagne 5 points
+ * de propreté ; sinon chaque salle perd 1 point par place restée sans entretien.
+ */
+export function cleanGuild(s: GameState): void {
+  const loads = cleaningLoads(s);
+  const total = Object.values(loads).reduce((a, b) => a + b, 0);
+  const ratio = total > 0 ? Math.min(1, cleaningCapacity(s) / total) : 1;
+  const dirty: string[] = [];
+  for (const room of CLEAN_ROOMS) {
+    if (loads[room] <= 0) continue;
+    const deficit = loads[room] * (1 - ratio);
+    const v = clamp(propreteOf(s, room) + (deficit >= 0.5 ? -deficit * P.personnel.entretien.baisse : 5), 0, 100);
+    setProprete(s, room, Math.round(v * 10) / 10);
+    if (v < 40) dirty.push(`${CLEAN_ROOM_NAMES[room].toLowerCase()} ${Math.round(v)}`);
+  }
+  if (dirty.length && ratio < 1) log(s, 'guilde', 'important', `La guilde se salit (propreté : ${dirty.join(', ')}). Il manque un agent d'entretien.`);
+}
+
 /** Chaque matin à 06h. */
 export function morningRooms(s: GameState): void {
   const d = s.dortoirs;
-  const placesTotal = dormPlacesUsed(d.beds);
-  const covered = s.staff.filter((m) => m.role === 'valet' && !isAbsent(s, m)).length * P.personnel.placesParValet;
-  const uncovered = Math.max(0, placesTotal - covered);
-  d.proprete = Math.max(0, Math.min(100, d.proprete + (uncovered > 0 ? -uncovered : 5)));
-  if (uncovered > 0 && d.proprete < 40) log(s, 'guilde', 'important', `Les dortoirs sont sales (propreté ${Math.round(d.proprete)}). Il manque un valet.`);
+  cleanGuild(s);
   if (d.pendingBeds) { d.beds = d.pendingBeds; d.pendingBeds = null; }
   const nuits = s.stats.services.nuitees;
   if (nuits && (nuits.served > 0 || nuits.toCompetitor > 0)) {

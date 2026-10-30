@@ -2,7 +2,7 @@
   "temps": {
     "heureDepart": 6,
     "jourDuRoi": 7,
-    "joursParSaison": 28,
+    "joursParSaison": 14,
     "secondesParTickX1": 12.5
   },
   "economie": {
@@ -68,7 +68,34 @@
     "chanceDemission": 0.1,
     "joursImpayesMax": 3,
     "indemniteJours": 3,
-    "placesParValet": 15
+    "placesParValet": 15,
+    "entretien": {
+      "_note": "Agents d'entretien (v1.1) : une place de réfectoire compte pour 0,25, un lit d'infirmerie pour 0,5. Un agent tient placesParValet × (0,8 + compétence / 250) places.",
+      "parPlaceRefectoire": 0.25,
+      "parLitInfirmerie": 0.5,
+      "baisse": 1
+    },
+    "ageMin": 18,
+    "ageMax": 58,
+    "ageRetraite": 60,
+    "retraiteChance": 0.35,
+    "retraiteParAn": 0.15,
+    "augmentationSeuil": 0.2,
+    "augmentationDelaiJours": 28,
+    "augmentationReponseJours": 3,
+    "satisfaction": {
+      "_note": "Satisfaction du personnel (v1.1) : base + salaire (150 × écart au salaire juste, de −30 à +20) + ancienneté (2 par an, 10 au plus) − surcharge (jusqu'à 20). Elle s'en rapproche de 10 % par jour.",
+      "base": 55,
+      "salaire": 150,
+      "salaireMin": -30,
+      "salaireMax": 20,
+      "ancienneteParAn": 2,
+      "ancienneteMax": 10,
+      "surcharge": 20,
+      "convergence": 0.1,
+      "refus": 10,
+      "accord": 10
+    }
   },
   "aventuriers": {
     "maitrise": {
@@ -365,7 +392,7 @@
     "rumeurFiabilite": 0.75,
     "crisesParAn": [
       1,
-      2
+      1
     ],
     "criseJourMin": 60,
     "crisesBonusSceau": {
@@ -637,8 +664,8 @@
     "_note": "Relations avec les rivales et tournoi (GDD 5.5.1, 5.4.6, v1.1).",
     "cadeau": 2000,
     "cadeauRelation": 15,
-    "pacte": 10000,
-    "pacteJours": 112,
+    "pacte": 5000,
+    "pacteJours": 56,
     "partageRecompense": 1.5,
     "rachatBase": 15000,
     "rachatParMembre": 200,
@@ -646,7 +673,7 @@
     "rachatRenommee": 20,
     "tournoi": {
       "saison": 1,
-      "jour": 20,
+      "jour": 10,
       "inscription": 1000,
       "prix1": 6000,
       "prix2": 2500,

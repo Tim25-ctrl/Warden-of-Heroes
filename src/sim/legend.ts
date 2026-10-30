@@ -4,7 +4,7 @@ import { className, rangForLevel, rangIndex } from './adventurers';
 import { P, ROOM_IDS } from './data';
 import progression from './data/progression.json';
 import { clamp, dormQuality, infQuality, terrainQuality } from './economy';
-import { advLink, dayOf, hourOf, money, SEASONS, seasonOf, weekdayOf, yearOf } from './format';
+import { advLink, dayOf, hourOf, isSeasonStart, money, SEASON_DAYS, SEASONS, seasonOf, weekdayOf, yearOf } from './format';
 import { earn, log, spend } from './journal';
 import { pick, rand } from './rng';
 import { addRel, rel, relStatus } from './social';
@@ -263,7 +263,7 @@ function dailyAchievements(s: GameState): void {
 
 function seasonAchievements(s: GameState): void {
   const c = C(s);
-  if (!c.desequilibre && dayOf(s.tick) > 28) unlock(s, 'equilibriste');
+  if (!c.desequilibre && dayOf(s.tick) > SEASON_DAYS) unlock(s, 'equilibriste');
   c.desequilibre = 0;
   if (s.loans.lastLoanTick < s.tick - 28 * H && s.loans.lastDebtTick < s.tick - 28 * H && dayOf(s.tick) > 28) unlock(s, 'sans_dette');
 }
@@ -311,7 +311,7 @@ export function repay(s: GameState, lender: 'banque' | 'usurier', amount: Money)
 function loanInterest(s: GameState): void {
   const L = PROG.prets;
   const day = dayOf(s.tick);
-  if ((day - 1) % 28 === 0 && day > 1 && s.loans.banque) {
+  if (isSeasonStart(day) && s.loans.banque) {
     const i = Math.round(s.loans.banque.principal * L.banqueTauxSaison);
     s.loans.banque.principal += i;
     log(s, 'economie', 'info', `Intérêts de la banque : ${money(i)} ajoutés à la dette.`);
@@ -416,7 +416,7 @@ export function bookFromLog(s: GameState, text: string): void {
 
 export function morningLegend(s: GameState): void {
   const day = dayOf(s.tick);
-  if ((day - 1) % 28 === 0 && day > 1) { closeChapter(s); seasonAchievements(s); }
+  if (isSeasonStart(day)) { closeChapter(s); seasonAchievements(s); }
   loanInterest(s);
   dailyAchievements(s);
   checkSeal(s);

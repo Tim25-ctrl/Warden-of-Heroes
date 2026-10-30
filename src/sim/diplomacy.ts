@@ -3,7 +3,7 @@ import { addAilment } from './ailments';
 import { createAdventurer, gainXp, powerOf, rangIndex, xpRequired } from './adventurers';
 import { P } from './data';
 import { clamp } from './economy';
-import { advLink, dayOf, hourOf, money, seasonOf } from './format';
+import { advLink, dayInSeason, dayOf, hourOf, money, seasonOf, yearOf } from './format';
 import { earn, log, spend, think } from './journal';
 import { chronicle, unlock } from './legend';
 import { makeChasse } from './quests';
@@ -145,7 +145,7 @@ const champPower = (r: Rival) => clamp(90 + r.renown * 0.15, 90, 230);
 
 function dailyTournament(s: GameState): void {
   const sea = seasonOf(s.tick);
-  const dIn = ((dayOf(s.tick) - 1) % 28) + 1;
+  const dIn = dayInSeason(s.tick);
   const T = D().tournoi;
   if (sea !== T.saison) return;
   if (dIn === T.jour - 7) {
@@ -208,7 +208,7 @@ export function hourlyTournament(s: GameState): void {
     earn(s, 'tournoi', T.prix1);
     addRenown(s, T.renommee1);
     winner.adv.respect = clamp(winner.adv.respect + 10, 0, 100);
-    winner.adv.history.notable.push(`vainqueur du Tournoi des insignes (an ${Math.floor((dayOf(s.tick) - 1) / 112) + 1})`);
+    winner.adv.history.notable.push(`vainqueur du Tournoi des insignes (an ${yearOf(s.tick)})`);
     unlock(s, 'tournoi');
   } else if (winner.rival) winner.rival.renown += T.renommee1;
   if (finalist?.adv) { earn(s, 'tournoi', T.prix2); addRenown(s, T.renommee2); }

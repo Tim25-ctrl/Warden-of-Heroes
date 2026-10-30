@@ -7,7 +7,8 @@ import { fireEvent, startEpidemic, triggerAssault } from '../src/sim/world';
 import { epilogue, sealConditions } from '../src/sim/legend';
 import { upgradeCost } from '../src/sim/rooms';
 import { money } from '../src/sim/format';
-import { salaryOf } from '../src/sim/staff';
+import { fairSalary, salaryOf, satisfactionTarget } from '../src/sim/staff';
+import { cleaningCapacity, cleaningLoads, propreteOf } from '../src/sim/rooms';
 import { boardQuests, guildReach, relinkRuns } from '../src/sim/quests';
 import { huntClosed } from '../src/sim/populations';
 import { grantPrivilege, hasPrivilege, workState } from '../src/sim/charter';
@@ -35,11 +36,11 @@ describe('formules du GDD', () => {
     s.prosperity = 50;
     expect(IP(s)).toBeCloseTo(1);
   });
-  it('salaire selon la compétence (1.4.3)', () => {
+  it('salaire juste selon la compétence (1.4.3)', () => {
     const s = createGame({ seed: 1 });
     const cook = { ...s.staff[0], role: 'cuisinier' as const, c: 50 };
-    expect(salaryOf(cook)).toBe(100);
-    expect(salaryOf({ ...cook, c: 25 })).toBe(41);
+    expect(fairSalary(cook)).toBe(100);
+    expect(fairSalary({ ...cook, c: 25 })).toBe(41);
   });
   it('expérience requise (3.9)', () => {
     expect(xpRequired(1)).toBe(100);
@@ -378,10 +379,10 @@ describe('la légende (tranche 4)', () => {
   });
   it("le Livre de la guilde ouvre un chapitre par saison, et l'épilogue se rédige (6.6, 6.9)", () => {
     const s = createGame({ seed: 56 });
-    stepDays(s, 30);
+    stepDays(s, 16);
     expect(s.book.chapters.length).toBe(1);
     expect(s.book.chapters[0].title).toContain('Printemps');
-    expect(s.book.weekly.length).toBeGreaterThanOrEqual(4);
+    expect(s.book.weekly.length).toBeGreaterThanOrEqual(2);
     const e = epilogue(s);
     expect(e.bilan.length).toBeGreaterThan(0);
     expect(e.destins.length).toBeGreaterThan(0);
@@ -425,7 +426,7 @@ describe('les villes voisines (v1.1)', () => {
     reopenRoute(s, 'chenaie', null);
     expect(routeOpen(s, 'chenaie')).toBe(true);
     expect(s.renown).toBeGreaterThan(r0);
-    expect(s.board.some((q) => q.route === 'chenaie')).toBe(false);
+    expect(s.board.some((q) => q.route === 'chenaie' && q.reservedBy === null)).toBe(false);
   });
   it('une caravane emporte les marchandises, les vend à la ville ou les rapporte', () => {
     const s = createGame({ seed: 73 });
@@ -449,5 +450,37 @@ describe('les villes voisines (v1.1)', () => {
     onCityEscortEnd(s, fakeRun(q2), true);
     expect(s.treasury - t1).toBeGreaterThan(10 * RESOURCES.carapace.prix);
     expect(CITY_IDS.length).toBe(4);
+  });
+});
+
+describe('le personnel et l\'entretien (v1.1)', () => {
+  it('un employé a un âge et un salaire convenu, et demande une augmentation quand il progresse', () => {
+    const s = createGame({ seed: 80 });
+    const m = s.staff[0];
+    expect(m.age).toBeGreaterThanOrEqual(18);
+    expect(salaryOf(m)).toBe(fairSalary(m));
+    m.c += 20;   // il a beaucoup progressé
+    m.hiredTick = -40 * 24;
+    expect(salaryOf(m)).toBeLessThan(fairSalary(m));
+    expect(satisfactionTarget(s, m)).toBeLessThan(55);   // payé sous sa valeur
+    stepDays(s, 1);
+    expect(m.raiseAsk?.amount).toBe(fairSalary(m));
+    const before = m.loyalty;
+    expect(applyCommand(s, { type: 'answerRaise', id: m.id, accept: true })).toBeNull();
+    expect(salaryOf(m)).toBe(fairSalary(m));
+    expect(m.loyalty).toBeGreaterThan(before);
+    expect(m.raiseAsk).toBeUndefined();
+  });
+  it('les agents d\'entretien tiennent propres toutes les salles, sinon elles se salissent', () => {
+    const s = createGame({ seed: 81 });
+    const load = Object.values(cleaningLoads(s)).reduce((a, b) => a + b, 0);
+    expect(cleaningLoads(s).refectoire).toBeGreaterThan(0);
+    s.staff = s.staff.filter((m) => m.role !== 'valet');
+    expect(cleaningCapacity(s)).toBe(0);
+    const p0 = propreteOf(s, 'refectoire');
+    stepDays(s, 2);
+    expect(propreteOf(s, 'refectoire')).toBeLessThan(p0);
+    expect(propreteOf(s, 'dortoirs')).toBeLessThan(70);
+    expect(load).toBeGreaterThan(0);
   });
 });

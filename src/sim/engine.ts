@@ -22,7 +22,7 @@ import { range, seedStreams } from './rng';
 import { addRival, decide, hourlyWorld, initWorld, morningWorld, repairRoom } from './world';
 import { buyModule, hourlyRooms, morningRooms, repairFurniture, restockCheck, setBeds, startUpgrade } from './rooms';
 import { checkTeams, eveningSocial } from './social';
-import { createStaff, fire, hire, payrollAndProgress, renewStaffCandidates } from './staff';
+import { answerRaise, createStaff, fire, hire, payrollAndProgress, renewStaffCandidates } from './staff';
 import { createProf, dailyProfOffers, fireProf, hireProf, profPayroll } from './training';
 import { dailyRanks, organizeExam } from './ranks';
 import { rangForLevel } from './adventurers';
@@ -382,6 +382,8 @@ export function applyCommand(s: GameState, c: Command): string | null {
     case 'giftRival': return giftRival(s, c.id);
     case 'pactRival': return pactRival(s, c.id);
     case 'sendCaravan': return sendCaravan(s, c.ville, c.res, c.fee);
+    case 'answerRaise': return answerRaise(s, c.id, c.accept);
+    case 'setAttribution': s.policy.attribution = c.rule; break;
     case 'gaspardAck': gaspardAck(s, c.id); break;
     case 'pantheonPick': return pickForPantheon(s, c.id);
     case 'ackEpilogue': s.legend.epilogueSeen = true; s.legend.defeatSeen = true; break;

@@ -17,7 +17,7 @@
   },
   "renommeeHebdo": { "erosion": 0.01, "murMax": 10, "mur": 0.5, "arene": 1 },
   "prets": {
-    "banqueTauxSaison": 0.08, "banqueEcheanceJours": 56,
+    "banqueTauxSaison": 0.04, "banqueEcheanceJours": 56,
     "usurierPlafond": 30000, "usurierTauxSemaine": 0.05, "usurierEcheanceJours": 28,
     "retardBanqueRenommee": 2, "retardUsurierRenommee": 3
   },

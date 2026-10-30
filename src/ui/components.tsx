@@ -47,10 +47,10 @@ export function Gauge({ value, max = 100, color }: { value: number; max?: number
   return <div class="gauge" role="meter" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={max}><span style={{ width: `${pct}%`, background: c }} /></div>;
 }
 
-export function GaugeRow({ label, value, max = 100, suffix, color }: { label: string; value: number; max?: number; suffix?: string; color?: string }) {
+export function GaugeRow({ label, value, max = 100, suffix, color, help }: { label: string; value: number; max?: number; suffix?: string; color?: string; help?: string }) {
   return (
     <div class="gauge-row">
-      <span class="soft">{label}</span>
+      <span class="soft">{label}{help && <> <Help text={help} /></>}</span>
       <Gauge value={value} max={max} color={color} />
       <span class="num">{suffix ?? Math.round(value)}</span>
     </div>

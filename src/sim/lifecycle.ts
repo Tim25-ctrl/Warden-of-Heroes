@@ -9,6 +9,7 @@ import { chance, randInt, range } from './rng';
 import { onDeath, onLeave } from './social';
 import { hasPrivilege } from './charter';
 import type { Adventurer, GameState, Money } from './types';
+import { referenceTaxRate } from './world';
 import { addRenown, onAdventurerDeath, poachedDeparture, recruitShareFactor } from './world';
 import { onMemorial } from './legend';
 import { retiredTeacher } from './training';
@@ -127,6 +128,20 @@ export function dailyAdventurers(s: GameState): void {
 }
 
 // ---------- Envie de partir (3.12.2) ----------
+
+/** L'envie de partir, cause par cause, avec ce que le joueur peut y faire (v1.1, D-156). */
+export function departureBreakdown(s: GameState, a: Adventurer): { label: string; value: number; conseil?: string }[] {
+  const out: { label: string; value: number; conseil?: string }[] = [];
+  const moral = Math.round(0.8 * (50 - a.morale));
+  out.push(moral > 0
+    ? { label: `Moral bas (${Math.round(a.morale)} sur 100)`, value: moral, conseil: 'Confort des lits, bons repas, soins, succès en quête : regarde ses pensées pour savoir ce qui lui pèse.' }
+    : { label: `Bon moral (${Math.round(a.morale)} sur 100)`, value: moral });
+  if (a.griefPrix >= 1) out.push({ label: 'Rancune : tes prix', value: Math.round(0.5 * a.griefPrix), conseil: 'Il trouve tes lits, repas ou soins trop chers (ou ton rachat de butin trop bas). Baisse les prix jugés « cher » ou « hors de prix ».' });
+  if (a.griefFiscal >= 1) out.push({ label: 'Rancune : la taxe sur le butin', value: Math.round(0.5 * a.griefFiscal), conseil: `Ta taxe dépasse le taux de la région (${Math.round(referenceTaxRate(s) * 100)} %). Rapproche-la, ou exempte les plus fiers.` });
+  if ((a.griefRang ?? 0) >= 1) out.push({ label: "Rancune : son talent n'est pas reconnu", value: Math.round(0.5 * a.griefRang), conseil: "Il mérite un insigne plus haut : organise ou offre son épreuve (onglet Insigne)." });
+  out.push({ label: `Attachement à la guilde (loyauté ${Math.round(a.loyalty)})`, value: -Math.round(0.4 * a.loyalty) });
+  return out;
+}
 
 export function departureDesire(a: Adventurer): number {
   return 0.8 * (50 - a.morale) + 0.5 * (a.griefPrix + a.griefFiscal + (a.griefRang ?? 0)) - 0.4 * a.loyalty;
