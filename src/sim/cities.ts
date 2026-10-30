@@ -162,6 +162,13 @@ export function onCityEscortEnd(s: GameState, run: QuestRun, ok: boolean): void 
   } else returnCaravan(s, q, "L'escorte a rebroussé chemin");
 }
 
+/** Une quête menée dans les environs d'une ville voisine nourrit le commerce avec elle (v1.1). */
+export function onCityZoneQuest(s: GameState, q: Quest, ok: boolean): void {
+  const id = ZONES[q.zone]?.ville;
+  if (!id || q.dest) return;
+  shiftCommerce(s, id, ok ? V().commerceQuete : V().commerceQueteEchec);
+}
+
 /** Toute l'escorte a péri en route : la caravane est perdue. */
 export function onCaravanLost(s: GameState, q: Quest): void {
   if (!q.caravane?.length) return;

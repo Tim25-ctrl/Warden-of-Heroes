@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.6 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
+> **Statut du document :** v2.7 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -1121,6 +1121,8 @@ Chaque mise à mort      : P = P − k
 Danger_zone = Σ ( P_espèce × Menace_espèce ) / Danger_max_zone        (0 à 100)
 ```
 
+> **Ajusté en v1.1 : golems et dragon hors du calcul** (D-161). Les golems gardent les salles profondes des Ruines et ne se reproduisent pas : ils partaient à 100 de population, comptaient comme une espèce qui prolifère et plaçaient les Ruines à 100 de danger dès le premier jour, même sans une goule. Comme le dragon, ils ne comptent plus dans le danger d'une zone (ils ne rôdent pas sur les routes) ; ils restent là pour les explorations. Le danger des Ruines suit désormais les goules : environ 70 quand elles sont à 50. Bilan sur 8 parties de 560 jours : toutes les cibles tiennent, Sceau d'Or vers J148, Mithril 8 sur 8 vers J384, ≈ 23 morts au lieu de 33.
+
 Le Danger régional global (5.1.1) est la moyenne pondérée des zones. **La boucle complète est la suivante :** chasser beaucoup fait baisser le danger et rend la région sûre et prospère, mais raréfie les dépouilles et fait monter les cours. Négliger une zone la fait proliférer, et la menace monte jusqu'à la ville.
 
 ---
@@ -2193,6 +2195,21 @@ Quatre villes entourent la région, au bout de routes commerciales qui traversen
 
 **Routes coupées** (D-150). Au plus une route coupée à la fois, au moins 30 jours entre deux coupures, 5 % de chances par jour ensuite. L'espèce la plus nombreuse de la zone traversée bloque la route : les escortes vers la ville sont annulées (les caravanes reviennent à l'Entrepôt, leur escorte est remboursée), l'avantage de la ville est suspendu et le commerce perd 2 points par jour. Le conseil de la ville publie une quête de chasse **« Rouvrir la route »** (récompense ×1,5, 8 jours, republiée si elle expire). Si la guilde la réussit : renommée +5 et commerce +10. Une rivale peut aussi s'en charger. Sinon, la milice de la ville dégage la route au bout de 21 jours.
 
+**Les environs des villes** (ajout v1.1, D-160). Chaque ville voisine a sa zone, avec ses bêtes et ses plantes, qui vivent comme celles de la région (croissance, chasse fermée sous 15, exterminations quand une espèce prolifère) :
+
+| Ville | Environs | Bêtes | Plantes | Rang des demandes |
+|-------|----------|-------|---------|-------------------|
+| Chênaie-sur-Orve | Bois de Chênaie | sangliers, loups | herbe-à-plaie, truffes | E |
+| Valroy | Catacombes de Valroy | rats, goules | mousse lumineuse, camomille | D |
+| Port-Salant | Quais de Port-Salant | crabes-rocs, rats | camomille, racine d'ombre | D |
+| Brisemine | Galeries de Brisemine | gobelins, araignées, trolls | chardon de fer, mousse lumineuse | C |
+
+- **Demandes du conseil :** chaque matin, une ville dont la route est ouverte a 20 % de chances de publier une demande sur ton tableau (une seule à la fois) : une chasse (45 %), une cueillette (25 %) ou la défense de la ville pendant quelques nuits (30 %). Le greffier écarte la plupart de celles qui dépassent la portée de la guilde.
+- **Paie et trajet :** le trajet est celui de la ville (10 à 26 h), la paie ×1,25. Chaque quête réussie dans les environs donne +4 de commerce avec la ville (−3 en cas d'échec).
+- **La milice :** chaque ville contient ses bêtes : au-dessus de 65, elle en retire 15 % de l'excédent chaque jour. Les guildes rivales chassent aussi les environs de leur ville.
+- Ces zones ne comptent pas dans le Danger de ta région, ni pour les épreuves de rang, les vagues, les assauts ou le haut fait *Équilibriste*.
+- **Sur la Carte**, elles n'ont pas de marque propre : la fiche de la ville montre ses environs (danger, bêtes, plantes, demandes du conseil), et une pastille à côté du nom de la ville donne leur danger.
+
 **Caravanes de la guilde** (D-151). Depuis la fiche d'une ville sur la Carte, le joueur charge des marchandises de l'Entrepôt (80 de poids au plus) et paie leur escorte : le prix conseillé est la moitié d'une escorte ordinaire vers cette ville, et le joueur peut le changer. La caravane devient une escorte au tableau (7 jours), hors limite des primes, deux caravanes au plus à la fois.
 - **Prix de vente :** la ville paie au moins le cours de la ville (jamais moins que le prix de base, car ses cours ne s'effondrent pas), ×1,5 pour les catégories qu'elle demande, jusqu'à ×2 quand le commerce est florissant, ×1,1 pour le reste.
 - **Arrivée :** la vente entre dans les coffres au retour de l'escorte (ligne « Caravanes de la guilde » du Livre de comptes).
@@ -2437,6 +2454,8 @@ Elles se commandent depuis la **Charte** (nouvel onglet *Œuvres*) et paraissent
 
 > **Refonte graphique (v1.1, D-147) :** deux ambiances liées au thème de l'appareil. Le thème clair **« Enluminure »** : parchemin, encre brune, liserés d'or, titres en Cinzel. Le thème sombre **« Taverne à la chandelle »** : bois sombre, laiton, lumière chaude, titres en Alegreya SC. Texte en Alegreya Sans (polices embarquées, jouable hors ligne), taille de base 15 px. Les emojis sont remplacés par un jeu d'icônes cohérent (Tabler). La barre du haut montre des pastilles avec une icône et un mot clair (« Calme », « Ville »), le menu est rangé en trois groupes (la guilde, le monde, les livres). La **vue en coupe** est illustrée : toit de tuiles, poutres et planchers, lits, tables et bougies, âtre animé, mannequins dans la cour, fenêtres qui suivent le jour et la nuit ; les aventuriers sont des pions à la couleur de leur classe, une pensée s'affiche de temps en temps dans une bulle, et un clic sur un employé ouvre le Personnel. Nouveaux : l'encart **« Ce matin à la guilde »** (Siège et Résumé), la fiche aventurier en **onglets** (État, Insigne, Équipement, Relations, Pensées), des **« ? »** qui expliquent les indicateurs, un **glossaire** dans les Options, les courbes de renommée face aux rivales, du moral et des effectifs dans les Chroniques, un filtre par type au Tableau, et des icônes par catégorie au Journal.
 
+> **Ajusté en v1.1 (D-159) :** l'écran du siège s'appelle **« La Guilde »**. Le menu est rangé en trois groupes : *Ta guilde* (La Guilde, Aventuriers, Personnel, Comptoir), *Le monde* (Tableau, Carte, Chroniques), *Les registres* (Livre de comptes, Charte, Livre de la guilde), puis les Options à part. Les mots cliquables ont la couleur du texte, avec un soulignement discret qui prend la couleur d'accent au survol. Dans la vue en coupe, seules restent les bulles utiles (« ! » mécontent ou sur le départ, « + » blessé ou soigné, « … » en file d'attente) ; ce que fait chacun se lit au survol. Les pensées affichées sont tirées au hasard parmi les pensées récentes différentes, sans répéter les huit dernières.
+
 > **Ajouté en v1.1 : deux illustrations** (D-158). La carte régionale et la vue en coupe du siège reposent désormais sur deux images peintes (encre et aquarelle, générées par IA à partir de prompts décrivant la disposition du jeu, puis retouchées), rangées dans `src/assets/` (`carte.jpg`, 1280 × 832 ; `guilde.jpg`, 1440 × 736). Le jeu dessine par-dessus ce qui change : lits, tables, personnages, flammes de l'âtre, mannequins, cartouches, pastilles de danger, équipes. En thème sombre, la carte est assombrie par un filtre ; la vue en coupe s'assombrit le soir et la nuit, avec la lueur des chandelles.
 
 ### 7.3 Disposition de l'écran (ordinateur)
@@ -2554,7 +2573,8 @@ L'écran principal. Le bâtiment est montré **en coupe**, comme une maison de p
 - **Calques activables :** populations de monstres, plantes, quêtes en cours. *v1.1 :* calque **Guildes rivales** (fanions des sorties des 3 derniers jours) et liste de leurs sorties dans la fiche de chaque zone.
 - **Clic sur une zone :** espèces présentes et courbe de leur population, plantes, quêtes de la zone.
 - **Clic sur une équipe :** journal de sa quête (4.10).
-- *v1.1 (D-158) :* la carte est une **illustration** (7.2). Chaque lieu garde son dessin ; le jeu y écrit son nom, une pastille et un halo à la couleur de son danger, les barres de population, le nombre de quêtes et les fanions des rivales. Les équipes suivent les routes de l'image (Dijkstra sur leurs carrefours) ; une route coupée vers une ville voisine se barre de rouge. Ce qui suit (ville et chemins dessinés en D-157) est remplacé par l'image.
+- *v1.1 (D-159) :* à l'ouverture, aucun lieu n'est choisi : le panneau de droite résume la région (danger, quêtes et équipes de chaque lieu, environs des villes compris). Le lieu choisi est entouré d'un trait clair. Les équipes des égouts restent dans les murs de la ville.
+- *v1.1 (D-158) :* la carte est une **illustration** (7.2). Chaque lieu garde son dessin ; le jeu y écrit son nom, une pastille à la couleur de son danger (le halo coloré du début a été retiré, D-161), les barres de population, le nombre de quêtes et les fanions des rivales. Les équipes suivent les routes de l'image (Dijkstra sur leurs carrefours) ; une route coupée vers une ville voisine se barre de rouge. Ce qui suit (ville et chemins dessinés en D-157) est remplacé par l'image.
 - *v1.1 (D-157) :* ta ville est **dessinée** (remparts, maisons plus nombreuses au fil des paliers, siège de la guilde et sa bannière), avec un halo à la couleur du danger des égouts. Des **chemins** relient les zones voisines (Ville–Vertbois, Ville–Marais, Vertbois–Collines, Vertbois–Marais, Collines–Pics, Collines–Ruines, Marais–Ruines, Ruines–Pics), et les équipes les suivent : pour les Pics, elles passent par Vertbois et les Collines. Les durées de trajet ne changent pas.
 - *v1.1 :* les **quatre villes voisines** (5.8) au bord de la carte, reliées à leur zone par une route commerciale en pointillés dorés (rouge et ✕ quand elle est coupée), avec le fanion de la guilde qui y siège et une barre de commerce. Les équipes d'une escorte lointaine suivent la route jusqu'à la ville ; une caravane de la guilde porte un petit chariot. **Clic sur une ville :** guilde qui y siège et relation, route, état de la route, commerce et avantage, escortes au tableau, et panneau **Caravane de la guilde** (marchandises de l'Entrepôt, prix en ville et à destination, prix de l'escorte, gain estimé). Le rapport du matin signale une route coupée et une caravane arrivée.
 
@@ -3142,6 +3162,14 @@ Agents d'entretien (D-153), âge, satisfaction et augmentations du personnel (D-
 
 **Résultats** (8 graines × 560 jours) : revenu net vers J30 ≈ 14 po ✔ · 4 salles vers J14 ✔ (limite) · première salle au niveau 3 vers J59 ✔ · Sceau d'Or 8 sur 8, médiane J159 ✔ · Sceau de Mithril 8 sur 8, médiane J459 ✔ · ≈ 24 morts ✔ · aucune faillite ✔. En fin de partie : propreté à 100 partout, satisfaction du personnel entre 41 et 65, aucune démission ; sur 14 jours, 18 quêtes disputées dont 15 parties en groupe commun.
 
+#### 8.11.13 Environs des villes voisines (v1.1, 2026-10-30)
+
+Environs des villes (D-160), menu, liens et bulles (D-159).
+
+**Réglages :** à ×1,5 de paie et 30 % de chances de demande par jour, le revenu vers J30 touchait la limite haute (≈ 20 po) et les morts montaient à ≈ 34 : ramenés à ×1,25 et 20 %. Sans milice, les bêtes des environs saturaient (danger 100 aux Galeries) et remplissaient le tableau d'exterminations : la milice les contient au-dessus de 65.
+
+**Résultats** (8 graines × 560 jours) : revenu net vers J30 ≈ 14 po ✔ · 4 salles vers J14 ✔ · première salle au niveau 3 vers J55 ✔ · Sceau d'Or 8 sur 8, médiane J152 ✔ · Sceau de Mithril 8 sur 8, médiane J389 ✔ · ≈ 33 morts ✔ · aucune faillite ✔.
+
 ### 8.12 Table centrale des paramètres
 
 Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans `parametres.json` et sont réglées à l'aide du simulateur d'équilibrage.
@@ -3439,6 +3467,9 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-156 | 2026-10-30 | « Pourquoi veut-il partir ? » : envie de partir détaillée cause par cause, rancunes renommées, « ? » sur chaque jauge. | 3.12.2, 7.5.2 |
 | D-157 | 2026-10-30 | Carte : ta ville dessinée et des chemins entre les zones, que les équipes suivent. | 7.5.6 |
 | D-158 | 2026-10-30 | La carte régionale et la vue en coupe reposent sur deux illustrations peintes ; le jeu dessine par-dessus ce qui change. | 7.2, 7.5.1, 7.5.6 |
+| D-159 | 2026-10-30 | Écran « La Guilde », menu Ta guilde / Le monde / Les registres, liens discrets, bulles utiles seulement, carte sans lieu choisi d'office. | 7.5 |
+| D-160 | 2026-10-30 | Chaque ville voisine a ses environs (bêtes, plantes, milice) et son conseil publie des demandes sur ton tableau. | 5.8 |
+| D-161 | 2026-10-30 | Golems et dragon ne comptent pas dans le danger d'une zone ; plus de halo coloré sur la carte, seulement la pastille. | 2.7, 7.5.6 |
 
 ### Relecture de cohérence (v1.0)
 

@@ -138,12 +138,11 @@ function computeTargets(s: GameState): Map<number, Target> {
     else if (k === 'entrainement') slot = terrainSlots[terI++ % terrainSlots.length];
     else if (['auberge', 'taverne', 'soin', 'vendre', 'aide', 'dehors', 'forge'].includes(k)) slot = villeSlots[villeI++ % villeSlots.length];
     else slot = hall[hallI++ % hall.length];
+    // Seules les bulles utiles (v1.1) : mécontent ou sur le départ, blessé ou malade, en file d'attente.
+    // Ce que fait chacun se lit au survol.
     let bubble = '';
-    if (k === 'dormir' || k === 'auberge' || k === 'dehors') bubble = 'z';
-    else if (k === 'boire') bubble = '♪';
-    else if (k === 'attendre') bubble = '…';
+    if (k === 'attendre') bubble = '…';
     else if (k === 'hospitalise' || k === 'consultation') bubble = '+';
-    else if (k === 'entrainement') bubble = '⚔';
     if (a.status !== 'actif') bubble = '!';
     else if (a.hp < pvMax(a) * 0.5 || a.states.some((x) => x.gravite >= 1)) bubble = bubble || '+';
     t.set(a.id, { ...slot, bubble, label: ACTIVITY_LABELS[k] });
@@ -330,7 +329,7 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
   const pos = useRef(new Map<number, { x: number; y: number }>());
   const targets = useRef(new Map<number, Target>());
   const staffSpots = useRef<StaffSpot[]>([]);
-  const thought = useRef<{ id: number; text: string; until: number; next: number }>({ id: -1, text: '', until: 0, next: 0 });
+  const thought = useRef<{ id: number; text: string; until: number; next: number; recent: string[] }>({ id: -1, text: '', until: 0, next: 0, recent: [] });
   const [hover, setHover] = useState<{ id?: number; staff?: StaffSpot; x: number; y: number } | null>(null);
   const hoverRef = useRef<number | null>(null);
   hoverRef.current = hover?.id ?? null;
@@ -594,15 +593,26 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
       // Une pensée à voix haute de temps en temps
       const th = thought.current;
       if (now > th.next) {
-        const candidates = st.adventurers.filter((a) => tg.has(a.id) && a.thoughts.length && a.thoughts[a.thoughts.length - 1].tick > st.tick - 24);
-        if (candidates.length) {
-          const a = candidates[Math.floor((now / 1000) % candidates.length)];
-          const txt = plain(a.thoughts[a.thoughts.length - 1].text);
-          th.id = a.id;
+        // Une pensée récente, chaque texte ne comptant qu'une fois (dix aventuriers au même petit boulot
+        // n'occupent pas la scène), et jamais une des dernières déjà montrées.
+        const byText = new Map<string, number>();
+        for (const a of st.adventurers) {
+          if (!tg.has(a.id)) continue;
+          for (const t of a.thoughts.slice(-3)) {
+            if (t.tick <= st.tick - 24) continue;
+            const txt = plain(t.text);
+            if (!th.recent.includes(txt) && !byText.has(txt)) byText.set(txt, a.id);
+          }
+        }
+        const pool = [...byText.entries()];
+        if (pool.length) {
+          const [txt, id] = pool[Math.floor(Math.random() * pool.length)];
+          th.id = id;
           th.text = txt.length > 46 ? `${txt.slice(0, 45)}…` : txt;
           th.until = now + 5000;
+          th.recent = [...th.recent, txt].slice(-8);
         }
-        th.next = now + 7000;
+        th.next = now + 9000;
       }
       if (now < th.until) {
         const c = pos.current.get(th.id);

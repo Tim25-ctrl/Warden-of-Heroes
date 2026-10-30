@@ -3,7 +3,7 @@
 import { createAdventurer, gainXp, hasTrait, profileOf, rangIndex, xpRequired } from './adventurers';
 import { addAilment, removeAilment, worstGravity } from './ailments';
 import { fight } from './combat';
-import { DENREES, EVENTS, NAMES, P, REMEDES, RESOURCES, ROOM_IDS, SPECIES, ZONE_IDS, ZONES } from './data';
+import { DENREES, EVENTS, NAMES, P, REGION_ZONES, REMEDES, RESOURCES, ROOM_IDS, SPECIES, ZONE_IDS, ZONES } from './data';
 import { chefSkill, clamp, dishPrice, dishRef, IP, roomLevelCost } from './economy';
 import { advLink, dayOf, hourOf, isSeasonStart, money, SEASON_DAYS, SEASONS, seasonOf, weekdayOf, YEAR_DAYS, yearOf } from './format';
 import { earn, log, spend, think } from './journal';
@@ -17,7 +17,7 @@ import { createProf } from './training';
 import { acceptShared, assaultAllies, buyout, canPoach, dailyDiplomacy, hourlyTournament, onDefamation, onPoachAttempt, onSharedDone, proposeBuyout, registerTournament } from './diplomacy';
 import { dailyWorks, grantPrivilege, hasPrivilege } from './charter';
 import { CITIES } from './data';
-import { dailyCities, newRivalCity, onCaravanExpired, onCityEscortEnd, onRouteQuestDone, reopenRoute, rivalCity, tradeFactor } from './cities';
+import { dailyCities, newRivalCity, onCaravanExpired, onCityEscortEnd, onCityZoneQuest, onRouteQuestDone, reopenRoute, rivalCity, tradeFactor } from './cities';
 import type {
   Adventurer, Decision, DecisionOption, GameState, NewsItem, Palier, Quest, QuestRun, Rival, RoomId, WorldState,
 } from './types';
@@ -99,7 +99,12 @@ export function decorateQuest(s: GameState, q: Quest): void {
   // La route de Valroy, la ville royale, amène des commandes nobles (v1.1), même dans un bourg.
   const roy = tradeFactor(s, 'nobles');
   const nobles = s.world.palier !== 'bourg' ? W().noblesPart * (1 + P.villes.noblesMax * roy) : W().noblesPart * P.villes.noblesBourg * roy;
-  if (q.clientType === 'villageois' && q.type !== 'escorte' && !q.route && chance(s, 'quetes', nobles)) {
+  const cityZone = ZONES[q.zone]?.ville;
+  if (cityZone) {
+    // Demande d'une ville voisine (v1.1) : son conseil paie bien, le trajet est long.
+    q.client = CITIES[cityZone].conseil;
+    mult *= P.villes.recompenseEnvirons;
+  } else if (q.clientType === 'villageois' && q.type !== 'escorte' && !q.route && chance(s, 'quetes', nobles)) {
     q.clientType = 'nobles';
     q.client = pick(s, 'noms', NAMES.nobles as string[]);
     mult *= W().noblesMult;
@@ -125,7 +130,7 @@ export const questCountFactor = (s: GameState) => (s.danger < 20 ? W().calmeQuet
 function crownQuest(s: GameState): void {
   if (s.danger < 60) return;
   let best: { z: string; sp: string; v: number } | null = null;
-  for (const z of ZONE_IDS) for (const sp of Object.keys(ZONES[z].especes)) {
+  for (const z of REGION_ZONES) for (const sp of Object.keys(ZONES[z].especes)) {
     if (sp === 'dragon' || sp === 'golem' || huntClosed(s, z, sp)) continue;
     const v = popOf(s, z, sp) * SPECIES[sp].menace;
     if (!best || v > best.v) best = { z, sp, v };
@@ -142,6 +147,7 @@ export function onQuestEnd(s: GameState, run: QuestRun, ok: boolean, team: Adven
   if (q.type === 'aide') return;
   if (q.sharedWith) onSharedDone(s, q.sharedWith, ok);
   onCityEscortEnd(s, run, ok);
+  onCityZoneQuest(s, q, ok);
   onRouteQuestDone(s, q, ok);
   onQuestDone(s, q, ok, team);
   const R = P.renommee;
@@ -295,7 +301,7 @@ function prepare(s: GameState, id: string): Data {
 
 function wrongDetail(s: GameState, id: string, data: Data): Data {
   if (data.zone) {
-    const z = pick(s, 'monde', ZONE_IDS.filter((x) => x !== data.zone && x !== 'ville'));
+    const z = pick(s, 'monde', REGION_ZONES.filter((x) => x !== data.zone && x !== 'ville'));
     return { ...data, lieu: ZONES[z].lieu };
   }
   void id;
@@ -434,7 +440,7 @@ function runAction(s: GameState, id: string, d: Data, until: number): boolean {
     case 'vague': {
       if (!d.zone) Object.assign(d, prepare(s, 'vague'));
       const sp = String(d.especeId);
-      const zones = [String(d.zone), ...ZONE_IDS.filter((z) => z !== d.zone && ZONES[z].especes[sp] !== undefined && chance(s, 'monde', 0.4)).slice(0, 1)];
+      const zones = [String(d.zone), ...REGION_ZONES.filter((z) => z !== d.zone && ZONES[z].especes[sp] !== undefined && chance(s, 'monde', 0.4)).slice(0, 1)];
       for (const z of zones) {
         s.populations[z][sp] = 100;
         s.world.counters[`vague:${z}:${sp}`] = 0;
@@ -639,7 +645,7 @@ function chains(s: GameState): void {
   if (c.danger >= W().assautDangerJours) {
     c.danger = 0;
     let best: [string, string, number] | null = null;
-    for (const z of ZONE_IDS) for (const sp of Object.keys(ZONES[z].especes)) {
+    for (const z of REGION_ZONES) for (const sp of Object.keys(ZONES[z].especes)) {
       if (sp === 'dragon' || sp === 'golem') continue;
       const v = popOf(s, z, sp) * ZONES[z].poidsDanger;
       if (!best || v > best[2]) best = [z, sp, v];

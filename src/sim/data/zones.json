@@ -10,5 +10,13 @@
   { "id": "ruines", "nom": "Ruines d'Ostral", "court": "les Ruines", "lieu": "dans les Ruines d'Ostral", "trajet": 14, "danger": 70, "poidsQuetes": 0.06, "poidsDanger": 1,
     "especes": { "goule": 3, "golem": 1 }, "plantes": { "mousse_lumineuse": 1 }, "village": "le prieuré d'Ostral" },
   { "id": "pics", "nom": "Pics des Wyvernes", "court": "les Pics", "lieu": "sur les Pics des Wyvernes", "trajet": 20, "danger": 85, "poidsQuetes": 0.04, "poidsDanger": 0.5,
-    "especes": { "wyverne": 1, "dragon": 0.2 }, "plantes": { "fleur_braise": 1 }, "village": "le camp des bergers" }
+    "especes": { "wyverne": 1, "dragon": 0.2 }, "plantes": { "fleur_braise": 1 }, "village": "le camp des bergers" },
+  { "id": "env_chenaie", "nom": "Bois de Chênaie", "court": "Bois de Chênaie", "lieu": "dans les bois de Chênaie", "trajet": 10, "danger": 30, "poidsQuetes": 0, "poidsDanger": 0,
+    "especes": { "sanglier": 2, "loup": 2 }, "plantes": { "herbe_plaie": 2, "truffe": 1 }, "village": "Chênaie-sur-Orve", "ville": "chenaie" },
+  { "id": "env_valroy", "nom": "Catacombes de Valroy", "court": "Catacombes", "lieu": "dans les catacombes de Valroy", "trajet": 14, "danger": 40, "poidsQuetes": 0, "poidsDanger": 0,
+    "especes": { "rat": 2, "goule": 1 }, "plantes": { "mousse_lumineuse": 1, "camomille": 1 }, "village": "Valroy", "ville": "valroy" },
+  { "id": "env_port", "nom": "Quais de Port-Salant", "court": "Quais", "lieu": "sur les quais de Port-Salant", "trajet": 16, "danger": 40, "poidsQuetes": 0, "poidsDanger": 0,
+    "especes": { "crabe": 3, "rat": 1 }, "plantes": { "camomille": 1, "racine_ombre": 1 }, "village": "Port-Salant", "ville": "port" },
+  { "id": "env_brisemine", "nom": "Galeries de Brisemine", "court": "Galeries", "lieu": "dans les galeries de Brisemine", "trajet": 26, "danger": 60, "poidsQuetes": 0, "poidsDanger": 0,
+    "especes": { "gobelin": 2, "araignee": 2, "troll": 1 }, "plantes": { "chardon_fer": 2, "mousse_lumineuse": 1 }, "village": "Brisemine", "ville": "brisemine" }
 ]

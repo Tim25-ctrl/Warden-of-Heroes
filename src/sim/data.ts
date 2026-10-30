@@ -38,15 +38,18 @@ export const isPlant = (id: string) => RESOURCES[id]?.categorie === 'plante';
 export interface Zone {
   id: string; nom: string; court: string; lieu: string; trajet: number; danger: number; poidsQuetes: number; poidsDanger: number;
   especes: Record<string, number>; plantes: Record<string, number>; village: string;
+  ville?: string;   // environs d'une ville voisine (v1.1)
 }
 export const ZONES: Record<string, Zone> = Object.fromEntries((zones as unknown as Zone[]).map((z) => [z.id, z]));
 export const ZONE_IDS = (zones as unknown as Zone[]).map((z) => z.id);
+/** Les zones de la région (sans les environs des villes voisines). */
+export const REGION_ZONES = ZONE_IDS.filter((z) => !ZONES[z].ville);
 
 /** Villes voisines (GDD 5.8, ajout v1.1) : destinations des escortes et sièges des guildes rivales. */
 export interface City {
   id: string; nom: string; court: string; titre: string; route: string; trajet: number; rang: Rang;
   guilde: string | null; zonesRivale: string[]; demande: string[]; effet: 'remedes' | 'nobles' | 'denrees' | 'equipement';
-  effetTexte: string; conseil: string;
+  effetTexte: string; conseil: string; environs: string;
 }
 export const CITIES: Record<string, City> = Object.fromEntries((villes as unknown as City[]).map((c) => [c.id, c]));
 export const CITY_IDS = (villes as unknown as City[]).map((c) => c.id);

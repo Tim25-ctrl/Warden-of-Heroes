@@ -541,7 +541,7 @@ export function Siege({ s }: { s: GameState }) {
   return (
     <div>
       <div class="screen-head">
-        <h2>Le Siège</h2>
+        <h2>La Guilde</h2>
         <span class="hint">Clique sur une salle pour la gérer, ou sur un aventurier pour ouvrir sa fiche.</span>
       </div>
       <MorningReport s={s} />

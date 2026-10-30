@@ -1,7 +1,7 @@
 // Insignes de rang et épreuves (GDD 3.9.1, ajout v1.1).
 // Le rang d'un aventurier n'est plus déduit de son niveau : la guilde le décerne après une épreuve.
 import { rangForLevel, rangIndex } from './adventurers';
-import { P, SPECIES, ZONE_IDS, ZONES } from './data';
+import { P, REGION_ZONES, SPECIES, ZONES } from './data';
 import { clamp } from './economy';
 import { advLink, money } from './format';
 import { earn, log, think } from './journal';
@@ -78,7 +78,7 @@ export function isCandidate(s: GameState, a: Adventurer): boolean {
 function examTarget(s: GameState, target: Rang): { zone: string; sp: string; count?: number } | null {
   const wanted = (R().especes as Record<string, string[]>)[target] ?? [];
   const opts: { zone: string; sp: string }[] = [];
-  for (const sp of wanted) for (const z of ZONE_IDS) if (ZONES[z].especes[sp] !== undefined && SPECIES[sp]) opts.push({ zone: z, sp });
+  for (const sp of wanted) for (const z of REGION_ZONES) if (ZONES[z].especes[sp] !== undefined && SPECIES[sp]) opts.push({ zone: z, sp });
   if (!opts.length) return null;
   const o = opts.sort((x, y) => popOf(s, y.zone, y.sp) - popOf(s, x.zone, x.sp))[0];
   // Un seul groupe de bêtes : l'épreuve mesure l'aventurier, pas son endurance.

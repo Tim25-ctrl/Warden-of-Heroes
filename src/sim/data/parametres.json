@@ -685,7 +685,7 @@
     }
   },
   "villes": {
-    "_note": "Villes voisines, routes commerciales, routes coupées et caravanes (GDD 5.8, v1.1). Commerce de 0 à 100 : +8 par escorte réussie, −6 par échec, il perd 2 % de sa valeur chaque jour (−2 points par jour quand la route est coupée). L'avantage de la ville vaut effetMax × commerce / 100.",
+    "_note": "Villes voisines, routes commerciales, routes coupées et caravanes (GDD 5.8, v1.1). Commerce de 0 à 100 : +8 par escorte réussie, −6 par échec, il perd 2 % de sa valeur chaque jour (−2 points par jour quand la route est coupée). L'avantage de la ville vaut effetMax × commerce / 100. Environs (v1.1, D-160) : chaque ville a sa zone (monstres et plantes) ; son conseil publie une demande par jour au plus (chance demandeJour), payée ×1,25 ; une quête réussie dans ses environs donne +4 de commerce. La milice de chaque ville contient ses bêtes : au-dessus de 65, elle en retire 15 % de l'excédent chaque jour.",
     "partEscortes": 0.5,
     "recompense": 1.2,
     "rencontres": 3,
@@ -714,6 +714,17 @@
       "autre": 1.1,
       "expirationJours": 7,
       "escorte": 0.5
-    }
+    },
+    "demandeJour": 0.2,
+    "recompenseEnvirons": 1.25,
+    "commerceQuete": 4,
+    "commerceQueteEchec": -3,
+    "demandes": {
+      "chasse": 0.45,
+      "cueillette": 0.25,
+      "protection": 0.3
+    },
+    "miliceSeuil": 65,
+    "milice": 0.15
   }
 }

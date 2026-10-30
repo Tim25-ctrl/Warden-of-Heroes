@@ -15,7 +15,7 @@ import { grantPrivilege, hasPrivilege, workState } from '../src/sim/charter';
 import { giftRival, relationOf } from '../src/sim/diplomacy';
 import { examOf, examRang, isCandidate, onExamDone } from '../src/sim/ranks';
 import { CITIES, CITY_IDS, RESOURCES, SPECIES, ZONES } from '../src/sim/data';
-import { cityState, cutRoute, onCityEscortEnd, reopenRoute, rivalCity, routeOpen, tradeFactor } from '../src/sim/cities';
+import { cityState, cutRoute, onCityEscortEnd, onCityZoneQuest, reopenRoute, rivalCity, routeOpen, tradeFactor } from '../src/sim/cities';
 import { foodUnitPrice } from '../src/sim/economy';
 import { expireQuests, makeCityEscort } from '../src/sim/quests';
 import type { QuestRun } from '../src/sim/types';
@@ -254,7 +254,8 @@ describe('revenus de la guilde (ajustements tranche 2)', () => {
     for (let d = 0; d < 20; d++) {
       stepDays(s, 1);
       const reach = guildReach(s);
-      for (const q of boardQuests(s)) { total++; if (rangIndex(q.rang) <= reach) inReach++; }
+      // Les chasses imposées par la Couronne (danger critique) ne passent pas par le greffier.
+      for (const q of boardQuests(s)) { if (q.clientType === 'couronne') continue; total++; if (rangIndex(q.rang) <= reach) inReach++; }
     }
     expect(total).toBeGreaterThan(0);
     expect(inReach / total).toBeGreaterThan(0.7);
@@ -414,6 +415,7 @@ describe('les villes voisines (v1.1)', () => {
   it('une route coupée bloque les escortes, une quête la rouvre', () => {
     const s = createGame({ seed: 72 });
     stepDays(s, 2);
+    for (const r of s.world.rivals) r.bankruptSince = s.tick;   // aucune rivale pour rouvrir la route à notre place
     expect(cutRoute(s, 'chenaie')).toBe(true);
     expect(routeOpen(s, 'chenaie')).toBe(false);
     expect(tradeFactor(s, 'remedes')).toBe(0);
@@ -482,5 +484,22 @@ describe('le personnel et l\'entretien (v1.1)', () => {
     expect(propreteOf(s, 'refectoire')).toBeLessThan(p0);
     expect(propreteOf(s, 'dortoirs')).toBeLessThan(70);
     expect(load).toBeGreaterThan(0);
+  });
+});
+
+describe('les environs des villes voisines (v1.1)', () => {
+  it('chaque ville a ses bêtes et ses plantes, son conseil publie des demandes, et une quête réussie nourrit le commerce', () => {
+    const s = createGame({ seed: 90 });
+    for (const id of CITY_IDS) expect(Object.keys(s.populations[CITIES[id].environs]).length).toBeGreaterThan(0);
+    let found = false;
+    for (let d = 0; d < 40 && !found; d++) {
+      stepDays(s, 1);
+      found = s.board.some((q) => ZONES[q.zone].ville && q.client === CITIES[ZONES[q.zone].ville!].conseil);
+    }
+    expect(found).toBe(true);
+    const q = s.board.find((x) => ZONES[x.zone].ville)!;
+    const c0 = cityState(s, ZONES[q.zone].ville!).commerce;
+    onCityZoneQuest(s, q, true);
+    expect(cityState(s, ZONES[q.zone].ville!).commerce).toBeGreaterThan(c0);
   });
 });

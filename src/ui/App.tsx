@@ -39,19 +39,19 @@ const NAV_CONSULTATION: [Screen, NavIcon, string, string?][] = [
   ['options', IconSettings, 'Options'],
 ];
 
-/** Menu en trois groupes (refonte v1.1) : la guilde, le monde, les livres. */
+/** Menu en trois groupes (v1.1, D-159) : ta guilde, le monde, les registres ; les options à part. */
 const NAV: [Screen, NavIcon, string, string?][] = [
-  ['siege', IconBuildingCastle, 'Siège', 'La guilde'],
+  ['siege', IconBuildingCastle, 'La Guilde', 'Ta guilde'],
   ['aventuriers', IconUsers, 'Aventuriers'],
   ['personnel', IconChefHat, 'Personnel'],
-  ['tableau', IconClipboardList, 'Tableau', 'Le monde'],
   ['comptoir', IconScale, 'Comptoir'],
+  ['tableau', IconClipboardList, 'Tableau', 'Le monde'],
   ['carte', IconMap2, 'Carte'],
   ['chroniques', IconNews, 'Chroniques'],
-  ['charte', IconCertificate, 'Charte', 'Les livres'],
+  ['livre', IconReportMoney, 'Livre de comptes', 'Les registres'],
+  ['charte', IconCertificate, 'Charte'],
   ['guilde', IconBook, 'Livre de la guilde'],
-  ['livre', IconReportMoney, 'Livre de comptes'],
-  ['options', IconSettings, 'Options'],
+  ['options', IconSettings, 'Options', '—'],
 ];
 
 function StartScreen() {
@@ -258,7 +258,7 @@ export function App() {
         <nav class="nav" aria-label="Écrans">
           {(consultation ? NAV_CONSULTATION : NAV).map(([id, Ico, label, group]) => (
             <>
-              {group && <span class="nav-group">{group}</span>}
+              {group && (group === '—' ? <span class="nav-sep" aria-hidden="true" /> : <span class="nav-group">{group}</span>)}
               <button class={screen === id ? 'on' : ''} aria-current={screen === id ? 'page' : undefined} onClick={() => setScreen(id)} title={label}>
                 <Ico size={20} stroke={1.75} class="ico" aria-hidden="true" /><span class="label">{label}</span>
                 {badges[id] ? <span class="badge">{badges[id]}</span> : null}

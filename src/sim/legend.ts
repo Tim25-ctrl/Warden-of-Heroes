@@ -1,7 +1,7 @@
 // La légende (GDD chapitre 6) : difficulté, Renommée hebdomadaire, Sceaux royaux, hauts faits, Panthéon,
 // conseils de Gaspard, prêteurs (1.1.3), Livre de la guilde et épilogue.
 import { className, rangForLevel, rangIndex } from './adventurers';
-import { P, ROOM_IDS } from './data';
+import { P, ROOM_IDS, ZONES } from './data';
 import progression from './data/progression.json';
 import { clamp, dormQuality, infQuality, terrainQuality } from './economy';
 import { advLink, dayOf, hourOf, isSeasonStart, money, SEASON_DAYS, SEASONS, seasonOf, weekdayOf, yearOf } from './format';
@@ -250,7 +250,8 @@ function dailyAchievements(s: GameState): void {
   if (s.taxRate > 0) c.taxed = 1;
   // Équilibriste : aucune espèce hors de [30, 80] pendant toute une saison
   let balanced = true;
-  for (const z of Object.values(s.populations)) for (const [id, v] of Object.entries(z)) {
+  for (const [zid, z] of Object.entries(s.populations)) for (const [id, v] of Object.entries(z)) {
+    if (ZONES[zid]?.ville) continue;   // les environs des villes voisines ne comptent pas
     if (id === 'dragon' || id === 'golem' || id.includes('_') || ['herbe_plaie', 'camomille', 'truffe'].includes(id)) continue;
     if (v < 30 || v > 80) balanced = false;
   }

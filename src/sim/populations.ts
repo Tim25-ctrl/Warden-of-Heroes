@@ -9,7 +9,12 @@ import type { GameState } from './types';
 
 export function initPopulations(s: GameState): void {
   s.populations = {};
-  for (const z of ZONE_IDS) {
+  for (const z of ZONE_IDS) initZone(s, z);
+}
+
+/** Populations de départ d'une zone (aussi pour une zone ajoutée après coup, dans une ancienne partie). */
+function initZone(s: GameState, z: string): void {
+  {
     const pop: Record<string, number> = {};
     for (const sp of Object.keys(ZONES[z].especes)) {
       if (sp === 'dragon') pop[sp] = 0;                 // le dragon n'apparaît que par un événement (tranche 3)
@@ -55,6 +60,7 @@ function updateClosedHunts(s: GameState): void {
 
 /** Croissance logistique quotidienne (2.7). Les plantes repoussent comme les monstres. */
 export function dailyPopulations(s: GameState): void {
+  for (const z of ZONE_IDS) if (!s.populations[z]) initZone(s, z);
   for (const z of ZONE_IDS) {
     const pop = s.populations[z];
     for (const id of Object.keys(pop)) {
@@ -65,6 +71,8 @@ export function dailyPopulations(s: GameState): void {
         * (isPlant(id) ? 1 : diff(s).croissance);
       const before = pop[id];
       if (pop[id] > 0) pop[id] = clamp(pop[id] + r * pop[id] * (1 - pop[id] / 100), 0, 100);
+      // Les villes voisines ont leur milice (v1.1) : elle contient les bêtes de leurs environs, sans les éliminer.
+      if (ZONES[z].ville && !isPlant(id) && pop[id] > P.villes.miliceSeuil) pop[id] -= (pop[id] - P.villes.miliceSeuil) * P.villes.milice;
       if (!isPlant(id) && before <= P.populations.proliferation && pop[id] > P.populations.proliferation) {
         log(s, 'monde', 'important', `Les ${SPECIES[id].pluriel} prolifèrent ${ZONES[z].lieu}.`);
       }
@@ -97,7 +105,9 @@ export function zoneDanger(s: GameState, zone: string): number {
   let den = 0;
   for (const [id, w] of Object.entries(z.especes)) {
     const sp = SPECIES[id];
-    if (!sp || id === 'dragon') continue;
+    // Les golems gardent les salles profondes des Ruines et le dragon dort : ils ne rôdent pas sur les routes,
+    // ils ne comptent donc pas dans le danger (ajusté en v1.1, D-161). Ils restent là pour les explorations.
+    if (!sp || sp.r <= 0) continue;
     num += popOf(s, zone, id) * sp.menace * w;
     den += 50 * sp.menace * w;
   }

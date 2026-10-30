@@ -1,14 +1,6 @@
 [
-  { "id": "chenaie", "nom": "Chênaie-sur-Orve", "court": "Chênaie", "titre": "le bourg forestier", "route": "foret", "trajet": 10, "rang": "E",
-    "guilde": "chene", "zonesRivale": ["foret", "collines", "marais"], "demande": ["plante", "os"],
-    "effet": "remedes", "effetTexte": "remèdes achetés moins cher", "conseil": "le bailli de Chênaie" },
-  { "id": "valroy", "nom": "Valroy", "court": "Valroy", "titre": "la ville royale", "route": "collines", "trajet": 14, "rang": "D",
-    "guilde": "aube", "zonesRivale": ["collines", "ruines", "pics"], "demande": ["rare", "peau"],
-    "effet": "nobles", "effetTexte": "plus de commandes nobles", "conseil": "le sénéchal de Valroy" },
-  { "id": "port", "nom": "Port-Salant", "court": "Port-Salant", "titre": "le port", "route": "marais", "trajet": 16, "rang": "C",
-    "guilde": "crocs", "zonesRivale": ["marais", "ville", "foret"], "demande": ["viande", "organe"],
-    "effet": "denrees", "effetTexte": "denrées du garde-manger moins chères", "conseil": "la capitainerie de Port-Salant" },
-  { "id": "brisemine", "nom": "Brisemine", "court": "Brisemine", "titre": "la cité minière", "route": "pics", "trajet": 26, "rang": "B",
-    "guilde": null, "zonesRivale": ["pics", "ruines", "collines"], "demande": ["os", "objet", "peau"],
-    "effet": "equipement", "effetTexte": "équipement moins cher chez le forgeron", "conseil": "la corporation des mineurs de Brisemine" }
+  {"id":"chenaie","nom":"Chênaie-sur-Orve","court":"Chênaie","titre":"le bourg forestier","route":"foret","trajet":10,"rang":"E","guilde":"chene","zonesRivale":["foret","collines","marais","env_chenaie"],"demande":["plante","os"],"effet":"remedes","effetTexte":"remèdes achetés moins cher","conseil":"le bailli de Chênaie","environs":"env_chenaie"},
+  {"id":"valroy","nom":"Valroy","court":"Valroy","titre":"la ville royale","route":"collines","trajet":14,"rang":"D","guilde":"aube","zonesRivale":["collines","ruines","pics","env_valroy"],"demande":["rare","peau"],"effet":"nobles","effetTexte":"plus de commandes nobles","conseil":"le sénéchal de Valroy","environs":"env_valroy"},
+  {"id":"port","nom":"Port-Salant","court":"Port-Salant","titre":"le port","route":"marais","trajet":16,"rang":"C","guilde":"crocs","zonesRivale":["marais","ville","foret","env_port"],"demande":["viande","organe"],"effet":"denrees","effetTexte":"denrées du garde-manger moins chères","conseil":"la capitainerie de Port-Salant","environs":"env_port"},
+  {"id":"brisemine","nom":"Brisemine","court":"Brisemine","titre":"la cité minière","route":"pics","trajet":26,"rang":"B","guilde":null,"zonesRivale":["pics","ruines","collines","env_brisemine"],"demande":["os","objet","peau"],"effet":"equipement","effetTexte":"équipement moins cher chez le forgeron","conseil":"la corporation des mineurs de Brisemine","environs":"env_brisemine"}
 ]

@@ -33,7 +33,10 @@ export const QUEST_TYPE_NAMES: Record<QuestType, string> = {
   escorte: 'Escorte', exploration: 'Exploration', protection: 'Protection',
 };
 const MULT: Record<QuestType, number> = { aide: 0, chasse: 1, extermination: 0, cueillette: 0.7, escorte: 1.1, exploration: 1.3, protection: 1.4 };
-const ZONE_RANG: Record<string, Rang> = { ville: 'F', foret: 'F', collines: 'E', marais: 'D', ruines: 'C', pics: 'B' };
+const ZONE_RANG: Record<string, Rang> = {
+  ville: 'F', foret: 'F', collines: 'E', marais: 'D', ruines: 'C', pics: 'B',
+  env_chenaie: 'E', env_valroy: 'D', env_port: 'D', env_brisemine: 'C',   // environs des villes voisines (v1.1)
+};
 
 // ---------- Génération (4.3) ----------
 
@@ -240,9 +243,9 @@ function makeExploration(s: GameState): Quest {
   return finishDanger(s, q, golems ? 'golem' : 'goule', golems ? 1 : avgGroup('goule'), 2, 1);
 }
 
-function makeProtection(s: GameState): Quest {
-  const zone = pickZone(s, ['foret', 'collines', 'marais']);
-  const rang: Rang = zone === 'marais' ? 'C' : 'D';
+function makeProtection(s: GameState, zoneIn?: string): Quest {
+  const zone = zoneIn ?? pickZone(s, ['foret', 'collines', 'marais']);
+  const rang: Rang = ZONES[zone].ville ? ZONE_RANG[zone] : zone === 'marais' ? 'C' : 'D';
   const q = base(s, 'protection', rang, zone, 'villageois');
   q.nights = randInt(s, 'quetes', P.quetes.protectionNuits[0], P.quetes.protectionNuits[1]);
   q.title = `Défendre ${ZONES[zone].village} pendant ${q.nights} nuits`;
@@ -285,6 +288,28 @@ function makeQuest(s: GameState, t: string): Quest | null {
     : t === 'exploration' ? makeExploration(s) : t === 'protection' ? makeProtection(s) : makeChasse(s);
 }
 
+/**
+ * Demandes des villes voisines (v1.1, D-160) : chaque matin, le conseil d'une ville dont la route est ouverte peut publier
+ * une demande pour ses environs (chasse, cueillette ou défense de la ville), une à la fois.
+ */
+function generateCityRequests(s: GameState): void {
+  const V = P.villes;
+  for (const id of CITY_IDS) {
+    const zone = CITIES[id].environs;
+    if (!ZONES[zone] || !routeOpen(s, id)) continue;
+    if (s.board.some((q) => q.zone === zone && q.type !== 'extermination') || !chance(s, 'quetes', V.demandeJour)) continue;
+    if (boardQuests(s).length >= boardCapacity(s)) return;
+    const t = weighted(s, 'quetes', V.demandes as Record<string, number>);
+    const q = t === 'cueillette' ? makeCueillette(s, zone) : t === 'protection' ? makeProtection(s, zone) : makeChasse(s, zone);
+    if (!q) continue;
+    // Le greffier écarte aussi la plupart des demandes hors de portée de la guilde.
+    if (rangIndex(q.rang) > guildReach(s) && !chance(s, 'quetes', onDuty(s, 'greffier') ? P.quetes.greffier.horsPortee : P.quetes.portee.horsPortee)) continue;
+    if (q.type === 'protection') q.title = `Défendre ${CITIES[id].nom} pendant ${q.nights} nuits`;
+    decorateQuest(s, q);
+    s.board.push(q);
+  }
+}
+
 /** Chaque matin : quêtes du tableau, exterminations des espèces qui prolifèrent, petits boulots (4.3.2). */
 export function generateQuests(s: GameState, firstDay = false): void {
   const q = P.quetes;
@@ -310,8 +335,10 @@ export function generateQuests(s: GameState, firstDay = false): void {
     const c = makeCueillette(s);
     if (c) { c.client = c.client || "l'herboriste"; decorateQuest(s, c); s.board.push(c); }
   }
-  // Une extermination par espèce qui prolifère (2.7)
+  generateCityRequests(s);
+  // Une extermination par espèce qui prolifère (2.7) ; pas vers une ville dont la route est coupée.
   for (const z of ZONE_IDS) {
+    if (ZONES[z].ville && !routeOpen(s, ZONES[z].ville!)) continue;
     for (const sp of Object.keys(ZONES[z].especes)) {
       if (sp === 'dragon' || popOf(s, z, sp) <= q.extermination.seuil) continue;
       if (s.board.some((x) => x.type === 'extermination' && x.zone === z && x.target === sp)) continue;
@@ -662,7 +689,7 @@ function trackingHours(s: GameState, run: QuestRun, team: Adventurer[]): number 
   return Math.max(1, Math.round(baseH * (1 - pist / 40) * (P.quetes.populationNormale / pop)));
 }
 
-const VENOMOUS = new Set(['foret', 'marais', 'ruines', 'pics']);
+const VENOMOUS = new Set(['foret', 'marais', 'ruines', 'pics', 'env_brisemine']);
 
 function depart(s: GameState, run: QuestRun): void {
   let team = runMembers(s, run).filter((m) => canQuest(m) && m.status !== 'depart' && m.activity.kind !== 'hospitalise');

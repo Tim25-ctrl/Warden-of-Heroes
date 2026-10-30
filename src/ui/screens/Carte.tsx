@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import {
   activeCaravans, caravanFeeRef, caravanPreview, cityLotValue, cityPriceMult, cityState, commerceLabel, rivalCity, routeOpen, tradeFactor,
 } from '../../sim/cities';
-import { CITIES, CITY_IDS, P, RESOURCES, SPECIES, ZONE_IDS, ZONES } from '../../sim/data';
+import { CITIES, CITY_IDS, P, REGION_ZONES, RESOURCES, SPECIES, ZONES } from '../../sim/data';
 import { relationLabel, relationOf } from '../../sim/diplomacy';
 import { money, stamp } from '../../sim/format';
 import { lotValue } from '../../sim/market';
@@ -110,7 +110,7 @@ function along(pts: Pt[], p: number): Pt {
 function runPosition(run: QuestRun, i: number): Pt {
   const target = run.quest.dest ?? run.quest.zone;
   const path = PATHS[target] ?? [NODE.ville];
-  if (path.length < 2) return [NODE.ville[0] + 92 + (i % 4) * 18, NODE.ville[1] + 46];   // aux égouts : devant la porte sud
+  if (path.length < 2) return [NODE.ville[0] - 30 + (i % 4) * 20, NODE.ville[1] + 10 + Math.floor(i / 4) * 18];   // aux égouts : dans les murs de la ville
   const trajet = Math.max(1, run.quest.dest ? CITIES[run.quest.dest].trajet : ZONES[run.quest.zone].trajet);
   let p = 0;
   if (run.stage === 'aller') p = 1 - Math.min(1, run.stageHours / trajet);
@@ -124,6 +124,36 @@ function Spark({ values }: { values: number[] }) {
   if (values.length < 2) return null;
   const pts = values.map((v, i) => `${(i / (values.length - 1)) * 60},${18 - (v / 100) * 16}`).join(' ');
   return <svg viewBox="0 0 60 20" class="spark" aria-hidden="true"><polyline fill="none" stroke="currentColor" stroke-width={1.5} points={pts} /></svg>;
+}
+
+/** Les environs d'une ville voisine (v1.1, D-160) : ses bêtes, ses plantes et les demandes de son conseil. */
+function Environs({ s, zone }: { s: GameState; zone: string }) {
+  const z = ZONES[zone];
+  if (!z) return null;
+  const quests = s.board.filter((q) => q.zone === zone);
+  const d = zoneDanger(s, zone);
+  return (
+    <>
+      <h4>{z.nom} <Help text={`Les environs de la ville. Ses bêtes et ses plantes vivent comme celles de la région ; son conseil publie des demandes sur ton tableau (chasse, cueillette, défense de la ville) et une extermination quand une espèce prolifère. Trajet long, paie ×${P.villes.recompenseEnvirons} ; chaque quête réussie ici fait aussi monter le commerce (+${P.villes.commerceQuete}).`} /></h4>
+      <p class="hint"><span class="tier-chip" style={{ background: TIER_COLORS[dangerTier(d).idx] }} /> danger {d} ({dangerTier(d).nom}) · {z.trajet} h de trajet</p>
+      {Object.keys(z.especes).map((sp) => (
+        <div class="gauge-row"><span class="soft">{SPECIES[sp].nom}{huntClosed(s, zone, sp) && <> <span class="tag amber">chasse fermée</span></>}</span>
+          <Gauge value={popOf(s, zone, sp)} color={popOf(s, zone, sp) > 80 ? 'var(--seal)' : 'var(--sage)'} /><span>{Math.round(popOf(s, zone, sp))}</span></div>
+      ))}
+      {Object.keys(z.plantes).map((pl) => (
+        <div class="gauge-row"><span class="soft">{RESOURCES[pl].nom}</span><Gauge value={popOf(s, zone, pl)} color="var(--blue)" /><span>{Math.round(popOf(s, zone, pl))}</span></div>
+      ))}
+      <h4>Demandes du conseil</h4>
+      {quests.map((q) => <p class="news">{q.title} <small class="hint">rang {q.rang} · {money(q.type === 'extermination' ? (q.perHead ?? 0) : q.reward + q.bonus)}{q.type === 'extermination' ? ' la tête' : ''}</small></p>)}
+      {quests.length === 0 && <p class="empty">Aucune pour l'instant.</p>}
+    </>
+  );
+}
+
+/** « de la Compagnie de l'Aube », « des Crocs Libres », « du Cercle… » : le nom d'une guilde après « de ». */
+function deNom(nom: string) {
+  const [pre, rest] = nom.startsWith('Les ') ? ['des ', nom.slice(4)] : nom.startsWith('Le ') ? ['du ', nom.slice(3)] : nom.startsWith('La ') ? ['de la ', nom.slice(3)] : nom.startsWith("L'") ? ["de l'", nom.slice(2)] : ['de ', nom];
+  return <>{pre}<strong>{rest}</strong></>;
 }
 
 /** Ce que rapporte la route commerciale d'une ville, en clair. */
@@ -196,7 +226,7 @@ function CityPanel({ s, id, onRun }: { s: GameState; id: string; onRun: (id: num
     <>
       <h3>{c.nom}</h3>
       <p class="hint" style={{ marginTop: -6 }}>{c.titre[0].toUpperCase() + c.titre.slice(1)}</p>
-      <p>{guild ? <><span class="rival-chip" style={{ background: RIVAL_COLORS[guild.profil] }} /> Siège de <strong>{guild.nom}</strong>{' '}
+      <p>{guild ? <><span class="rival-chip" style={{ background: RIVAL_COLORS[guild.profil] }} /> Siège {deNom(guild.nom)}{' '}
         <span class={`tag ${relationLabel(relationOf(guild)).tone}`}>{relationLabel(relationOf(guild)).nom}</span></>
         : <span class="soft">Aucune guilde n'y siège : une nouvelle guilde peut s'y installer.</span>}</p>
       <p class="hint">Route par {ZONES[c.route].nom} · {c.trajet} h de trajet · escortes de rang {c.rang}</p>
@@ -211,6 +241,7 @@ function CityPanel({ s, id, onRun }: { s: GameState; id: string; onRun: (id: num
       <div class="gauge-row"><span class={`tag ${lab.tone}`}>{lab.nom}</span><Gauge value={st.commerce} color="var(--gold)" /><span class="num">{Math.round(st.commerce)}</span></div>
       <p class="hint">Avantage : {advantage(s, id)}{!open && ' (suspendu)'}.</p>
       <p class="hint">Achète bien : {c.demande.map((d) => CATEGORIES[d] ?? d).join(', ')}.</p>
+      <Environs s={s} zone={c.environs} />
       <h4>Escortes au tableau</h4>
       {escorts.map((q) => <p class="news">{q.title} <small class="hint">rang {q.rang} · {money(q.reward + q.bonus)}</small></p>)}
       {escorts.length === 0 && <p class="empty">Aucune.</p>}
@@ -222,14 +253,14 @@ function CityPanel({ s, id, onRun }: { s: GameState; id: string; onRun: (id: num
 }
 
 export function Carte({ s }: { s: GameState }) {
-  const [zone, setZone] = useState<string>('foret');
+  const [zone, setZone] = useState<string | null>(null);   // aucun lieu choisi à l'ouverture
   const [city, setCity] = useState<string | null>(null);
   const [runId, setRunId] = useState<number | null>(null);
   const [layers, setLayers] = useState({ pops: true, quests: true, plants: false, rivals: true });
   const runs = s.runs.filter((r) => r.stage !== 'preparation');
   const run = runs.find((r) => r.id === runId) ?? null;
   const toggle = (k: keyof typeof layers) => setLayers({ ...layers, [k]: !layers[k] });
-  const z = ZONES[zone];
+  const z = zone ? ZONES[zone] : null;
   const hist = s.world.popHistory;
   const trips = s.world.rivalTrips ?? [];
   const rivalOf = (id: string) => s.world.rivals.find((r) => r.id === id);
@@ -259,7 +290,7 @@ export function Carte({ s }: { s: GameState }) {
                 </g>
               );
             })}
-            {ZONE_IDS.map((id) => {
+            {REGION_ZONES.map((id) => {
               const d = zoneDanger(s, id);
               const [x, y] = ART[id];
               const [lx, ly] = LABEL[id];
@@ -269,7 +300,6 @@ export function Carte({ s }: { s: GameState }) {
               return (
                 <g class={`zone ${!city && zone === id ? 'on' : ''}`} onClick={() => pickZone(id)} role="button" tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') pickZone(id); }}>
-                  <circle cx={x} cy={y} r={78} class="danger-halo" style={{ fill: tier }} />
                   <circle cx={x} cy={y} r={84} class="zone-sel" />
                   <text x={lx} y={ly} class="lbl">{id === 'ville' ? TOWN_NAMES[s.world.palier] : ZONES[id].court}</text>
                   <g transform={`translate(${lx},${ly + 22})`}>
@@ -301,7 +331,8 @@ export function Carte({ s }: { s: GameState }) {
               const [lx, ly] = LABEL[id];
               const guild = active.find((r) => rivalCity(r) === id);
               const st = cityState(s, id);
-              const ne = s.board.filter((q) => q.dest === id).length;
+              const ne = s.board.filter((q) => q.dest === id || q.zone === CITIES[id].environs).length;
+              const envD = zoneDanger(s, CITIES[id].environs);
               return (
                 <g class={`city ${city === id ? 'on' : ''}`} onClick={() => pickCity(id)} role="button" tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') pickCity(id); }}>
@@ -311,6 +342,7 @@ export function Carte({ s }: { s: GameState }) {
                   <text x={lx} y={ly} class="lbl lbl-city">{CITIES[id].court}</text>
                   <rect x={lx - 40} y={ly + 9} width={80} height={7} rx={3} class="bar-bg" />
                   <rect x={lx - 40} y={ly + 9} width={0.8 * st.commerce} height={7} rx={3} class="trade-bar" />
+                  <circle cx={lx + 50} cy={ly + 12} r={6} class="tier-dot" style={{ fill: TIER_COLORS[dangerTier(envD).idx] }}><title>Danger des environs : {envD}</title></circle>
                   {layers.rivals && guild && <g><line x1={lx + 52} y1={ly + 4} x2={lx + 52} y2={ly - 24} class="flag-pole" /><path d={`M${lx + 52} ${ly - 24} h18 l-4 6 l4 6 h-18 Z`} style={{ fill: RIVAL_COLORS[guild.profil] }} /></g>}
                   {layers.quests && ne > 0 && <g><circle cx={lx - CITIES[id].court.length * 6.5 - 24} cy={ly - 8} r={15} class="badge-disc" /><text x={lx - CITIES[id].court.length * 6.5 - 24} y={ly - 2} class="badge-text">{ne}</text></g>}
                 </g>
@@ -328,7 +360,7 @@ export function Carte({ s }: { s: GameState }) {
               );
             })}
           </svg>
-          <p class="hint">La pastille et le halo de chaque lieu donnent son danger : vert calme, bleu tendu, ambre menaçant, rouge critique. Les équipes suivent les routes de la carte. ⊘ : chasse fermée à une espèce devenue rare (moins de 15).
+          <p class="hint">La pastille de chaque lieu donne son danger : vert calme, bleu tendu, ambre menaçant, rouge critique. Les équipes suivent les routes de la carte. ⊘ : chasse fermée à une espèce devenue rare (moins de 15).
             La barre dorée sous chaque ville voisine montre son commerce avec la tienne, ✕ une route coupée.
             Les points sont les équipes en quête ; les fanions, les guildes rivales, dans leur ville et dans les zones où elles sont sorties ces 3 derniers jours
             ({active.map((r, i) => <><span class="rival-chip" style={{ background: RIVAL_COLORS[r.profil] }} /> {r.nom}{rivalCity(r) ? ` (${CITIES[rivalCity(r)!].court})` : ''}{i < active.length - 1 ? ', ' : ''}</>)}).</p>
@@ -345,9 +377,32 @@ export function Carte({ s }: { s: GameState }) {
             </>
           ) : city ? (
             <CityPanel s={s} id={city} onRun={setRunId} />
+          ) : !z || !zone ? (
+            <>
+              <h3>La région</h3>
+              <p class="hint">Clique sur un lieu de la carte pour voir ses bêtes, ses plantes et ses quêtes, ou sur une équipe pour suivre sa quête.</p>
+              <table class="data">
+                <thead><tr><th>Lieu</th><th class="num">Danger</th><th class="num">Quêtes</th><th class="num">Équipes</th></tr></thead>
+                <tbody>{REGION_ZONES.map((id) => (
+                  <tr><td><button class="link" onClick={() => pickZone(id)}>{ZONES[id].nom}</button></td>
+                    <td class="num"><span class="tier-chip" style={{ background: TIER_COLORS[dangerTier(zoneDanger(s, id)).idx] }} /> {zoneDanger(s, id)}</td>
+                    <td class="num">{s.board.filter((q) => q.zone === id && q.type !== 'aide' && !q.dest).length}</td>
+                    <td class="num">{runs.filter((r) => r.quest.zone === id && !r.quest.dest).length}</td></tr>
+                ))}
+                {CITY_IDS.map((id) => {
+                  const env = CITIES[id].environs;
+                  return (
+                    <tr><td><button class="link" onClick={() => pickCity(id)}>{ZONES[env].nom}</button> <small class="hint">({CITIES[id].court})</small></td>
+                      <td class="num"><span class="tier-chip" style={{ background: TIER_COLORS[dangerTier(zoneDanger(s, env)).idx] }} /> {zoneDanger(s, env)}</td>
+                      <td class="num">{s.board.filter((q) => q.zone === env || q.dest === id).length}</td>
+                      <td class="num">{runs.filter((r) => r.quest.zone === env || r.quest.dest === id).length}</td></tr>
+                  );
+                })}</tbody>
+              </table>
+            </>
           ) : (
             <>
-              <h3>{z.nom}</h3>
+              <div class="row"><h3 style={{ margin: 0 }}>{z.nom}</h3><span class="spacer" /><button class="btn ghost small" onClick={() => setZone(null)}>Fermer</button></div>
               <p class="hint">{z.trajet} h de trajet · danger {zoneDanger(s, zone)} ({dangerTier(zoneDanger(s, zone)).nom})
                 {CITY_IDS.filter((id) => CITIES[id].route === zone).map((id) => <> · route de <button class="link" onClick={() => pickCity(id)}>{CITIES[id].nom}</button></>)}</p>
               <h4>Espèces</h4>
