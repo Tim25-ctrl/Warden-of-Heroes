@@ -12,8 +12,8 @@ export type Rang = 'F' | 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
 export type BedType = 'paillasse' | 'commun' | 'individuelle' | 'suite';
 export type DishId = 'gruau' | 'ragout' | 'roti' | 'festin' | 'biere' | 'vin' | 'panier';
 export type DenreeId = 'cereales' | 'legumes' | 'viande' | 'biere' | 'epices' | 'vin' | 'monstre';
-export type RoomId = 'dortoirs' | 'refectoire' | 'infirmerie' | 'terrain';
-export type StaffRole = 'cuisinier' | 'commis' | 'valet' | 'soigneur' | 'apothicaire' | 'intendant' | 'inspecteur';
+export type RoomId = 'dortoirs' | 'refectoire' | 'cuisine' | 'infirmerie' | 'terrain';
+export type StaffRole = 'cuisinier' | 'commis' | 'valet' | 'soigneur' | 'apothicaire' | 'intendant' | 'inspecteur' | 'courtier' | 'greffier';
 export type Quality = 'intacte' | 'abimee' | 'ruinee';
 export type Profile = 'temeraire' | 'normal' | 'prudent';
 export type EtatId = 'plaie' | 'fracture' | 'poison' | 'brulure' | 'maladie' | 'malediction';
@@ -132,7 +132,7 @@ export interface Professor {
   eleves: number;
   ego: number;                         // niveau minimum du terrain exigé
   slots: Record<SlotId, boolean>;
-  curseur: number;
+  prix: Money;                         // prix de la séance, fixé par le joueur
   loyalty: number;
   unpaidDays: number;
   hiredTick: number;
@@ -243,15 +243,19 @@ export interface Dortoirs {
   beds: Record<BedType, number>;
   pendingBeds: Record<BedType, number> | null;
   proprete: number;
-  curseurs: Record<BedType, number>;
+  prix: Record<BedType, Money>;          // prix de la nuitée, fixés par le joueur
 }
 
 export interface Refectoire {
   level: number;
   works: RoomWorks | null;
   menu: DishId[];
-  curseurs: Record<DishId, number>;
+  prix: Record<DishId, Money>;           // prix des plats, fixés par le joueur
   pantry: FoodLot[];
+  eaten?: Partial<Record<DenreeId, number>>;           // portions consommées depuis minuit
+  eatenYesterday?: Partial<Record<DenreeId, number>>;  // portions consommées la veille (affichées au garde-manger)
+  ranOut?: DenreeId[];                                  // denrées épuisées par les repas depuis minuit
+  ranOutYesterday?: DenreeId[];
   portionsReady: number;
   queue: number[];
   damage: number;                         // mobilier cassé (bagarres)
@@ -261,8 +265,8 @@ export interface Infirmerie {
   level: number;                          // 0 : non construite
   works: RoomWorks | null;
   remedes: Record<RemedeId, number>;
-  curseurSoins: number;
-  curseurVente: number;
+  prixSoins: Money;                       // prix d'une plaie sérieuse : le reste de la grille suit
+  prixVente: Money;                       // prix d'une potion : les autres remèdes suivent
   queue: string[];                        // recettes à fabriquer
   craftedToday: number;
   autoCraft: Partial<Record<RemedeId, number>>;  // stock minimum à maintenir par fabrication
@@ -270,11 +274,18 @@ export interface Infirmerie {
   treatedThisHour: number;
 }
 
+/** La cuisine (v1.1) : ses niveaux débloquent les plats, la taille du menu et du garde-manger.
+ * Le menu, les prix des plats et le garde-manger restent rangés dans `refectoire`. */
+export interface Cuisine {
+  level: number;
+  works: RoomWorks | null;
+}
+
 export interface Terrain {
   level: number;                          // 0 : non construit
   works: RoomWorks | null;
   profs: Professor[];
-  libreCurseur: number;
+  prixLibre: Money;                       // séance d'entraînement libre
 }
 
 export interface RestockRule { enabled: boolean; seuil: number; qty: number }
@@ -290,13 +301,14 @@ export interface Policy {
   sanction: Sanction;
   rachatCurseur: number;
   rachatRules: RachatRule[];
+  courtierRachat?: boolean;               // le courtier rachète les dépouilles pour les revendre (v1.1)
   autoSell: 'off' | 'sans_usage' | 'tout';
   autoAccept: { enabled: boolean; minLevel: number; refuseMalhonnete: boolean };
   reserve: Money;
 }
 
 export interface GameState {
-  version: 4;
+  version: number;                      // format de sauvegarde (SAVE_VERSION)
   seed: number;
   rng: Record<string, number>;
   tick: number;
@@ -311,9 +323,10 @@ export interface GameState {
   taxRate: number;
   exemptBeginners: boolean;
   exemptAide: boolean;
-  cotisationCurseur: number;
+  cotisationPrix: Money;
   dortoirs: Dortoirs;
   refectoire: Refectoire;
+  cuisine: Cuisine;
   infirmerie: Infirmerie;
   terrain: Terrain;
   modules: string[];
@@ -365,8 +378,8 @@ export interface GameState {
 }
 
 export type Command =
-  | { type: 'setBedCurseur'; bed: BedType; value: number }
-  | { type: 'setDishCurseur'; dish: DishId; value: number }
+  | { type: 'setBedPrix'; bed: BedType; price: Money }
+  | { type: 'setDishPrix'; dish: DishId; price: Money }
   | { type: 'setMenu'; menu: DishId[] }
   | { type: 'setBeds'; beds: Record<BedType, number> }
   | { type: 'upgradeRoom'; room: RoomId }
@@ -378,8 +391,8 @@ export type Command =
   | { type: 'hireProf'; id: number }
   | { type: 'fireProf'; id: number }
   | { type: 'setProfSlot'; id: number; slot: SlotId; open: boolean }
-  | { type: 'setProfCurseur'; id: number; value: number }
-  | { type: 'setLibreCurseur'; value: number }
+  | { type: 'setProfPrix'; id: number; price: Money }
+  | { type: 'setLibrePrix'; price: Money }
   | { type: 'acceptCandidate'; id: number }
   | { type: 'refuseCandidate'; id: number }
   | { type: 'excludeAdventurer'; id: number }
@@ -387,9 +400,10 @@ export type Command =
   | { type: 'setCreditCap'; id: number; cap: Money | null }
   | { type: 'setTaxRate'; value: number }
   | { type: 'setExemptions'; beginners: boolean; aide: boolean }
-  | { type: 'setCotisation'; value: number }
+  | { type: 'setCotisation'; price: Money }
   | { type: 'sellLoot'; index: number | 'all' }
   | { type: 'setAutoSell'; mode: Policy['autoSell'] }
+  | { type: 'setCourtierRachat'; enabled: boolean }
   | { type: 'setRachat'; curseur: number; rules: RachatRule[] }
   | { type: 'setSanction'; value: Sanction }
   | { type: 'setCredit'; enabled: boolean; cap: Money }
@@ -397,7 +411,7 @@ export type Command =
   | { type: 'setReserve'; value: Money }
   | { type: 'buyRemede'; remede: RemedeId; qty: number }
   | { type: 'setRemedeRestock'; remede: RemedeId; rule: RestockRule }
-  | { type: 'setInfirmerieCurseur'; kind: 'soins' | 'vente'; value: number }
+  | { type: 'setInfirmeriePrix'; kind: 'soins' | 'vente'; price: Money }
   | { type: 'queueRecipe'; recipe: string; times: number }
   | { type: 'setAutoCraft'; remede: RemedeId; min: number }
   | { type: 'createPrime'; questType: 'chasse' | 'extermination' | 'cueillette'; zone: string; target: string; count: number; reward: Money; days: number }
@@ -434,7 +448,7 @@ export interface Decision {
 }
 
 export interface Rival {
-  id: string; nom: string; profil: 'prestige' | 'mercenaires'; renown: number; size: number;
+  id: string; nom: string; profil: 'prestige' | 'mercenaires' | 'chasseurs'; renown: number; size: number;
   tarifs: number; taux: number; nextAction: number; bankruptSince: number | null;
 }
 
@@ -450,6 +464,9 @@ export interface WorldState {
   palierStreak: number;
   mods: WorldMod[];
   events: ActiveEvent[];
+  lastFired?: Record<string, number>;
+  closedHunts?: string[];                  // « zone:espèce » dont la chasse est fermée, l'espèce étant devenue rare (v1.1)
+  rivalTrips?: { tick: number; rival: string; zone: string; text: string }[];   // sorties des rivales, 3 derniers jours (carte)     // dernier déclenchement de chaque événement (délai avant qu'il revienne)
   scheduled: { eventId: string; tick: number; data?: Record<string, string | number>; real: boolean }[];
   rumors: Rumor[];
   decisions: Decision[];

@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.1 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.6
+> **Statut du document :** v2.1 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -268,6 +268,8 @@ Prix_affiché   = Prix_référence × Curseur
 
 - L'interface affiche toujours le prix de référence à côté du prix affiché, ainsi que le prix du concurrent.
 
+> **Ajusté en v1.1 :** le joueur **fixe directement chaque prix** (en po, pa, pc, avec des boutons − et +), il ne règle plus un curseur autour d'une référence. Le prix de référence reste la **valeur que les aventuriers donnent au service** : c'est lui qu'ils comparent au prix pour accepter ou refuser (1.3.4). L'interface ne l'affiche plus en chiffres. Elle montre le **verdict des clients** (bradé, bon marché, correct, cher, hors de prix), le prix du concurrent en ville et les refus du jour. Conséquence voulue : un prix ne suit plus tout seul la qualité ou la prospérité ; quand une salle s'améliore, c'est au joueur de monter ses prix. Pour l'infirmerie, le joueur fixe le prix d'une plaie sérieuse (toute la grille suit) et celui d'une potion (les autres remèdes suivent). Les prix de départ valent la référence du jour 1 (D-132).
+
 #### 1.3.4 Perception par l'aventurier (interface avec le chapitre 3)
 
 L'aventurier connaît le **juste prix**, c'est-à-dire le prix de référence. Il calcule le **ratio** `R = Prix_affiché / Prix_référence` et le compare à sa **tolérance** T :
@@ -325,12 +327,16 @@ Les événements du chapitre 5 peuvent toucher les concurrents : l'auberge brûl
 | Rôle | Salle | Salaire de base / jour | Capacité | Effet de la compétence |
 |------|-------|------------------------|----------|------------------------|
 | **Valet de dortoir** | Dortoirs | 5 pa | Entretient 15 places | Propreté des dortoirs |
-| **Cuisinier** | Réfectoire | 1 po | `6 + C/10` portions / heure | Qualité des plats, recettes accessibles |
-| **Commis de cuisine** | Réfectoire | 4 pa | +4 portions / heure | Réduit le gaspillage |
+| **Cuisinier** | Cuisine | 1 po | `6 + C/10` portions / heure | Qualité des plats, recettes accessibles |
+| **Commis de cuisine** | Cuisine | 4 pa | +4 portions / heure | Réduit le gaspillage |
 | **Soigneur** | Infirmerie | 1 po 5 pa | 1 soin léger / heure | Chance de succès, durée des soins |
 | **Apothicaire** | Infirmerie (niv 3) | 1 po 5 pa | Fabrication de remèdes | Rendement de fabrication |
 | **Intendant** | Siège (1 seul) | 2 po | — | Exécute les consignes automatiques (1.10) à meilleur prix : −5 % à −15 % sur les achats |
 | **Inspecteur du butin** | Comptoir (ch. 2) | 1 po 5 pa | Contrôle 20 aventuriers | Détecte la fraude fiscale (2.6) |
+| **Courtier** *(v1.1)* | Comptoir (1 seul) | 1 po 5 pa | Ventes de l'entrepôt | Vend sans frais avec un bonus de 5 % + C/10 % ; attend un cours d'au moins 90 % du prix de base (sauf denrées qui se gâtent ou entrepôt à moitié plein) ; un contrat de plus par semaine ; peut racheter les dépouilles pour les revendre (2.4.1) |
+| **Greffier** *(v1.1)* | Comptoir (1 seul) | 1 po 2 pa | Tableau des quêtes | Estime le danger sans erreur (au lieu de ±15 %) ; quêtes hors de portée écartées à 95 % (au lieu de 85 %) ; 2 places de plus au tableau |
+
+> **Ajouté en v1.1 :** le comptoir a désormais son personnel propre : l'inspecteur, le **courtier** et le **greffier**. Avant, les rachats ne servaient guère en début de partie (sans apothicairerie ni rôti, la guilde rachetait à perte) ; le courtier rend le rachat rentable dès qu'il est engagé, et le greffier incarne le tri des quêtes qui existait déjà sans visage (D-135).
 
 Les **professeurs** ont leur propre modèle (1.7).
 
@@ -489,6 +495,18 @@ Moral_gagné = Moral_recette × (0,5 + Q_plat / 100)
 | 3 | 24 | 4 | 350 | Viande de monstre, Rôti | 250 po |
 | 4 | 32 | 5 | 500 | Festin du Héros | 700 po (rang 3) |
 | 5 | 40 | 6 | 700 | *Table renommée* : attire des visiteurs nobles (événement *Gourmet de passage*, 5.4.3) | 1 800 po (rang 4) |
+
+> **Ajusté en v1.1 : la cuisine devient une salle à part** (D-133). Cliquer sur la cuisine ouvrait le réfectoire ; le menu et le garde-manger y sont désormais, et c'est elle qui débloque les plats. Le **réfectoire** garde les places, l'ambiance et les soirées de taverne (niveau 2). La qualité d'un plat compte **2 × (niveau du réfectoire + niveau de la cuisine)** au lieu de 4 × niveau du réfectoire. Une cuisine en travaux ou endommagée produit moitié moins. Le saloir, la cave à vin et la glacière deviennent des aménagements de la cuisine. Les **paniers de route** (que les aventuriers achètent en partant en quête) s'y règlent aussi, dans l'onglet *Menu et prix*.
+>
+> | Niveau | Réfectoire : places | Coût | Cuisine : plats au menu | Garde-manger | Débloque | Coût |
+> |--------|--------------------|------|------------------------|--------------|----------|------|
+> | 1 | 8 | *de départ* | 2 | 100 | Gruau, Ragoût | *de départ* |
+> | 2 | 16, soirées de taverne | 80 po | 3 | 200 | Bière, Panier de route | 60 po |
+> | 3 | 24 | 150 po | 4 | 350 | Rôti de monstre | 140 po |
+> | 4 | 32 | 400 po (rang 3) | 5 | 500 | Festin du Héros | 350 po (rang 3) |
+> | 5 | 40 | 1 000 po (rang 4) | 6 | 700 | *Cuisine renommée* (Gourmet de passage) | 900 po (rang 4) |
+>
+> Les deux salles réunies coûtent 3 080 po du niveau 2 au niveau 5, contre 2 870 po pour l'ancien réfectoire seul.
 
 #### 1.6.8 Modules
 
@@ -935,7 +953,9 @@ Chaque retour de quête passe obligatoirement par le comptoir.
 
 Des **consignes de l'intendant** automatisent la préemption, par exemple : « Racheter toute viande de loup si le stock est sous 10 unités », « Racheter toute glande à venin », « Ne rien racheter au-dessus de 500 pc ».
 
-#### 2.4.2 Le stock de la guilde (la Resserre)
+#### 2.4.2 Le stock de la guilde (l'Entrepôt)
+
+> **Ajusté en v1.1 :** la « Resserre » s'appelle désormais l'**Entrepôt** dans le jeu (*Entrepôt agrandi* pour les modules), avec une phrase d'explication à l'écran. Le mot « resserre » reste dans le code et dans ce document (D-136).
 
 | Élément | Valeur |
 |---------|--------|
@@ -989,6 +1009,8 @@ Facteur_OD = clamp( ( (D × 5) / S ) ^ Élasticité , 0,3 , 3,0 )
 - **Bruit :** ±3 % par jour.
 - **Évolution quotidienne :** `S = S + ventes du jour (aventuriers + guilde) + Apport_extérieur − D`.
 - **Apport extérieur** : les autres guildes et caravanes apportent environ 50 % de D pour une ressource commune et 20 % pour une rare. Le marché n'est donc jamais entièrement piloté par le joueur.
+
+> **Ajusté en v1.1 :** cet apport seul ne suffisait pas : le stock baissait de moitié de D chaque jour, et en une semaine **tous les cours étaient « recherchés »** au plafond. Désormais, les **guildes rivales vendent leur butin** en ville (40 % de leurs prises, 5.5) : les cours des bêtes et des plantes qu'elles chassent bougent selon leur activité. Le courtier de la guilde attend un bon cours avant de vendre (1.4.2) (D-134).
 - **Facteur événements** (5.4.3) : mode de la noblesse pour les fourrures (×2 à ×3 sur la demande), guerre (carapaces et écailles ×2), épidémie (plantes médicinales ×2), afflux de caravanes (stock ×1,5)…
 
 #### 2.5.2 Les acheteurs de la ville
@@ -1073,6 +1095,8 @@ Chaque mise à mort      : P = P − k
 | Wyverne | 0,015 | 8 |
 | Golem | 0 (ne se reproduit pas) | 20 (5 golems par zone) |
 | Jeune dragon | Unique : réapparaît par événement | 100 |
+
+> **Ajouté en v1.1 : la chasse fermée** (D-139). En fin de partie, la guilde faisait tomber presque toutes les espèces à 0, et une population à 0 ne repousse jamais : la région devenait morte, le danger nul. Désormais, quand une espèce passe **sous 15** dans une zone, la ville **ferme sa chasse** : plus de quête de chasse ni d'extermination contre elle (primes du joueur comprises), et les rivales ne la chassent pas (elles s'en tiennent aux espèces au-dessus de 45). Elle se reconstitue d'elle-même et la chasse **rouvre à 25**. Le journal annonce la fermeture et la réouverture ; la carte marque l'espèce « chasse fermée ». Les golems et le dragon, qui ne se reproduisent pas, ne sont pas concernés. L'événement **Migration** repeuple en priorité une espèce disparue ou dont la chasse est fermée. En fin de partie, les aventuriers se tournent davantage vers l'exploration, les escortes, la protection et les bêtes de haut rang.
 
 **Effets de la population :**
 
@@ -1837,7 +1861,7 @@ Prospérité_cible = 50 − Insécurité + Commerce + Apport_guilde + Saison + �
 
 Insécurité    = 0,5 × max(0, Danger − 30)
 Commerce      = +2 par escorte réussie dans la semaine, −3 par escorte échouée   (de −15 à +15)
-Apport_guilde = valeur des ventes en ville et des dépenses des aventuriers sur 7 jours / 50 po   (plafonné à +20 ; +10 avant la v1.1)
+Apport_guilde = valeur des ventes en ville et des dépenses des aventuriers sur 7 jours / 50 po   (plafonné à +24 ; +10 avant la v1.1, +20 jusqu'à la chasse fermée)
 Saison        = Automne +5, Hiver −5
 ```
 
@@ -1880,9 +1904,11 @@ La ville a **3 paliers**. Pour changer de palier, la Prospérité doit rester au
 
 | Catégorie | Fréquence | Annoncé par une rumeur ? |
 |-----------|-----------|--------------------------|
-| **Petit événement** | 2 à 3 par semaine (test quotidien à 35 %) | Rarement |
+| **Petit événement** | 2 à 3 par semaine (test quotidien à 35 %). *v1.1 :* un même petit événement ne revient pas avant 21 jours | Rarement |
 | **Événement majeur** | 1 par saison, à une date aléatoire | Oui, 2 à 5 jours avant |
 | **Crise** | 1 à 2 par an, à partir du jour 60, ou déclenchée par une chaîne | Oui, 2 à 5 jours avant |
+
+> **Corrigé en v1.1 :** rien n'empêchait un même petit événement de revenir le surlendemain (jusqu'à trois inspecteurs royaux en quatre jours), et chaque visite de l'inspecteur écrivait deux lignes au journal. Un petit événement attend désormais **21 jours** avant de pouvoir revenir, et le verdict de l'inspecteur tient dans le même message (D-137).
 
 > **Ajouté en v1.1 :** à partir du Sceau d'Or, la Couronne met la guilde à l'épreuve : **une crise de plus par an**, et le réveil du dragon devient la crise la plus probable (poids 6 au lieu de 2). Le dragon terrassé **met fin à la crise** sur-le-champ. Le dragon n'apparaît que par cet événement : sans ce renfort, la victoire tenait au hasard d'un réveil par an (D-128).
 
@@ -1998,6 +2024,13 @@ Deux guildes rivales, **simulées de façon abstraite** (sans agents individuels
 - **Les quêtes :** une quête du tableau non prise peut être réalisée par une rivale avant son expiration (chance selon la Renommée de la rivale). Elle disparaît alors sans pénalité pour toi.
 - **Les recrues :** les candidats se répartissent entre les guildes selon leur attractivité. Ta part dépend de ta Renommée, de tes tarifs et de ta fiscalité, comparés à ceux des rivales.
 - **Le taux de référence régional** (2.6.1) est la moyenne des taux pratiqués par les guildes.
+
+> **Ajusté en v1.1 : trois rivales, qui vivent leur vie** (D-134). Une troisième guilde rejoint la ville : **La Confrérie du Chêne**, des chasseurs et cueilleurs (tarifs moyens, fiscalité 12 %, quêtes de chasse, d'extermination et de cueillette jusqu'au rang D). Chaque jour, chaque rivale envoie ses propres équipes : environ 0,06 sortie par membre (0,09 pour les chasseurs), plafonné à 25 membres.
+> - **Zones :** l'Aube va aux Ruines, au Marais et aux Pics ; les Crocs Libres à Vertbois, aux Collines et en ville ; le Chêne à Vertbois, au Marais et aux Collines.
+> - **Prises :** elles ne chassent que les espèces **au-dessus de 45** de population, jusqu'au rang C pour l'Aube et D pour les autres, et font baisser la population de 3 à 7 points par sortie. Elles cueillent aussi (30 % des sorties). Personne ne touche aux golems ni au dragon, qui ne repoussent pas.
+> - **Quêtes prises :** une quête du tableau réalisée par une rivale a désormais ses effets : bêtes tuées, plantes cueillies.
+> - **Marché :** 40 % de leurs prises arrivent sur le marché de la ville (2.5.1).
+> - **Carte :** des fanions aux couleurs de chaque rivale marquent leurs sorties des 3 derniers jours (7.5.6). Résultat : la carte et les cours évoluent sans le joueur, mais les rivales ne font que contenir les proliférations ; c'est la guilde qui fait vraiment baisser le danger.
 - **Les débauchages** (3.12.2) viennent d'elles.
 
 **Leurs actions** (environ une toutes les 2 semaines par rivale) :
@@ -2175,6 +2208,8 @@ Une trentaine de hauts faits **purement honorifiques**, sans avantage de jeu. Il
 
 > **Précisé en tranche 4 :** 13 déclencheurs. En plus de ceux du tableau : premier candidat à la porte, première décision, aventuriers qui dorment dehors, prolifération, rappel de la Charte au jour 10, félicitations à chaque sceau. Un conseil s'affiche dans un encart en bas à gauche, 3 au plus en attente. Le réglage est enregistré avec la partie.
 
+> **Ajusté en v1.1 :** un conseil laissé sans réponse se périme au bout de 3 jours de jeu. Avant, un conseil ignoré (comme le rappel de la Charte du jour 10) pouvait rester affiché toute la partie (D-130).
+
 ### 6.5 La difficulté
 
 Trois niveaux prédéfinis, plus un mode **personnalisé** où chaque paramètre est réglable.
@@ -2325,6 +2360,8 @@ L'écran principal. Le bâtiment est montré **en coupe**, comme une maison de p
 | Stocks | Denrées (réfectoire) ou remèdes (infirmerie), avec leur fraîcheur |
 | Statistiques | Graphiques sur 28 jours |
 
+> **Ajusté en v1.1 :** le garde-manger affiche, pour chaque denrée, les portions **mangées la veille** et un repère **« rupture »** si le stock est tombé à zéro. Quand la consigne de réapprovisionnement n'a pas suffi, elle est signalée **« trop juste »**. Avec 50 aventuriers, la consigne de départ (60 céréales) s'épuisait chaque matin sans que rien ne le signale (D-131). Dans la vue en coupe, les lits rétrécissent quand ils ne tiennent plus dans le dortoir, et chaque employé se tient dans sa salle : cuisiniers et commis en cuisine, soigneurs à l'infirmerie, intendant et inspecteur au comptoir.
+
 #### 7.5.2 Les Aventuriers
 
 - **Liste** triable et filtrable : nom, classe, niveau, activité, état, or, moral, loyauté, griefs, équipe, statut (*Mécontent*, *Sur le départ*, *Débauché*).
@@ -2367,16 +2404,18 @@ L'écran principal. Le bâtiment est montré **en coupe**, comme une maison de p
 |--------|---------|
 | **Bourse** | Tableau des ressources : cours, variation, mini-courbe, tension du stock en ville. Clic : graphique sur 28 jours |
 | **Resserre** | Stock de la guilde avec barres de fraîcheur, et boutons pour vendre à un acheteur |
-| **Rachat** | Curseur du prix de rachat, consignes de préemption, rachats récents |
+| **Rachat** | Curseur du prix de rachat, consignes de préemption, rachats récents. *v1.1 :* case « le courtier rachète pour revendre » |
 | **Acheteurs et contrats** | Réputation auprès de chaque acheteur, contrats proposés et en cours, avec leur échéance |
 | **Apothicairerie** | Recettes avec le comparatif **fabriquer ou acheter**, file de fabrication |
 | **Fiscalité** | Curseur du taux, exonérations, statistiques de fraude, politique de sanction, inspecteurs |
+
+> **Ajusté en v1.1 :** en tête de l'écran, un encart **Personnel du comptoir** (inspecteur, courtier, greffier) dit qui est en poste et ce que chacun fait. L'onglet de stock s'appelle *Entrepôt et rachat*, et explique à quoi sert l'entrepôt.
 
 #### 7.5.6 La Carte régionale
 
 - Les 6 zones, colorées selon leur **Danger**, reliées par des routes.
 - Les **icônes des équipes** se déplacent sur les routes en temps réel.
-- **Calques activables :** populations de monstres, plantes, quêtes en cours.
+- **Calques activables :** populations de monstres, plantes, quêtes en cours. *v1.1 :* calque **Guildes rivales** (fanions des sorties des 3 derniers jours) et liste de leurs sorties dans la fiche de chaque zone.
 - **Clic sur une zone :** espèces présentes et courbe de leur population, plantes, quêtes de la zone.
 - **Clic sur une équipe :** journal de sa quête (4.10).
 
@@ -2393,7 +2432,9 @@ Une **gazette quotidienne**, dont le nom change avec le palier de la ville : *La
 | Les guildes | Les actions des rivales |
 | Exploits et nécrologie | Les hauts faits et les morts de la semaine |
 
-#### 7.5.8 Le Grand Livre
+#### 7.5.8 Le Livre de comptes
+
+> **Ajusté en v1.1 :** l'écran s'appelle **Livre de comptes** (ex-Grand Livre). Il montre les recettes et les dépenses jour par jour sur 28 jours (deux courbes, détail au survol) et leur répartition par poste sur 7 jours, au-dessus de la courbe de trésorerie (D-138).
 
 - **Bilan** du jour, de la semaine ou de la saison (1.11), ventilé par salle.
 - Graphiques des recettes, des dépenses et de la trésorerie.
@@ -2611,7 +2652,7 @@ Les effets des événements sont décrits sous forme déclarative, par exemple `
 | Stockage | Base de données du navigateur (IndexedDB) |
 | Emplacements | 3 emplacements manuels, plus 2 sauvegardes automatiques en rotation |
 | Sauvegarde automatique | Chaque jour de jeu à minuit. En mode Chronique : chaque heure de jeu, et dès que la page passe en arrière-plan |
-| Format | JSON compressé, avec un **numéro de version** et des migrations automatiques entre versions. *Pendant le développement (tranches 1 à 3) : pas de migration ; une sauvegarde d'une version précédente est affichée « ancienne version » et ne peut pas être chargée* |
+| Format | JSON compressé, avec un **numéro de version** et des migrations automatiques entre versions. *Pendant le développement (tranches 1 à 3) : pas de migration ; une sauvegarde d'une version précédente est affichée « ancienne version » et ne peut pas être chargée.* **v1.1 :** format 5 ; une sauvegarde au format 4 (version 1.0) est convertie au chargement : prix gardés tels qu'affichés, cuisine au niveau du réfectoire, troisième guilde rivale ajoutée |
 | Export / import | Fichier `.guilde`, pour une copie de secours ou un changement d'appareil |
 | Taille visée | Moins de 2 Mo par sauvegarde |
 
@@ -2897,6 +2938,33 @@ Chaque tranche est **jouable et testée** avant de passer à la suivante.
 - Les **débauchages** de vétérans par les rivales augmentent en fin de partie (environ 7 aventuriers de niveau 13 ou plus en 5 ans).
 - La **renommée** dépasse largement les seuils en fin de partie (4 000 à 9 000 points) : ce sont les conditions des sceaux qui rythment la fin, pas les points.
 
+#### 8.11.7 Revue des écrans : prix, cuisine, comptoir, rivales (v1.1, 2026-10-30)
+
+Suite à la revue écran par écran (Siège, Comptoir, Carte, Grand Livre) : prix fixés directement (D-132), cuisine en salle à part (D-133), rivales qui chassent et vendent (D-134), courtier et greffier (D-135), Entrepôt (D-136), petits événements espacés (D-137), Livre de comptes (D-138).
+
+**Robot du simulateur :** il réajuste ses prix chaque matin sur la valeur perçue (×1,05 pour certains lits et plats, comme avant), monte la cuisine avec le réfectoire, engage courtier et greffier à partir de 15 aventuriers, et laisse le courtier racheter pour revendre.
+
+**Résultats** (robot prudent, 8 graines × 560 jours) :
+
+| Cible | Avant | Après | Statut |
+|-------|-------|-------|--------|
+| Revenu net vers J30 (10-20 po) | ≈ 15,9 po | ≈ 10,5 à 11,3 po | ✔ |
+| Première salle au niveau 3 (J45-60) | ≈ J52 | ≈ J59 à J65 | ✔ (limite haute) |
+| Sceau d'Or (J120-170) | médiane J155 | 16 sur 16, médiane J166-169 | ✔ |
+| Sceau de Mithril (J300-500) | 6 sur 8, médiane J414 | 13 sur 16, médiane J343-400 | ✔ |
+| Morts (une toutes les 2 à 3 semaines) | ≈ 32 en 5 ans | ≈ 28 à 32 en 5 ans | ✔ |
+| Danger régional en fin de partie | 0 (espèces éteintes) | 0 à 32, souvent 2 à 10 ; les espèces restent entre 15 et 25 | ✔ |
+| Faillites, incohérences | 0 / 0 | 1 partie sur 16 / 0 | ⚠ |
+
+*Mesures finales, chasse fermée comprise, sur 16 graines (1 à 16). La faillite est une partie où le moral s'effondre la 2ᵉ année (≈ 25), avec trois épidémies : à surveiller.*
+
+**Écarts et réglages notés :**
+- Le **revenu du début de partie** baisse (≈ 16 → 10 po par jour vers J30) : les rivales vendent leur butin, donc les dépouilles se vendent moins cher qu'au plafond permanent d'avant. Il reste dans la cible.
+- Le **plafond de 25 membres** pour les sorties des rivales est indispensable : sans lui, une rivale de 100 membres inondait le marché, les aventuriers se ruinaient et une partie a fait faillite.
+- Les **chasseurs** ne prennent pas les quêtes au-delà du rang D : sinon ils volaient souvent la quête du dragon, et le Mithril tombait à 4 parties sur 8.
+- **Extinction des espèces :** en fin de partie, la guilde (avec ou sans rivales) faisait tomber la plupart des populations à 0, d'où un danger nul. Un essai d'immigration (une espèce presque disparue revient peu à peu) bouleversait la fin de partie (Mithril 2 sur 8, 35 morts) : écarté au profit de la **chasse fermée** (2.7, D-139).
+- **Effets de bord de la chasse fermée, corrigés :** les migrations, exemptées du délai de 21 jours, se déclenchaient 34 fois par partie (le délai les garde) ; avec un tableau plus fourni, la Compagnie de l'Aube prenait la quête du dragon, désormais réservée à la guilde (D-140) ; les escortes échouant plus souvent, la Cité n'était plus atteinte, d'où l'apport de la guilde porté à +24 (D-141).
+
 ### 8.12 Table centrale des paramètres
 
 Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans `parametres.json` et sont réglées à l'aide du simulateur d'équilibrage.
@@ -2917,7 +2985,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | | Délai avant faillite | 7 jours (Normal) | 1.1.4 |
 | **Tarification** | Multiplicateur de qualité MQ | 0,6 + 0,8 × Q / 100 | 1.3.1 |
 | | Indice de prix IP | 0,7 + 0,6 × Prospérité / 100 | 1.3.2 |
-| | Curseur de prix | ×0,5 à ×3,0, par pas de 5 % | 1.3.3 |
+| | Prix (v1.1) | fixé par le joueur, ≥ 1 pc ; verdict : bradé < ×0,7, bon marché ≤ ×0,92, correct ≤ ×1,1, cher ≤ ×1,4, au-delà hors de prix | 1.3.3 |
 | | Tolérance T | 1,10 + 0,25 × log10(Or / Coût de la vie), entre 0 et 2, + trait | 1.3.4 |
 | | Grief : refus / baisse quotidienne | +5 / −2 par jour | 1.3.4 |
 | **Personnel** | Exposant de salaire | (C / 50) ^ 1,3 | 1.4.3 |
@@ -2978,7 +3046,8 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | | Recette de l'Arène | 20 po × (1 + Prospérité / 50), ×2 au palier Cité | 1.7.4 |
 | | Recrue descendante d'un héros | 3 % | 6.7 |
 | **Monde** | Convergence de la Prospérité | 5 % par jour | 5.1.2 |
-| | Apport de la guilde à la Prospérité | Recettes 7 j + dépenses en ville / 50 po, plafond +20 | 5.1.2 |
+| | Apport de la guilde à la Prospérité | Recettes 7 j + dépenses en ville / 50 po, plafond +24 | 5.1.2 |
+| **Populations** | Chasse fermée / rouverte | sous 15 / à 25 | 2.7 |
 | | Danger Menaçant : récompenses | ×1,2 | 5.1.1 |
 | | Quêtes nobles (palier Ville) | 15 %, ×1,3 | 5.3 |
 | | Rumeurs exactes / fausses alertes / détails faux | 75 / 12,5 / 12,5 % | 5.4.5 |
@@ -3158,6 +3227,18 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-127 | 2026-10-29 | Apport de la guilde à la Prospérité plafonné à +20 ; Cité à 70 ; une ville ne régresse que 10 points sous le seuil de son palier. | 5.1.2, 5.3 |
 | D-128 | 2026-10-29 | À partir du Sceau d'Or : une crise de plus par an, le réveil du dragon devient la crise la plus probable, et sa mort met fin à la crise. | 5.4.1 |
 | D-129 | 2026-10-29 | Cibles de rythme ajoutées : Sceau d'Or J120-170, Sceau de Mithril J300-500. Tableau agrandi d'une place par 4 aventuriers au-delà de 20. | 1.13, 4.3.4 |
+| D-130 | 2026-10-30 | Les conseils de Gaspard se périment au bout de 3 jours sans réponse. | 6.4 |
+| D-131 | 2026-10-30 | Le garde-manger montre la consommation de la veille et les ruptures, et signale une consigne de réapprovisionnement trop juste. | 7.5.1 |
+| D-132 | 2026-10-30 | Le joueur fixe directement ses prix ; l'interface montre le verdict des clients au lieu d'une référence chiffrée. Les prix ne suivent plus la qualité d'eux-mêmes. | 1.3.3 |
+| D-133 | 2026-10-30 | La cuisine devient une salle à part (niveaux 1 à 5) : menu, plats débloqués, garde-manger. Le réfectoire garde places, ambiance et taverne. | 1.6.7 |
+| D-134 | 2026-10-30 | Trois guildes rivales (ajout de La Confrérie du Chêne) qui chassent et cueillent chaque jour, au-dessus de 45 de population, et vendent 40 % de leurs prises en ville. | 2.5.1, 5.5 |
+| D-135 | 2026-10-30 | Personnel du comptoir : courtier (ventes sans frais au bon cours, contrats, rachat pour revente) et greffier (danger exact, tableau mieux trié et plus grand). | 1.4.2 |
+| D-136 | 2026-10-30 | La Resserre s'appelle l'Entrepôt dans le jeu. | 2.4.2 |
+| D-137 | 2026-10-30 | Un même petit événement ne revient pas avant 21 jours ; l'inspecteur royal n'écrit plus qu'un message. | 5.4.1 |
+| D-138 | 2026-10-30 | Le Grand Livre devient le Livre de comptes, avec les recettes et dépenses jour par jour et par poste. | 7.5.8 |
+| D-139 | 2026-10-30 | Chasse fermée sous 15 de population, rouverte à 25 ; les migrations repeuplent d'abord les espèces disparues ou fermées. Fin des extinctions en fin de partie. | 2.7 |
+| D-140 | 2026-10-30 | Les rivales ne prennent pas la quête du dragon : c'est l'épreuve de la Couronne pour la guilde du joueur. | 5.4.1, 5.5 |
+| D-141 | 2026-10-30 | Apport de la guilde à la Prospérité plafonné à +24 (au lieu de +20). | 5.1.2 |
 
 ### Relecture de cohérence (v1.0)
 

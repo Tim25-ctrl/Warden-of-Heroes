@@ -23,6 +23,8 @@ export const ROLE_HELP: Record<StaffRole, string> = {
   apothicaire: 'Fabrique les remèdes à partir des dépouilles et des plantes (infirmerie niveau 3).',
   intendant: 'Exécute les consignes sans erreur et obtient 5 à 15 % de remise sur les achats. Un seul.',
   inspecteur: 'Contrôle le butin déclaré au comptoir : détecte la fraude (20 aventuriers chacun).',
+  courtier: "Revend l'entrepôt sans frais (+5 à 10 % selon sa compétence), attend un bon cours, décroche un contrat de plus par semaine et peut racheter les dépouilles pour les revendre. Un seul.",
+  greffier: 'Tient le tableau des quêtes : estime le danger sans erreur, écarte les quêtes hors de portée, 2 places de plus au tableau. Un seul.',
 };
 
 export function salaryOf(m: StaffMember): Money {
@@ -52,15 +54,15 @@ export function renewStaffCandidates(s: GameState): void {
   s.staffCandidates = [];
   const roles: StaffRole[] = ['cuisinier', 'commis', 'valet', 'soigneur', 'inspecteur'];
   if (s.infirmerie.level >= 2) roles.push('apothicaire');
-  if (!s.staff.some((m) => m.role === 'intendant')) roles.push('intendant');
+  for (const r of ['intendant', 'courtier', 'greffier'] as const) if (!s.staff.some((m) => m.role === r)) roles.push(r);
   for (const role of roles) {
-    const n = role === 'intendant' || role === 'inspecteur' || role === 'apothicaire' ? 1 : randInt(s, 'personnel', 1, 2);
+    const n = ROLES[role].unique || role === 'inspecteur' || role === 'apothicaire' ? 1 : randInt(s, 'personnel', 1, 2);
     for (let i = 0; i < n; i++) s.staffCandidates.push(createStaff(s, role));
   }
 }
 
 export function canHire(s: GameState, m: StaffMember): string | null {
-  if (ROLES[m.role].unique && s.staff.some((x) => x.role === m.role)) return 'Un seul intendant à la fois.';
+  if (ROLES[m.role].unique && s.staff.some((x) => x.role === m.role)) return `Un seul ${ROLES[m.role].nom.toLowerCase()} à la fois.`;
   if (m.role === 'apothicaire' && s.infirmerie.level < 3) return 'Il faut une infirmerie de niveau 3.';
   return null;
 }

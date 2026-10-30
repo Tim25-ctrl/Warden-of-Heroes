@@ -1,7 +1,7 @@
 // Modificateurs temporaires du monde (événements, saisons, rivales) : GDD 5.4.2.
 // Module sans dépendance, lu par tous les systèmes qui subissent un effet.
 import { seasonOf } from './format';
-import type { GameState, Money } from './types';
+import type { GameState, Money, RoomId } from './types';
 
 /** Produit des multiplicateurs actifs pour une clé (1 si aucun). */
 export function modMult(s: GameState, key: string): number {
@@ -35,7 +35,7 @@ export function townSpend(s: GameState, v: Money): void {
 }
 
 /** Une salle endommagée par un assaut ne tourne qu'à moitié (5.6). */
-export const damaged = (s: GameState, room: 'dortoirs' | 'refectoire' | 'infirmerie' | 'terrain') => !!s.world?.damaged[room];
+export const damaged = (s: GameState, room: RoomId) => !!s.world?.damaged[room];
 
 /** Personnel présent (les malades d'une épidémie sont absents, 5.7). */
 export function present<T extends { absentUntil?: number }>(s: GameState, staff: T[]): T[] {

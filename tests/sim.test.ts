@@ -1,7 +1,7 @@
 // Tests automatiques (GDD 8.10.3) : formules, déterminisme, sauvegarde, commandes.
 import { describe, expect, it } from 'vitest';
 import { pvMax, rangIndex, xpRequired } from '../src/sim/adventurers';
-import { IP, MQ } from '../src/sim/economy';
+import { bedPrice, dishUnlocked, IP, menuSize, MQ } from '../src/sim/economy';
 import { applyCommand, catchUp, createGame, stateHash, step, stepDays } from '../src/sim/engine';
 import { fireEvent, startEpidemic, triggerAssault } from '../src/sim/world';
 import { epilogue, sealConditions } from '../src/sim/legend';
@@ -9,6 +9,7 @@ import { upgradeCost } from '../src/sim/rooms';
 import { money } from '../src/sim/format';
 import { salaryOf } from '../src/sim/staff';
 import { boardQuests, guildReach, relinkRuns } from '../src/sim/quests';
+import { huntClosed } from '../src/sim/populations';
 import { RESOURCES, SPECIES, ZONES } from '../src/sim/data';
 import type { GameState } from '../src/sim/types';
 
@@ -62,7 +63,7 @@ describe('déterminisme (8.3)', () => {
     const play = () => {
       const s = createGame({ seed: 7 });
       stepDays(s, 2);
-      applyCommand(s, { type: 'setBedCurseur', bed: 'paillasse', value: 1.3 });
+      applyCommand(s, { type: 'setBedPrix', bed: 'paillasse', price: 40 });
       applyCommand(s, { type: 'setTaxRate', value: 0.25 });
       stepDays(s, 5);
       return stateHash(s);
@@ -94,11 +95,41 @@ describe('règles de jeu', () => {
     const s = createGame({ seed: 3 });
     const before = s.treasury;
     applyCommand(s, { type: 'upgradeRoom', room: 'refectoire' });
-    expect(s.treasury).toBe(before - 12000);
+    expect(s.treasury).toBe(before - 8000);
     expect(s.refectoire.works?.targetLevel).toBe(2);
     stepDays(s, 3);
     expect(s.refectoire.level).toBe(2);
+  });
+  it('la cuisine débloque les plats et agrandit le menu (v1.1)', () => {
+    const s = createGame({ seed: 3 });
+    expect(s.cuisine.level).toBe(1);
+    expect(dishUnlocked(s, 'biere')).toBe(false);
+    const before = s.treasury;
+    applyCommand(s, { type: 'upgradeRoom', room: 'cuisine' });
+    expect(s.treasury).toBe(before - 6000);
+    stepDays(s, 3);
+    expect(s.cuisine.level).toBe(2);
+    expect(dishUnlocked(s, 'biere')).toBe(true);
     expect(s.refectoire.menu).toContain('biere');
+    expect(menuSize(s)).toBe(3);
+  });
+  it('la chasse ferme sous 15 et rouvre à 25 (v1.1)', () => {
+    const s = createGame({ seed: 6 });
+    s.populations.foret.loup = 5;
+    stepDays(s, 1);
+    expect(huntClosed(s, 'foret', 'loup')).toBe(true);
+    const err = applyCommand(s, { type: 'createPrime', questType: 'chasse', zone: 'foret', target: 'loup', count: 3, reward: 500, days: 3 });
+    expect(err).toMatch(/fermée/);
+    s.populations.foret.loup = 60;
+    stepDays(s, 1);
+    expect(huntClosed(s, 'foret', 'loup')).toBe(false);
+  });
+  it('les prix sont fixés directement et ne suivent plus la qualité (v1.1)', () => {
+    const s = createGame({ seed: 4 });
+    applyCommand(s, { type: 'setBedPrix', bed: 'paillasse', price: 37 });
+    expect(bedPrice(s, 'paillasse')).toBe(37);
+    s.dortoirs.proprete = 100;
+    expect(bedPrice(s, 'paillasse')).toBe(37);
   });
   it('les aventuriers gardent des jauges valides', () => {
     const s = createGame({ seed: 11 });

@@ -3,14 +3,14 @@
 import { createAdventurer, gainXp, hasTrait, profileOf, rangIndex, xpRequired } from './adventurers';
 import { addAilment, removeAilment, worstGravity } from './ailments';
 import { fight } from './combat';
-import { DENREES, EVENTS, NAMES, P, REMEDES, RESOURCES, SPECIES, ZONE_IDS, ZONES } from './data';
-import { chefSkill, clamp, IP, roomLevelCost } from './economy';
+import { DENREES, EVENTS, NAMES, P, REMEDES, RESOURCES, ROOM_IDS, SPECIES, ZONE_IDS, ZONES } from './data';
+import { chefSkill, clamp, dishPrice, dishRef, IP, roomLevelCost } from './economy';
 import { advLink, dayOf, hourOf, money, SEASONS, seasonOf, weekdayOf, yearOf } from './format';
 import { earn, log, spend, think } from './journal';
 import { conscript, killAdventurer, leave } from './lifecycle';
 import { addMod, modAdd, present } from './mods';
 import { diff, onQuestDone, unlock } from './legend';
-import { popOf, regionalDanger } from './populations';
+import { harvested, huntClosed, killed, plantsOf, popOf, regionalDanger } from './populations';
 import { guildReach, makeChasse, makeExterminationFor, makeLegendQuest } from './quests';
 import { chance, pick, randInt, range, weighted } from './rng';
 import { createProf } from './training';
@@ -24,10 +24,15 @@ type Data = Record<string, string | number>;
 
 // ---------- Initialisation ----------
 
+/** Ajoute une guilde rivale (conversion d'une ancienne sauvegarde). */
+export function addRival(s: GameState, id: string, nom: string, profil: Rival['profil'], renown: number): void {
+  s.world.rivals.push(makeRival(s, id, nom, profil, renown));
+}
+
 function makeRival(s: GameState, id: string, nom: string, profil: Rival['profil'], renown: number): Rival {
   return {
     id, nom, profil, renown, size: Math.round(8 + renown / 4),
-    tarifs: profil === 'prestige' ? 1.3 : 0.8, taux: profil === 'prestige' ? 0.2 : 0.08,
+    tarifs: profil === 'prestige' ? 1.3 : profil === 'chasseurs' ? 1 : 0.8, taux: profil === 'prestige' ? 0.2 : profil === 'chasseurs' ? 0.12 : 0.08,
     nextAction: s.tick + H * randInt(s, 'monde', W().rivaleActionJours[0], W().rivaleActionJours[1]), bankruptSince: null,
   };
 }
@@ -41,6 +46,7 @@ export function initWorld(s: GameState): WorldState {
   s.world = w;
   w.rivals.push(makeRival(s, 'aube', "La Compagnie de l'Aube", 'prestige', 35));
   w.rivals.push(makeRival(s, 'crocs', 'Les Crocs Libres', 'mercenaires', 20));
+  w.rivals.push(makeRival(s, 'chene', 'La Confrérie du Chêne', 'chasseurs', 25));   // ajout v1.1
   scheduleSeason(s);
   scheduleCrises(s);
   return w;
@@ -111,7 +117,7 @@ function crownQuest(s: GameState): void {
   if (s.danger < 60) return;
   let best: { z: string; sp: string; v: number } | null = null;
   for (const z of ZONE_IDS) for (const sp of Object.keys(ZONES[z].especes)) {
-    if (sp === 'dragon' || sp === 'golem') continue;
+    if (sp === 'dragon' || sp === 'golem' || huntClosed(s, z, sp)) continue;
     const v = popOf(s, z, sp) * SPECIES[sp].menace;
     if (!best || v > best.v) best = { z, sp, v };
   }
@@ -229,7 +235,7 @@ function eligible(s: GameState, id: string, sea = seasonOf(s.tick), day = dayOf(
   if (c.pasSaison && c.pasSaison.includes(sea)) return false;
   if (c.prosperiteMax !== undefined && s.prosperity > c.prosperiteMax) return false;
   if (c.prosperiteMin !== undefined && s.prosperity < c.prosperiteMin) return false;
-  if (c.refectoireMin !== undefined && s.refectoire.level < c.refectoireMin) return false;
+  if (c.cuisineMin !== undefined && s.cuisine.level < c.cuisineMin) return false;
   if (c.jourMin !== undefined && day < c.jourMin) return false;
   if (c.bagarreur && !s.adventurers.some((a) => hasTrait(a, 'bagarreur') && atHome(a))) return false;
   return true;
@@ -240,6 +246,9 @@ function pickEvent(s: GameState, cat: 'petit' | 'majeur' | 'crise', sea?: number
   for (const [id, e] of Object.entries(EVENTS)) {
     if (e.categorie !== cat || e.poids <= 0 || !eligible(s, id, sea, day)) continue;
     if (s.world.events.some((x) => x.id === id)) continue;
+    // Un petit événement ne revient pas avant quelques semaines (trois inspecteurs royaux en une semaine, c'est trop).
+    const last = s.world.lastFired?.[id];
+    if (cat === 'petit' && !e.sansDelai && last !== undefined && s.tick - last < W().petitRecurrenceJours * H) continue;
     w[id] = e.poidsSceau && s.rank >= e.poidsSceau.rang ? e.poidsSceau.poids : e.poids;
   }
   return Object.keys(w).length ? weighted(s, 'monde', w) : null;
@@ -322,6 +331,7 @@ export function fireEvent(s: GameState, id: string, data: Data = {}): void {
   for (const fx of e.effets ?? []) addMod(s, fx.key, until, id, { mult: fx.mult, add: fx.add });
   const proceed = runAction(s, id, d, until);
   if (!proceed) return;
+  (s.world.lastFired ??= {})[id] = s.tick;
   const text = fill(e.texte, d);
   s.world.events.push({ id, nom: e.nom, until, startTick: s.tick, text, data: d });
   log(s, 'monde', e.categorie === 'petit' ? 'important' : 'critique', text.startsWith(e.nom) ? text : `${e.nom} : ${text}`);
@@ -371,7 +381,7 @@ function runAction(s: GameState, id: string, d: Data, until: number): boolean {
       return lost > 0;
     }
     case 'emeute': {
-      const avg = (s.refectoire.curseurs.gruau + s.refectoire.curseurs.ragout) / 2;
+      const avg = (dishPrice(s, 'gruau') / dishRef(s, 'gruau') + dishPrice(s, 'ragout') / dishRef(s, 'ragout')) / 2;
       if (avg > 1.3) {
         for (const l of s.refectoire.pantry) l.qty = Math.floor(l.qty * 0.7);
         s.refectoire.damage = clamp(s.refectoire.damage + 30, 0, 100);
@@ -387,7 +397,9 @@ function runAction(s: GameState, id: string, d: Data, until: number): boolean {
         if (sp !== 'dragon' && sp !== 'golem' && popOf(s, z, sp) < P.populations.rarefaction) opts.push([z, sp]);
       }
       if (!opts.length) return false;
-      const [z, sp] = pick(s, 'monde', opts);
+      // Ajusté en v1.1 : les migrations repeuplent d'abord les espèces disparues ou dont la chasse est fermée.
+      const urgent = opts.filter(([z, sp]) => popOf(s, z, sp) < 1 || huntClosed(s, z, sp));
+      const [z, sp] = pick(s, 'monde', urgent.length ? urgent : opts);
       s.populations[z][sp] = clamp(s.populations[z][sp] + 30, 0, 100);
       d.espece = SPECIES[sp].pluriel; d.lieu = ZONES[z].lieu;
       return true;
@@ -426,12 +438,13 @@ function runAction(s: GameState, id: string, d: Data, until: number): boolean {
       return true;
     }
     case 'inspecteur': {
+      // Un seul message au journal : le verdict est intégré au texte de l'événement.
       if (s.taxRate > 0.3 || s.treasury < 0) {
         spend(s, 'amendesRoyales', 5000);
         d.issue = 'amende';
-        log(s, 'economie', 'important', `L'inspecteur royal inflige une amende de ${money(5000)} (${s.taxRate > 0.3 ? 'taxe sur le butin abusive' : 'guilde endettée'}).`);
+        d.verdict = `il inflige une amende de ${money(5000)} (${s.taxRate > 0.3 ? 'taxe sur le butin abusive' : 'guilde endettée'})`;
       } else {
-        log(s, 'economie', 'info', "L'inspecteur royal n'a rien trouvé à redire.");
+        d.verdict = "il n'a rien trouvé à redire";
       }
       return true;
     }
@@ -677,14 +690,19 @@ export function referenceTaxRate(s: GameState): number {
 function rivalsTakeQuests(s: GameState): void {
   for (const q of [...s.board]) {
     if (q.type === 'aide' || q.clientType === 'guilde' || q.reservedBy !== null || q.teams.length || s.tick - q.createdTick < H) continue;
+    // Le dragon est l'épreuve de la Couronne pour la guilde du joueur (D-128) : les rivales ne s'y frottent pas.
+    if (q.target === 'dragon') continue;
     for (const r of s.world.rivals) {
       if (r.bankruptSince !== null) continue;
+      if (r.profil === 'chasseurs' && rangIndex(q.rang) > 2) continue;   // les chasseurs s'en tiennent aux bêtes de rang D au plus
       let p = clamp(W().rivaleQueteChance * (r.renown / 50), 0.01, 0.12);
       if (r.profil === 'prestige' && (q.clientType === 'nobles' || q.clientType === 'couronne')) p *= 2;
       if (r.profil === 'mercenaires' && rangIndex(q.rang) <= 1) p *= 1.5;
+      if (r.profil === 'chasseurs' && (q.type === 'chasse' || q.type === 'extermination' || q.type === 'cueillette')) p *= 1.5;
       if (q.legend) p *= 0.3;
       if (!chance(s, 'monde', p)) continue;
       s.board = s.board.filter((x) => x !== q);
+      rivalDoesQuest(s, r, q);
       r.renown += P.renommee.quete[q.rang] * (q.legend ? 0 : P.monde.rivaleGainQuete);
       if (q.legend) {
         r.renown += 10;
@@ -699,9 +717,78 @@ function rivalsTakeQuests(s: GameState): void {
   }
 }
 
+// ---------- Sorties des guildes rivales (v1.1) ----------
+
+/** Zones où chaque profil de guilde va chercher fortune. */
+const RIVAL_ZONES: Record<Rival['profil'], string[]> = {
+  prestige: ['ruines', 'marais', 'pics'],
+  mercenaires: ['foret', 'collines', 'ville'],
+  chasseurs: ['foret', 'marais', 'collines'],
+};
+
+/** Le butin d'une rivale arrive sur le marché de la ville : l'offre augmente, les cours baissent. */
+function supplyMarket(s: GameState, res: string, qty: number): void {
+  if (s.market[res]) s.market[res].S += qty * W().rivales.vente;
+}
+
+function noteTrip(s: GameState, r: Rival, zone: string, text: string): void {
+  const w = s.world;
+  (w.rivalTrips ??= []).push({ tick: s.tick, rival: r.id, zone, text });
+  w.rivalTrips = w.rivalTrips.filter((t) => t.tick > s.tick - 3 * H);
+}
+
+/** Une quête prise par une rivale a les mêmes effets que si la guilde l'avait faite : bêtes tuées, plantes cueillies. */
+function rivalDoesQuest(s: GameState, r: Rival, q: Quest): void {
+  if (!q.target || !q.zone) return;
+  const n = q.count ?? 3;
+  if (q.type === 'chasse' || q.type === 'extermination') {
+    // Les golems et le dragon ne repoussent pas : ils restent pour la guilde du joueur.
+    if (!SPECIES[q.target] || SPECIES[q.target].r <= 0) return;
+    killed(s, q.zone, q.target, n);
+    for (const res of SPECIES[q.target].butin) supplyMarket(s, res, n);
+    noteTrip(s, r, q.zone, `${n} ${SPECIES[q.target].pluriel}`);
+  } else if (q.type === 'cueillette' && RESOURCES[q.target]) {
+    harvested(s, q.zone, q.target, n);
+    supplyMarket(s, q.target, n);
+  }
+}
+
+/**
+ * Chaque jour, les rivales envoient leurs propres équipes : elles chassent et cueillent selon leur profil,
+ * ce qui fait baisser les populations (la carte évolue sans la guilde), et vendent leur butin en ville.
+ */
+function rivalExpeditions(s: GameState, r: Rival): void {
+  const R = W().rivales;
+  const expected = Math.min(r.size, R.tailleMax) * R.sortiesParMembre * (r.profil === 'chasseurs' ? R.bonusChasseurs : 1);
+  const n = Math.floor(expected) + (chance(s, 'monde', expected % 1) ? 1 : 0);
+  for (let i = 0; i < n; i++) {
+    const zone = pick(s, 'monde', RIVAL_ZONES[r.profil]);
+    const plants = plantsOf(zone).filter((pl) => popOf(s, zone, pl) > R.seuilChasse);
+    if (plants.length && chance(s, 'monde', R.cueillette)) {
+      const pl = pick(s, 'monde', plants);
+      const q = randInt(s, 'monde', R.cueilletteQte[0], R.cueilletteQte[1]);
+      harvested(s, zone, pl, q);
+      supplyMarket(s, pl, q);
+      noteTrip(s, r, zone, `cueillette (${RESOURCES[pl].nom.toLowerCase()})`);
+      continue;
+    }
+    // Les rivales chassent les espèces abondantes (elles ne les exterminent pas) : rang C au plus pour la guilde
+    // de prestige, rang D au plus pour les autres. Personne ne touche au dragon, aux golems ni aux wyvernes.
+    const opts = Object.keys(ZONES[zone].especes).filter((sp) => SPECIES[sp] && popOf(s, zone, sp) > R.seuilChasse
+      && rangIndex(SPECIES[sp].rang) <= (r.profil === 'prestige' ? 3 : 2));
+    if (!opts.length) continue;
+    const sp = weighted(s, 'monde', Object.fromEntries(opts.map((x) => [x, popOf(s, zone, x)])));
+    const kills = Math.max(1, Math.round(randInt(s, 'monde', R.baisse[0], R.baisse[1]) / SPECIES[sp].k));
+    killed(s, zone, sp, kills);
+    for (const res of SPECIES[sp].butin) supplyMarket(s, res, kills);
+    noteTrip(s, r, zone, `${kills} ${SPECIES[sp].pluriel}`);
+  }
+}
+
 function rivalAction(s: GameState, r: Rival): void {
   const w: Record<string, number> = r.profil === 'prestige'
     ? { debauchage: 3, diffamation: 2, eclat: 2 }
+    : r.profil === 'chasseurs' ? { debauchage: 2, eclat: 2, prix: 1 }
     : { prix: 3, debauchage: 1, diffamation: 1, eclat: 1 };
   const act = weighted(s, 'monde', w);
   if (act === 'prix') {
@@ -745,6 +832,7 @@ function dailyRivals(s: GameState): void {
       log(s, 'monde', 'important', `${r.nom} fait faillite.`);
       continue;
     }
+    rivalExpeditions(s, r);
     if (s.tick >= r.nextAction) {
       rivalAction(s, r);
       r.nextAction = s.tick + H * randInt(s, 'monde', W().rivaleActionJours[0], W().rivaleActionJours[1]);
@@ -828,14 +916,14 @@ function assaultWave(s: GameState): void {
     }
     log(s, 'monde', 'critique', `Vague ${as.wave} : les défenseurs repoussent les ${sp.pluriel} (${defenders.length} aventuriers${mercs.length ? ' et 4 mercenaires' : ''}).`);
   } else {
-    const built = (['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]).filter((r) => s[r].level > 0 && !w.damaged[r]);
+    const built = ROOM_IDS.filter((r) => s[r].level > 0 && !w.damaged[r]);
     const room = built.length ? pick(s, 'monde', built) : null;
     if (room) w.damaged[room] = true;
     for (const l of s.refectoire.pantry) l.qty = Math.floor(l.qty * 0.8);
     for (const l of s.resserre) l.qty = Math.floor(l.qty * 0.8);
     s.resserre = s.resserre.filter((l) => l.qty > 0);
     s.prosperity = clamp(s.prosperity - 5, 0, 100);
-    const roomName: Record<RoomId, string> = { dortoirs: 'les dortoirs', refectoire: 'le réfectoire', infirmerie: "l'infirmerie", terrain: "le terrain d'entraînement" };
+    const roomName: Record<RoomId, string> = { dortoirs: 'les dortoirs', refectoire: 'le réfectoire', cuisine: 'la cuisine', infirmerie: "l'infirmerie", terrain: "le terrain d'entraînement" };
     log(s, 'monde', 'critique', `Vague ${as.wave} : les ${sp.pluriel} percent les défenses !${room ? ` ${roomName[room].charAt(0).toUpperCase() + roomName[room].slice(1)} sont endommagés (capacité −50 % jusqu'à réparation).` : ''} Les stocks sont pillés.`);
   }
   // Infirmerie ouverte gratuitement : les blessés retournent au combat

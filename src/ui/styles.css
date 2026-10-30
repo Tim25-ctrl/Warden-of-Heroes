@@ -330,6 +330,8 @@ ul.plain li { padding: 2px 0; }
 .gaspard { position: fixed; left: 76px; bottom: 16px; max-width: min(380px, calc(100vw - 32px)); z-index: 25;
   background: var(--panel); border: 1px solid var(--gold); border-radius: 10px; padding: 10px 14px; box-shadow: var(--shadow); }
 .gaspard.alert { border-color: var(--seal); }
+/* La carte de Gaspard flotte en bas de l'écran : on laisse de quoi faire défiler le contenu au-dessus. */
+.app.has-gaspard .main { padding-bottom: 190px; }
 .gaspard p { margin: 6px 0; font-style: italic; }
 .modal.epilogue { max-width: 640px; max-height: 90vh; overflow-y: auto; }
 .modal.epilogue.victory h1 { color: var(--gold); }
@@ -361,3 +363,37 @@ ul.plain li { padding: 2px 0; }
   .modal { max-width: calc(100vw - 32px); }
 }
 .modal .subtitle { margin: -0.4em 0 0.8em; font-family: var(--font-title); font-style: italic; color: var(--ink-soft); }
+
+/* Prix fixés directement (v1.1) */
+.price-row { grid-template-columns: minmax(140px, 1.3fr) auto minmax(90px, auto); }
+.price-edit { flex-wrap: nowrap; gap: 4px; justify-content: center; }
+.money-field { text-align: center; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .price-row { grid-template-columns: 1fr auto; }
+  .price-row > div:first-child { grid-column: 1 / -1; }
+}
+.menu-item { border-bottom: 1px solid var(--line-soft); padding-top: 6px; }
+.menu-item .slider-row { border-bottom: none; padding-top: 2px; }
+.staff-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.flag-pole { stroke: var(--ink-soft); stroke-width: 1; }
+.rival-chip { display: inline-block; width: 10px; height: 8px; border-radius: 2px; vertical-align: middle; }
+
+/* Livre de comptes (v1.1) : recettes et dépenses */
+.flow-chart .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 0.85rem; margin-bottom: 4px; min-height: 1.4em; }
+.flow-chart .key { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.flow-chart .key.rec, .bd-bar.rec { background: var(--sage); }
+.flow-chart .key.dep, .bd-bar.dep { background: var(--seal); }
+.chart path.flow { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart path.flow.rec { stroke: var(--sage); }
+.chart path.flow.dep { stroke: var(--seal); }
+.chart circle.dot { stroke: var(--panel); stroke-width: 2; }
+.chart circle.dot.rec { fill: var(--sage); }
+.chart circle.dot.dep { fill: var(--seal); }
+.chart line.crosshair { stroke: var(--ink-faint); stroke-width: 1; }
+.chart rect.hit { fill: transparent; cursor: crosshair; }
+.breakdown { display: grid; gap: 6px; }
+.bd-row { display: grid; grid-template-columns: minmax(110px, 1fr) 2fr auto; gap: 8px; align-items: center; font-size: 0.85rem; }
+.bd-track { background: var(--line-soft); border-radius: 4px; height: 8px; overflow: hidden; }
+.bd-bar { display: block; height: 100%; border-radius: 4px; }
+.bd-value { font-variant-numeric: tabular-nums; color: var(--ink-soft); text-align: right; min-width: 70px; }
+.map .closed-mark { fill: var(--amber); font-size: 16px; font-weight: 700; }

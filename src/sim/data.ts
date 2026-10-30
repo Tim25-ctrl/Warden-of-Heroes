@@ -57,8 +57,12 @@ export interface BedDef { nom: string; places: number; energie: number; moral: n
 export const BEDS = salles.lits as Record<BedType, BedDef>;
 export interface DormLevel { niveau: number; places: number; lits: BedType[]; cout: number; valeur?: number }
 export const DORM_LEVELS = salles.dortoirs as DormLevel[];
-export interface MessLevel { niveau: number; places: number; plats: number; garde: number; cout: number; valeur?: number }
+export interface MessLevel { niveau: number; places: number; cout: number; valeur?: number; rang?: number }
 export const MESS_LEVELS = salles.refectoire as MessLevel[];
+export interface KitchenLevel { niveau: number; plats: number; garde: number; cout: number; valeur?: number; rang?: number }
+export const KITCHEN_LEVELS = salles.cuisine as KitchenLevel[];
+/** Toutes les salles du siège, dans l'ordre d'affichage. */
+export const ROOM_IDS: RoomId[] = ['dortoirs', 'refectoire', 'cuisine', 'infirmerie', 'terrain'];
 export interface RoleDef { nom: string; salaire: number; salle: string; niveauSalle?: number; unique?: boolean }
 export const ROLES = salles.roles as Record<StaffRole, RoleDef>;
 export interface ModuleDef { nom: string; salle: RoomId | 'siege'; cout: number; niveau: number; effet: string; requiert?: string }
@@ -116,10 +120,11 @@ export interface EventDef {
   poids: number;
   /** Poids à partir d'un sceau donné (ajout v1.1) : la Couronne met une guilde célèbre à l'épreuve. */
   poidsSceau?: { rang: number; poids: number };
+  sansDelai?: boolean;          // petit événement qui peut revenir sans attendre 21 jours (migration)
   duree: number;
   conditions?: {
     saison?: number[]; pasSaison?: number[]; prosperiteMax?: number; prosperiteMin?: number;
-    refectoireMin?: number; chaine?: boolean; jourMin?: number; bagarreur?: boolean;
+    cuisineMin?: number; chaine?: boolean; jourMin?: number; bagarreur?: boolean;
   };
   rumeur?: string;
   effets?: EventEffect[];

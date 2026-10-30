@@ -1,7 +1,7 @@
 // Le comptoir : retour de quête, taxe, fraude, rachat, partage (GDD 2.4, 2.6, 4.9).
 import { gainXp, hasTrait, rangForLevel, rangIndex, xpQuestType } from './adventurers';
 import { P, RESOURCES, SPECIES } from './data';
-import { clamp, isAbsent } from './economy';
+import { clamp, isAbsent, onDuty } from './economy';
 import { advLink, money } from './format';
 import { wear } from './gear';
 import { earn, log, spend, think, flow } from './journal';
@@ -85,6 +85,9 @@ function sanction(s: GameState, a: Adventurer, hiddenTax: Money): 'exclu' | null
 
 function rachatWanted(s: GameState, lot: ResLot): number {
   let want = 0;
+  // Le courtier rachète pour revendre, tant que l'entrepôt n'est pas trop plein (v1.1).
+  if (s.policy.courtierRachat && onDuty(s, 'courtier') && !RESOURCES[lot.res].rare
+    && resserreWeight(s) < P.comptoir.courtier.entrepotMax * resserreCapacity(s)) want = lot.qty;
   for (const r of s.policy.rachatRules) {
     if (r.res !== lot.res && r.res !== '*') continue;
     want = Math.max(want, r.maxStock - stockOfRes(s, lot.res));

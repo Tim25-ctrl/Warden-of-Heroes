@@ -1,12 +1,12 @@
 // Fonctionnement des salles : construction, travaux, améliorations, cuisine, livraisons, consignes (GDD 1.2 à 1.10).
-import { BEDS, DENREES, DORM_LEVELS, INF_LEVELS, MESS_LEVELS, MODULES, P, RESOURCES, SERVICES, TERRAIN_LEVELS } from './data';
+import { BEDS, DENREES, DORM_LEVELS, INF_LEVELS, KITCHEN_LEVELS, MESS_LEVELS, MODULES, P, RESOURCES, SERVICES, TERRAIN_LEVELS } from './data';
 import { freshLoss, isAbsent, kitchenRate, orderCost, pendingOf, placeOrder, stockOf } from './economy';
 import { hourOf, money } from './format';
 import { log, spend } from './journal';
 import type { BedType, DenreeId, GameState, RoomId } from './types';
 
 export const ROOM_NAMES: Record<RoomId, string> = {
-  dortoirs: 'les dortoirs', refectoire: 'le réfectoire', infirmerie: "l'infirmerie", terrain: "le terrain d'entraînement",
+  dortoirs: 'les dortoirs', refectoire: 'le réfectoire', cuisine: 'la cuisine', infirmerie: "l'infirmerie", terrain: "le terrain d'entraînement",
 };
 
 export function dormPlacesUsed(beds: Record<BedType, number>): number {
@@ -14,7 +14,7 @@ export function dormPlacesUsed(beds: Record<BedType, number>): number {
 }
 
 function levelsOf(room: RoomId): { niveau: number; cout: number }[] {
-  return room === 'dortoirs' ? DORM_LEVELS : room === 'refectoire' ? MESS_LEVELS : room === 'infirmerie' ? INF_LEVELS : TERRAIN_LEVELS;
+  return room === 'dortoirs' ? DORM_LEVELS : room === 'refectoire' ? MESS_LEVELS : room === 'cuisine' ? KITCHEN_LEVELS : room === 'infirmerie' ? INF_LEVELS : TERRAIN_LEVELS;
 }
 
 /** Les niveaux 4 et 5 demandent un Sceau (6.2) : d'Argent pour le niveau 4, d'Or pour le niveau 5. */
@@ -79,12 +79,20 @@ function finishWorks(s: GameState): void {
     r.level = r.works.targetLevel;
     r.works = null;
     const lvl = MESS_LEVELS[r.level - 1];
-    if (r.level >= 2) {
+    log(s, 'guilde', 'important', `Le réfectoire passe au niveau ${r.level} : ${lvl.places} places${r.level === 2 ? ', et des soirées de taverne' : ''}.`);
+  }
+  const k = s.cuisine;
+  if (k.works && s.tick >= k.works.endTick) {
+    k.level = k.works.targetLevel;
+    k.works = null;
+    const lvl = KITCHEN_LEVELS[k.level - 1];
+    if (k.level >= 2) {
       for (const dish of ['biere', 'panier'] as const) if (!r.menu.includes(dish)) r.menu.push(dish);
       if (!s.restock.biere.enabled) s.restock.biere = { enabled: true, seuil: 20, qty: 40 };
     }
-    if (r.level >= 3) s.restock.epices = { enabled: true, seuil: 10, qty: 20 };
-    log(s, 'guilde', 'important', `Le réfectoire passe au niveau ${r.level} : ${lvl.places} places${r.level === 2 ? ', bière et paniers de route au menu' : r.level === 3 ? ', le rôti de monstre devient possible' : ''}.`);
+    if (k.level >= 3) s.restock.epices = { enabled: true, seuil: 10, qty: 20 };
+    const unlocked = k.level === 2 ? ', bière et paniers de route au menu' : k.level === 3 ? ', le rôti de monstre devient possible' : k.level === 4 ? ', le Festin du Héros devient possible' : k.level === 5 ? ', sa réputation attire les gourmets' : '';
+    log(s, 'guilde', 'important', `La cuisine passe au niveau ${k.level} : ${lvl.plats} plats au menu, garde-manger de ${lvl.garde} portions${unlocked}.`);
   }
   for (const room of ['infirmerie', 'terrain'] as const) {
     const x = s[room];
@@ -137,7 +145,7 @@ export function repairFurniture(s: GameState): void {
 /** La cuisine débite une pièce de viande de monstre de la resserre (1 unité = 4 portions). */
 function butcher(s: GameState): void {
   const r = s.refectoire;
-  if (r.level < 3 || !r.menu.includes('roti') || stockOf(s, 'monstre') >= 8) return;
+  if (s.cuisine.level < 3 || !r.menu.includes('roti') || stockOf(s, 'monstre') >= 8) return;
   const lot = s.resserre.filter((l) => RESOURCES[l.res].categorie === 'viande' && l.quality !== 'ruinee').sort((a, b) => a.fresh - b.fresh)[0];
   if (!lot) return;
   lot.qty -= 1;

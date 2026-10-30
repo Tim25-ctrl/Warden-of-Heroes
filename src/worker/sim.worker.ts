@@ -1,7 +1,7 @@
 // Tâche de fond qui fait tourner la simulation (GDD 8.1). L'interface ne fait qu'afficher.
 // Mode Classique : un tick toutes les 12,5 s ÷ vitesse. Mode Chronique : l'horloge suit l'heure réelle (0.5, 8.6).
 import { P } from '../sim/data';
-import { applyCommand, catchUp, createGame, SAVE_VERSION, step, type AbsenceReport } from '../sim/engine';
+import { applyCommand, catchUp, createGame, migrateSave, MIN_SAVE_VERSION, SAVE_VERSION, step, type AbsenceReport } from '../sim/engine';
 import { relinkRuns } from '../sim/quests';
 import type { Command, DifficultyId, GameState } from '../sim/types';
 
@@ -100,8 +100,8 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       break;
     }
     case 'load':
-      if (m.state?.version !== SAVE_VERSION) { post({ type: 'error', message: "Sauvegarde d'une version précédente du jeu : elle ne peut plus être chargée." }); break; }
-      s = m.state;
+      if (!m.state || m.state.version < MIN_SAVE_VERSION || m.state.version > SAVE_VERSION) { post({ type: 'error', message: "Sauvegarde d'une version trop ancienne du jeu : elle ne peut plus être chargée." }); break; }
+      s = migrateSave(m.state);
       relinkRuns(s);
       speed = s.mode === 'chronique' ? 1 : 0;
       if (s.mode === 'chronique') resumeChronicle(s);

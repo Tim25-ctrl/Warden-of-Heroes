@@ -10,7 +10,7 @@ import { cotisationPrice, tolerance } from '../../sim/economy';
 import { money, stamp } from '../../sim/format';
 import { departureDesire } from '../../sim/lifecycle';
 import type { Adventurer, AttrId, GameState, SkillId } from '../../sim/types';
-import { ACTIVITY_LABELS, ClassDot, Gauge, GaugeRow, Money, plain, useNav } from '../components';
+import { ACTIVITY_LABELS, ClassDot, Gauge, GaugeRow, Money, NumField, plain, useNav } from '../components';
 import { game } from '../store';
 
 type SortKey = 'name' | 'level' | 'gold' | 'morale' | 'loyalty' | 'griefs';
@@ -129,8 +129,8 @@ function Fiche({ s, a }: { s: GameState; a: Adventurer }) {
         <button class="btn small" disabled={s.treasury < 1000} onClick={() => game.command({ type: 'retain', id: a.id, kind: 'prime', amount: 1000 })} title="Envie de partir réduite, loyauté +5">Prime de 10 po</button>
         <button class="btn small" disabled={a.exemptUntil > s.tick} onClick={() => game.command({ type: 'retain', id: a.id, kind: 'exoneration' })} title="Pas de taxe pendant 2 semaines, loyauté +5">{a.exemptUntil > s.tick ? `Exonéré jusqu'au ${stamp(a.exemptUntil)}` : 'Exonération de 2 semaines'}</button>
         <label class="row"><small>Plafond de crédit</small>
-          <input type="number" min={0} step={100} value={a.creditCap ?? s.policy.creditCap} style={{ width: 80 }} aria-label="Plafond de crédit"
-            onChange={(e) => game.command({ type: 'setCreditCap', id: a.id, cap: Number((e.target as HTMLInputElement).value) || 0 })} /></label>
+          <NumField min={0} step={100} value={a.creditCap ?? s.policy.creditCap} width={80} label="Plafond de crédit"
+            onCommit={(v) => game.command({ type: 'setCreditCap', id: a.id, cap: v })} /></label>
       </div>
       <h4 style={{ marginTop: 10 }}>Pensées</h4>
       {thoughts.length === 0 && <p class="empty">Aucune pensée pour l'instant.</p>}

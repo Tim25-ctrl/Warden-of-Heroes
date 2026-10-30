@@ -1,13 +1,14 @@
-// Comptoir et marché (GDD 7.5.5) : fiscalité, fraude, resserre, rachat, acheteurs, contrats, cours.
+// Comptoir et marché (GDD 7.5.5) : personnel, fiscalité, fraude, entrepôt, rachat, acheteurs, contrats, cours.
 import { useEffect, useState } from 'preact/hooks';
-import { BUYERS, P, RESOURCES } from '../../sim/data';
-import { cotisationPrice } from '../../sim/economy';
+import { BUYERS, P, RESOURCES, ROLES } from '../../sim/data';
+import { cotisationPrice, cotisationRef, onDuty } from '../../sim/economy';
 import { money, stamp } from '../../sim/format';
 import {
-  buyerAvailable, hasInternalUse, lotValue, QUALITY_NAMES, resserreCapacity, resserreWeight, stockOfRes,
+  buyerAvailable, courtierBonus, hasInternalUse, lotValue, QUALITY_NAMES, resserreCapacity, resserreWeight, stockOfRes,
 } from '../../sim/market';
 import type { BuyerId, GameState, Policy, RachatRule, Sanction } from '../../sim/types';
-import { Gauge, PriceSlider, Tabs } from '../components';
+import { ROLE_HELP } from '../../sim/staff';
+import { Gauge, NumField, PriceInput, Tabs, useNav } from '../components';
 import { game } from '../store';
 
 const AUTOSELL: [Policy['autoSell'], string][] = [['off', 'Jamais'], ['sans_usage', 'Tout ce qui n\'a pas d\'usage interne'], ['tout', 'Tout']];
@@ -33,8 +34,8 @@ function Fiscalite({ s }: { s: GameState }) {
         <label class="row" style={{ padding: '6px 0' }}><input type="checkbox" checked={s.exemptBeginners} onChange={() => game.command({ type: 'setExemptions', beginners: !s.exemptBeginners, aide: s.exemptAide })} />Exonérer les débutants (niveau 3 et moins)</label>
         <label class="row" style={{ padding: '6px 0' }}><input type="checkbox" checked={s.exemptAide} onChange={() => game.command({ type: 'setExemptions', beginners: s.exemptBeginners, aide: !s.exemptAide })} />Exonérer les petits boulots en ville</label>
         <h3 style={{ marginTop: 14 }}>Cotisation d'inscription</h3>
-        <PriceSlider label="Cotisation" sub="payée une fois à l'arrivée" value={s.cotisationCurseur} price={cotisationPrice(s)} refPrice={Math.round(cotisationPrice(s) / s.cotisationCurseur)}
-          onCommit={(v) => game.command({ type: 'setCotisation', value: v })} />
+        <PriceInput label="Cotisation" sub="payée une fois à l'arrivée" price={cotisationPrice(s)} refPrice={cotisationRef(s)}
+          onCommit={(v) => game.command({ type: 'setCotisation', price: v })} />
       </div>
       <div class="panel">
         <h3>Fraude</h3>
@@ -51,6 +52,30 @@ function Fiscalite({ s }: { s: GameState }) {
   );
 }
 
+/** Le personnel du comptoir (v1.1) : inspecteur du butin, courtier, greffier. */
+function ComptoirStaff({ s }: { s: GameState }) {
+  const nav = useNav();
+  const roles = ['inspecteur', 'courtier', 'greffier'] as const;
+  return (
+    <div class="panel">
+      <h3>Personnel du comptoir</h3>
+      <div class="staff-cards">
+        {roles.map((r) => {
+          const team = s.staff.filter((m) => m.role === r);
+          return (
+            <div class="panel flat">
+              <div class="row"><strong>{ROLES[r].nom}</strong><span class="spacer" />
+                {team.length ? <span class="tag sage">{team.map((m) => m.name).join(', ')}</span> : <span class="tag">aucun</span>}</div>
+              <p class="hint" style={{ margin: '4px 0' }}>{ROLE_HELP[r]}</p>
+              {team.length === 0 && <button class="btn small" onClick={() => nav.go('personnel')}>Voir les candidats (Personnel)</button>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Resserre({ s }: { s: GameState }) {
   const [rules, setRules] = useState<RachatRule[]>(s.policy.rachatRules);
   const [cur, setCur] = useState(s.policy.rachatCurseur);
@@ -59,19 +84,22 @@ function Resserre({ s }: { s: GameState }) {
   useEffect(() => { setRules(s.policy.rachatRules); setCur(s.policy.rachatCurseur); }, [s.policy.rachatRules, s.policy.rachatCurseur]);
   const commit = (r: RachatRule[], c = cur) => game.command({ type: 'setRachat', curseur: c, rules: r });
   const total = s.resserre.reduce((a, l) => a + lotValue(s, l), 0);
+  const courtier = onDuty(s, 'courtier');
   return (
     <div class="grid2">
       <div class="panel">
-        <h3>Resserre</h3>
-        <p>{resserreWeight(s)} / {resserreCapacity(s)} unités de poids, valeur estimée <strong>{money(total)}</strong>. La viande alimente le rôti, les plantes et organes l'apothicairerie, et les contrats sont livrés chaque matin.</p>
+        <h3>Entrepôt des dépouilles</h3>
+        <p class="hint">L'entrepôt garde les dépouilles que la guilde prélève en taxe ou rachète au comptoir : peaux, viandes, plantes, organes. La viande alimente le rôti de la cuisine, les plantes et organes l'apothicairerie, les contrats sont livrés chaque matin, et le reste se revend en ville.</p>
+        <p>{resserreWeight(s)} / {resserreCapacity(s)} unités de poids, valeur estimée <strong>{money(total)}</strong>.</p>
         <div class="row" style={{ marginBottom: 8 }}>
-          <button class="btn" disabled={s.resserre.length === 0} onClick={() => game.command({ type: 'sellLoot', index: 'all' })}>Tout vendre (frais 5 %)</button>
+          <button class="btn" disabled={s.resserre.length === 0} onClick={() => game.command({ type: 'sellLoot', index: 'all' })}>Tout vendre ({courtier ? `sans frais, +${Math.round(courtierBonus(courtier) * 100)} % grâce au courtier` : 'frais 5 %'})</button>
           <label class="row">Vente automatique chaque matin
             <select value={s.policy.autoSell} onChange={(e) => game.command({ type: 'setAutoSell', mode: (e.target as HTMLSelectElement).value as Policy['autoSell'] })}>
               {AUTOSELL.map(([id, label]) => <option value={id}>{label}</option>)}
             </select></label>
         </div>
-        {s.resserre.length === 0 ? <p class="empty">La resserre est vide.</p> : (
+        {courtier && <p class="hint">{courtier.name}, le courtier, vend au bon moment : il garde ce dont le cours est bas, sauf ce qui va se gâter.</p>}
+        {s.resserre.length === 0 ? <p class="empty">L'entrepôt est vide.</p> : (
           <div class="table-wrap"><table class="data">
             <thead><tr><th>Ressource</th><th class="num">Qté</th><th>Qualité</th><th>Fraîcheur</th><th class="num">Valeur</th><th /></tr></thead>
             <tbody>{s.resserre.map((l, i) => (
@@ -91,7 +119,11 @@ function Resserre({ s }: { s: GameState }) {
           <input type="range" min={0.7} max={1} step={0.05} value={cur} aria-label="Prix de rachat" onInput={(e) => setCur(Number((e.target as HTMLInputElement).value))} onChange={(e) => commit(rules, Number((e.target as HTMLInputElement).value))} />
           <span class={`tag ${cur < 0.9 ? 'amber' : ''}`}>×{cur.toFixed(2).replace('.', ',')} du cours</span>
         </div>
-        <h4>Ce que la guilde rachète</h4>
+        <label class="row" style={{ padding: '6px 0' }} title={courtier ? '' : 'Engage un courtier dans l\'écran Personnel.'}>
+          <input type="checkbox" checked={!!s.policy.courtierRachat} disabled={!courtier} onChange={() => game.command({ type: 'setCourtierRachat', enabled: !s.policy.courtierRachat })} />
+          Le courtier rachète les dépouilles pour les revendre {courtier ? `(marge d'environ ${Math.round((1 + courtierBonus(courtier) - cur) * 100)} %)` : '(il faut un courtier)'}
+        </label>
+        <h4>Ce que la guilde rachète pour ses besoins</h4>
         {rules.length === 0 && <p class="empty">Rien pour l'instant.</p>}
         {rules.map((r, i) => (
           <div class="row" style={{ padding: '3px 0' }}>
@@ -105,7 +137,7 @@ function Resserre({ s }: { s: GameState }) {
           <select value={newRes} onChange={(e) => setNewRes((e.target as HTMLSelectElement).value)} aria-label="Ressource à racheter">
             {Object.entries(RESOURCES).filter(([id]) => !id.includes('dragon')).map(([id, r]) => <option value={id}>{r.nom}</option>)}
           </select>
-          <input type="number" min={1} value={newMax} style={{ width: 56 }} aria-label="Stock maximum" onInput={(e) => setNewMax(Number((e.target as HTMLInputElement).value) || 1)} />
+          <NumField min={1} value={newMax} width={56} label="Stock maximum" live onCommit={setNewMax} />
           <button class="btn small" onClick={() => { const n = [...rules.filter((r) => r.res !== newRes), { res: newRes, maxStock: newMax }]; setRules(n); commit(n); }}>Ajouter</button>
         </div>
       </div>
@@ -128,7 +160,7 @@ function Contrats({ s }: { s: GameState }) {
       </div>
       <div class="panel">
         <h3>Contrats</h3>
-        <p class="hint">Livrés automatiquement chaque matin depuis la resserre. {s.contracts.length} / {P.marche.contrats.actifsMax} en cours. Pour les remplir, publie des primes au tableau ou règle le rachat au comptoir.</p>
+        <p class="hint">Livrés automatiquement chaque matin depuis l'entrepôt. {s.contracts.length} / {P.marche.contrats.actifsMax} en cours. Pour les remplir, publie des primes au tableau ou règle le rachat au comptoir.</p>
         {s.contracts.map((c) => (
           <div class="panel flat" style={{ marginBottom: 6 }}>
             <div class="row"><strong>{c.qty} {RESOURCES[c.res].nom.toLowerCase()}</strong><small>pour {BUYERS[c.buyer].nom}</small><span class="spacer" /><span class="tag sage">+{Math.round(c.premium * 100)} %</span></div>
@@ -155,7 +187,7 @@ function Cours({ s }: { s: GameState }) {
   return (
     <div class="panel">
       <h3>Cours des dépouilles en ville</h3>
-      <p class="hint">Les cours suivent l'offre et la demande : quand on vend beaucoup de peaux de loup, leur prix baisse (GDD 2.5).</p>
+      <p class="hint">Les cours suivent l'offre et la demande : quand on vend beaucoup de peaux de loup, leur prix baisse. Les guildes rivales vendent aussi leur butin : plus elles chassent, plus le marché est approvisionné.</p>
       <input type="text" placeholder="Filtrer…" value={filter} onInput={(e) => setFilter((e.target as HTMLInputElement).value)} style={{ marginBottom: 8 }} aria-label="Filtrer les ressources" />
       <div class="table-wrap"><table class="data">
         <thead><tr><th>Ressource</th><th>Acheteur</th><th class="num">Cours</th><th class="num">Base</th><th>Tendance</th><th>Stock en ville</th></tr></thead>
@@ -180,7 +212,8 @@ export function Comptoir({ s }: { s: GameState }) {
   return (
     <div>
       <div class="screen-head"><h2>Comptoir</h2><span class="hint">Chaque retour de quête passe ici (GDD 2.4)</span></div>
-      <Tabs value={tab} onChange={setTab} tabs={[['fisc', 'Fiscalité et fraude'], ['resserre', 'Resserre et rachat'], ['contrats', `Acheteurs et contrats${s.contractOffers.length ? ` (${s.contractOffers.length})` : ''}`], ['cours', 'Cours du marché']]} />
+      <ComptoirStaff s={s} />
+      <Tabs value={tab} onChange={setTab} tabs={[['fisc', 'Fiscalité et fraude'], ['resserre', 'Entrepôt et rachat'], ['contrats', `Acheteurs et contrats${s.contractOffers.length ? ` (${s.contractOffers.length})` : ''}`], ['cours', 'Cours du marché']]} />
       {tab === 'fisc' && <Fiscalite s={s} />}
       {tab === 'resserre' && <Resserre s={s} />}
       {tab === 'contrats' && <Contrats s={s} />}

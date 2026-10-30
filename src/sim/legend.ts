@@ -1,7 +1,7 @@
 // La légende (GDD chapitre 6) : difficulté, Renommée hebdomadaire, Sceaux royaux, hauts faits, Panthéon,
 // conseils de Gaspard, prêteurs (1.1.3), Livre de la guilde et épilogue.
 import { className, rangForLevel, rangIndex } from './adventurers';
-import { P } from './data';
+import { P, ROOM_IDS } from './data';
 import progression from './data/progression.json';
 import { clamp, dormQuality, infQuality, terrainQuality } from './economy';
 import { advLink, dayOf, hourOf, money, SEASONS, seasonOf, weekdayOf, yearOf } from './format';
@@ -83,7 +83,7 @@ export function sealConditions(s: GameState): { label: string; ok: boolean }[] {
     out.push({ label: `Les 4 salles construites (${built})`, ok: built >= Number(c.sallesConstruites) });
   }
   if (c.quetesReussies) out.push({ label: `${c.quetesReussies} quêtes réussies (${C(s).quetesReussies ?? 0})`, ok: (C(s).quetesReussies ?? 0) >= Number(c.quetesReussies) });
-  if (c.salleNiveau3) out.push({ label: 'Une salle au niveau 3', ok: (['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]).some((r) => s[r].level >= 3) });
+  if (c.salleNiveau3) out.push({ label: 'Une salle au niveau 3', ok: ROOM_IDS.some((r) => s[r].level >= 3) });
   if (c.monstreRang) out.push({ label: `Un monstre de rang ${c.monstreRang} tué`, ok: (C(s).monstreRang ?? -1) >= rangIndex(c.monstreRang as Rang) });
   if (c.sansDetteJours) {
     const days = Math.floor((s.tick - Math.max(s.loans.lastDebtTick, -1e8)) / H);
@@ -359,6 +359,8 @@ export function advise(s: GameState, key: string, data: Record<string, string | 
 function hourlyGaspard(s: GameState): void {
   const day = dayOf(s.tick);
   const early = day <= 10;
+  // Un conseil laissé sans réponse se périme au bout de 3 jours : il ne reste pas affiché toute la partie.
+  if (s.gaspard?.queue.length) s.gaspard.queue = s.gaspard.queue.filter((a) => s.tick - a.tick < 3 * H);
   if (day === 1 && hourOf(s.tick) >= 7) advise(s, 'intro');
   if (early && s.doorCandidates.length) advise(s, 'candidat');
   const cereales = s.refectoire.pantry.filter((l) => l.denree === 'cereales').reduce((a, l) => a + l.qty, 0);

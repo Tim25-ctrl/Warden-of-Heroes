@@ -2,7 +2,7 @@
 import { className, createAdventurer, hasTrait, visibleTraits } from './adventurers';
 import { hourlyAilments } from './ailments';
 import { P, TRAITS } from './data';
-import { clamp, cotisationPrice, hasModule } from './economy';
+import { clamp, cotisationPrice, cotisationRef, hasModule } from './economy';
 import { advLink, money } from './format';
 import { earn, log, spend, think, flow } from './journal';
 import { chance, randInt, range } from './rng';
@@ -176,7 +176,7 @@ export function weekPriceRatio(s: GameState): number {
 }
 
 export function spawnCandidates(s: GameState): void {
-  const fCot = clamp(1.5 - 0.5 * s.cotisationCurseur, 0.2, 1.5);
+  const fCot = clamp(1.5 - 0.5 * (cotisationPrice(s) / cotisationRef(s)), 0.2, 1.5);
   const fPrix = clamp(1.6 - 0.6 * weekPriceRatio(s), 0.3, 1.3);
   const fTax = s.taxRate > 0.3 ? 0.5 : s.taxRate <= 0.1 ? 1.2 : 1;
   const expected = P.aventuriers.candidatsParJour * fCot * fPrix * fTax * recruitShareFactor(s);

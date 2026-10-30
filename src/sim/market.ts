@@ -1,12 +1,12 @@
 // Bourse des dépouilles, acheteurs, contrats, resserre (GDD 2.4, 2.5).
 import { BUYERS, P, RECIPES, RESOURCES } from './data';
-import { clamp, hasModule, IP } from './economy';
+import { clamp, hasModule, IP, onDuty } from './economy';
 import { money } from './format';
 import { earn, log } from './journal';
 import { modMult } from './mods';
 import { onSale } from './legend';
 import { chance, pick, randInt, range } from './rng';
-import type { BuyerId, Contract, GameState, Money, Quality, ResLot } from './types';
+import type { BuyerId, Contract, GameState, Money, Quality, ResLot, StaffMember } from './types';
 
 export const QUALITY_MULT: Record<Quality, number> = { intacte: 1, abimee: 0.6, ruinee: 0.25 };
 export const QUALITY_NAMES: Record<Quality, string> = { intacte: 'intacte', abimee: 'abîmée', ruinee: 'ruinée' };
@@ -67,9 +67,11 @@ export function buyerFor(s: GameState, res: string): BuyerId {
 
 /** Vente en ville : l'offre augmente, les frais sont retenus. La guilde profite de sa réputation. */
 export function sellInTown(s: GameState, lot: ResLot, seller: 'aventurier' | 'guilde'): Money {
-  const fee = seller === 'guilde' ? P.comptoir.fraisVenteGuilde : P.comptoir.fraisVenteAventurier;
+  // Le courtier négocie les ventes de la guilde : pas de frais, et un bonus selon sa compétence (v1.1).
+  const courtier = seller === 'guilde' ? onDuty(s, 'courtier') : undefined;
+  const fee = seller === 'guilde' ? (courtier ? 0 : P.comptoir.fraisVenteGuilde) : P.comptoir.fraisVenteAventurier;
   const b = buyerFor(s, lot.res);
-  const rep = seller === 'guilde' ? (s.buyers[b] / 100) * P.marche.repBonusMax : 0;
+  const rep = seller === 'guilde' ? (s.buyers[b] / 100) * P.marche.repBonusMax + (courtier ? courtierBonus(courtier) : 0) : 0;
   const v = Math.round(lotValue(s, lot) * (1 + rep) * (1 - fee));
   if (s.market[lot.res]) s.market[lot.res].S += lot.qty;
   onSale(s, lot.res, lot.qty, lot.qty ? v / lot.qty : 0, RESOURCES[lot.res].prix);
@@ -86,7 +88,7 @@ export function sellResserreLot(s: GameState, index: number): Money {
   return v;
 }
 
-// ---------- Resserre (2.4.2) ----------
+// ---------- Entrepôt des dépouilles (2.4.2 ; « resserre » dans le code) ----------
 
 export function resserreCapacity(s: GameState): number {
   return P.comptoir.resserreBase + (hasModule(s, 'resserre1') ? 100 : 0) + (hasModule(s, 'resserre2') ? 100 : 0);
@@ -137,7 +139,7 @@ export function hasInternalUse(s: GameState, res: string): boolean {
   if (s.contracts.some((c) => c.res === res)) return true;
   const apothecary = s.infirmerie.level >= 3 && s.staff.some((m) => m.role === 'apothicaire');
   if (apothecary && RECIPES.some((r) => r.ingredients[res])) return true;
-  if (RESOURCES[res].categorie === 'viande' && s.refectoire.menu.includes('roti') && s.refectoire.level >= 3) return true;
+  if (RESOURCES[res].categorie === 'viande' && s.refectoire.menu.includes('roti') && s.cuisine.level >= 3) return true;
   return false;
 }
 
@@ -153,13 +155,31 @@ export function ageLots(s: GameState, lots: ResLot[]): ResLot[] {
   return lots.filter((l) => l.fresh > 0.001 && l.qty > 0);
 }
 
-/** Vente automatique du matin selon la consigne (1.10). */
+export function courtierBonus(m: StaffMember): number {
+  const c = P.comptoir.courtier;
+  return c.bonusBase + c.bonusParC * m.c;
+}
+
+/** Le courtier attend un bon cours, sauf pour ce qui va se gâter ou quand l'entrepôt déborde. */
+function goodTimeToSell(s: GameState, lot: ResLot): boolean {
+  const c = P.comptoir.courtier;
+  const cours = s.market[lot.res]?.cours ?? RESOURCES[lot.res].prix;
+  if (cours >= c.coursMin * RESOURCES[lot.res].prix * IP(s)) return true;
+  if (RESOURCES[lot.res].conservation && lot.fresh < c.fraicheurVente) return true;
+  return resserreWeight(s) > c.entrepotVente * resserreCapacity(s);
+}
+
+/** Vente automatique du matin selon la consigne (1.10). Avec un courtier, il choisit le moment (v1.1). */
 export function autoSell(s: GameState): void {
-  if (s.policy.autoSell === 'off') return;
+  const courtier = onDuty(s, 'courtier');
+  // Le courtier revend ce qu'il a racheté, même si la consigne est « jamais ».
+  const mode = s.policy.autoSell === 'off' && courtier && s.policy.courtierRachat ? 'sans_usage' : s.policy.autoSell;
+  if (mode === 'off') return;
   let total = 0;
   for (let i = s.resserre.length - 1; i >= 0; i--) {
     const lot = s.resserre[i];
-    if (s.policy.autoSell === 'sans_usage' && hasInternalUse(s, lot.res)) continue;
+    if (mode === 'sans_usage' && hasInternalUse(s, lot.res)) continue;
+    if (courtier && !goodTimeToSell(s, lot)) continue;
     total += sellResserreLot(s, i);
   }
   if (total > 0) log(s, 'economie', 'detail', `Vente automatique de dépouilles : ${money(total)}.`);
@@ -169,7 +189,8 @@ export function autoSell(s: GameState): void {
 
 export function generateContractOffers(s: GameState): void {
   s.contractOffers = s.contractOffers.filter((c) => c.offerUntil > s.tick);
-  const n = randInt(s, 'marche', P.marche.contrats.offresParSemaine[0], P.marche.contrats.offresParSemaine[1]);
+  const n = randInt(s, 'marche', P.marche.contrats.offresParSemaine[0], P.marche.contrats.offresParSemaine[1])
+    + (onDuty(s, 'courtier') ? P.comptoir.courtier.offresContrats : 0);   // le courtier décroche des commandes en plus
   const candidates = Object.keys(RESOURCES).filter((r) => RESOURCES[r].prix <= 250 && RESOURCES[r].categorie !== 'objet');
   for (let i = 0; i < n; i++) {
     const res = pick(s, 'marche', candidates);

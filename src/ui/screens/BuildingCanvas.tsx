@@ -49,18 +49,25 @@ function grid(box: Box, n: number, cols: number, padX = 22, padY = 40, dx = 30, 
 
 interface Bed { type: BedType; x: number; y: number; w: number; h: number }
 
+/** Lits du dortoir. Quand ils ne tiennent plus dans la salle (grands niveaux), on les dessine plus petits. */
 function layoutBeds(s: GameState): Bed[] {
-  const beds: Bed[] = [];
+  const box = ROOMS.dortoirs;
   const order: BedType[] = ['suite', 'individuelle', 'commun', 'paillasse'];
-  let x = ROOMS.dortoirs.x + 16;
-  let y = ROOMS.dortoirs.y + 32;
-  for (const t of order) {
-    for (let i = 0; i < s.dortoirs.beds[t]; i++) {
-      const w = t === 'suite' ? 70 : t === 'individuelle' ? 44 : 26;
-      if (x + w > ROOMS.dortoirs.x + ROOMS.dortoirs.w - 10) { x = ROOMS.dortoirs.x + 16; y += 30; }
-      beds.push({ type: t, x, y, w, h: t === 'suite' ? 26 : t === 'individuelle' ? 22 : 14 });
-      x += w + 6;
+  const bottom = box.y + box.h - 20;   // sous cette ligne : le décompte des lits
+  let beds: Bed[] = [];
+  for (const k of [1, 0.85, 0.7, 0.6, 0.5]) {
+    beds = [];
+    let x = box.x + 16;
+    let y = box.y + 32;
+    for (const t of order) {
+      for (let i = 0; i < s.dortoirs.beds[t]; i++) {
+        const w = (t === 'suite' ? 70 : t === 'individuelle' ? 44 : 26) * k;
+        if (x + w > box.x + box.w - 10) { x = box.x + 16; y += 30 * k; }
+        beds.push({ type: t, x, y, w, h: (t === 'suite' ? 26 : t === 'individuelle' ? 22 : 14) * k });
+        x += w + 6 * k;
+      }
     }
+    if (beds.every((b) => b.y + b.h <= bottom)) break;
   }
   return beds;
 }
@@ -69,13 +76,34 @@ function seatSlots(n: number): Slot[] {
   const box = ROOMS.refectoire;
   const slots: Slot[] = [];
   const tables = Math.ceil(n / 4);
+  // 5 tables par rangée : les 40 places du niveau 5 tiennent sur deux rangées.
   for (let t = 0; t < tables; t++) {
-    const tx = box.x + 30 + (t % 4) * 80;
-    const ty = box.y + 50 + Math.floor(t / 4) * 52;
+    const tx = box.x + 24 + (t % 5) * 64;
+    const ty = box.y + 46 + Math.floor(t / 5) * 54;
     const pos = [[0, -12], [28, -12], [0, 26], [28, 26]];
     for (let k = 0; k < 4 && slots.length < n; k++) slots.push({ x: tx + pos[k][0], y: ty + pos[k][1] });
   }
   return slots;
+}
+
+function infBedBoxes(n: number): Box[] {
+  return Array.from({ length: n }, (_, i) => ({
+    x: ROOMS.infirmerie.x + 12 + (i % 7) * 32,
+    y: ROOMS.infirmerie.y + 32 + Math.floor(i / 7) * 30,
+    w: 26, h: 14,
+  }));
+}
+
+/** Petit carré du personnel, avec une lettre. */
+function staffBadge(ctx: CanvasRenderingContext2D, p: Palette, x: number, y: number, color: string, letter: string) {
+  ctx.fillStyle = color;
+  roundRect(ctx, { x: x - 8, y: y - 8, w: 16, h: 16 }, 4);
+  ctx.fill();
+  ctx.fillStyle = p.panel;
+  ctx.font = `700 10px ${p.text}`;
+  ctx.textAlign = 'center';
+  ctx.fillText(letter, x, y + 4);
+  ctx.textAlign = 'left';
 }
 
 interface Target { x: number; y: number; bubble: string; label: string }
@@ -90,11 +118,14 @@ function computeTargets(s: GameState): Map<number, Target> {
   let hallI = 0;
   const villeSlots = grid(ROOMS.ville, 30, 6, 22, 44, 28, 24);
   let villeI = 0;
-  const infSlots = grid(ROOMS.infirmerie, 20, 6, 24, 44, 34, 30);
+  // Patients couchés sur les lits de l'infirmerie (mêmes positions que le dessin des lits)
+  const infSlots = infBedBoxes(20).map((b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 }));
   let infI = 0;
-  const terrainSlots = grid(ROOMS.terrain, 40, 20, 150, 40, 28, 26);
+  // Les élèves se tiennent à droite des professeurs
+  const terrainSlots = grid(ROOMS.terrain, 40, 17, 230, 40, 28, 26);
   let terI = 0;
-  const waiting = grid({ x: ROOMS.refectoire.x, y: ROOMS.refectoire.y + 110, w: 0, h: 0 }, 20, 10, 14, 34, 22, 20);
+  // File d'attente le long du bas du réfectoire
+  const waiting = grid({ x: ROOMS.refectoire.x, y: ROOMS.refectoire.y + ROOMS.refectoire.h - 46, w: 0, h: 0 }, 15, 15, 14, 34, 22, 20);
   let waitI = 0;
 
   const advs = [...s.adventurers].sort((a, b) => a.id - b.id);
@@ -265,7 +296,7 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen }: {
       drawRoom(ctx, p, ROOMS.dortoirs, 'Dortoirs', `niveau ${d.level} · propreté ${Math.round(d.proprete)}`, sel === 'dortoirs', !!d.works);
       drawRoom(ctx, p, ROOMS.comptoir, 'Comptoir', 'et grand hall', sel === 'comptoir', false);
       drawRoom(ctx, p, ROOMS.refectoire, 'Réfectoire', `niveau ${r.level} · ${seats(st)} places`, sel === 'refectoire', !!r.works);
-      drawRoom(ctx, p, ROOMS.cuisine, 'Cuisine', '', sel === 'cuisine', false);
+      drawRoom(ctx, p, ROOMS.cuisine, 'Cuisine', `niveau ${st.cuisine.level}`, sel === 'cuisine', !!st.cuisine.works);
       drawRoom(ctx, p, ROOMS.ville, 'En ville', '', sel === 'ville', false);
       const inf = st.infirmerie;
       const ter = st.terrain;
@@ -285,26 +316,20 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen }: {
         ctx.fillText('Cliquer pour construire', b.x + 14, b.y + b.h / 2 + 8);
       }
       // Lits de l'infirmerie et soigneurs
-      for (let i = 0; i < infBeds(st); i++) {
-        const x = ROOMS.infirmerie.x + 12 + (i % 7) * 32;
-        const y = ROOMS.infirmerie.y + 32 + Math.floor(i / 7) * 30;
+      for (const b of infBedBoxes(infBeds(st))) {
         ctx.fillStyle = '#d9d4c7';
         ctx.globalAlpha = 0.6;
-        roundRect(ctx, { x, y, w: 26, h: 14 }, 3);
+        roundRect(ctx, b, 3);
         ctx.fill();
         ctx.globalAlpha = 1;
       }
       st.staff.filter((m) => m.role === 'soigneur' || m.role === 'apothicaire').forEach((m, i) => {
-        const x = ROOMS.infirmerie.x + ROOMS.infirmerie.w - 20 - i * 22;
-        const y = ROOMS.infirmerie.y + ROOMS.infirmerie.h - 18;
-        ctx.fillStyle = p.sage;
-        roundRect(ctx, { x: x - 8, y: y - 8, w: 16, h: 16 }, 4);
-        ctx.fill();
-        ctx.fillStyle = p.panel;
-        ctx.font = `700 10px ${p.text}`;
-        ctx.textAlign = 'center';
-        ctx.fillText(m.role === 'soigneur' ? '✚' : 'A', x, y + 4);
-        ctx.textAlign = 'left';
+        staffBadge(ctx, p, ROOMS.infirmerie.x + ROOMS.infirmerie.w - 20 - i * 22, ROOMS.infirmerie.y + ROOMS.infirmerie.h - 18,
+          p.sage, m.role === 'soigneur' ? '✚' : 'A');
+      });
+      // Intendant et inspecteur du butin : derrière le comptoir
+      st.staff.filter((m) => m.role === 'intendant' || m.role === 'inspecteur').forEach((m, i) => {
+        staffBadge(ctx, p, ROOMS.comptoir.x + ROOMS.comptoir.w - 20 - i * 22, ROOMS.comptoir.y + 12, p.amber, m.role === 'intendant' ? 'I' : 'B');
       });
       // Professeurs sur le terrain
       ter.profs.forEach((pr, i) => {
@@ -337,25 +362,18 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen }: {
 
       // Tables du réfectoire
       const sl = seatSlots(Math.max(seats(st), 1));
+      ctx.fillStyle = '#8c6d46';
+      ctx.globalAlpha = 0.55;
       for (let t = 0; t < sl.length; t += 4) {
-        ctx.fillStyle = p.wood;
         roundRect(ctx, { x: sl[t].x - 4, y: sl[t].y + 6, w: 36, h: 14 }, 3);
         ctx.fill();
       }
+      ctx.globalAlpha = 1;
 
-      // Cuisine : le personnel
-      const staff = st.staff.filter((m) => m.role !== 'valet');
-      staff.forEach((m, i) => {
-        const x = ROOMS.cuisine.x + 22 + (i % 4) * 30;
-        const y = ROOMS.cuisine.y + 56 + Math.floor(i / 4) * 34;
-        ctx.fillStyle = m.role === 'cuisinier' ? p.ink : p.soft;
-        roundRect(ctx, { x: x - 8, y: y - 8, w: 16, h: 16 }, 4);
-        ctx.fill();
-        ctx.fillStyle = p.panel;
-        ctx.font = `700 10px ${p.text}`;
-        ctx.textAlign = 'center';
-        ctx.fillText(m.role === 'cuisinier' ? 'C' : 'c', x, y + 4);
-        ctx.textAlign = 'left';
+      // Cuisine : cuisiniers et commis seulement (les autres employés ont leur place ailleurs)
+      st.staff.filter((m) => m.role === 'cuisinier' || m.role === 'commis').forEach((m, i) => {
+        staffBadge(ctx, p, ROOMS.cuisine.x + 22 + (i % 4) * 30, ROOMS.cuisine.y + 56 + Math.floor(i / 4) * 34,
+          m.role === 'cuisinier' ? p.ink : p.soft, m.role === 'cuisinier' ? 'C' : 'c');
       });
       ctx.fillStyle = p.faint;
       ctx.font = `11px ${p.text}`;

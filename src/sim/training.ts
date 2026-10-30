@@ -29,7 +29,7 @@ export function createProf(s: GameState, type?: ProfType): Professor {
     eleves: randInt(s, 'personnel', 4, 8),
     ego: randInt(s, 'personnel', 1, 2),
     slots: { matin: true, apresmidi: false, soir: false },
-    curseur: 1,
+    prix: 0,                           // fixé à l'embauche (valeur de la séance)
     loyalty: 60,
     unpaidDays: 0,
     hiredTick: s.tick,
@@ -58,6 +58,7 @@ export function hireProf(s: GameState, id: number): boolean {
   const p = s.profCandidates[i];
   s.profCandidates.splice(i, 1);
   p.hiredTick = s.tick;
+  if (!p.prix) p.prix = sessionRef(s, p);   // prix de départ : la valeur de sa séance
   s.terrain.profs.push(p);
   log(s, 'guilde', 'important', `${p.name}, ${PROFS[p.type].nom.toLowerCase()} de niveau ${p.level}, rejoint le terrain (${money(profSalary(p))} par jour).`);
   if (p.ancien) unlock(s, 'retraite_doree');

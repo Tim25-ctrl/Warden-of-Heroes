@@ -1,11 +1,12 @@
 // Tableau des quêtes (GDD 7.5.4), primes du joueur (4.4), régions et populations (2.7).
 import { useState } from 'preact/hooks';
 import { ATTR_NAMES, RESOURCES, SPECIES, ZONE_IDS, ZONES } from '../../sim/data';
+import { onDuty } from '../../sim/economy';
 import { money, stamp } from '../../sim/format';
-import { popOf, zoneDanger } from '../../sim/populations';
+import { huntClosed, popOf, zoneDanger } from '../../sim/populations';
 import { activePrimes, boardCapacity, boardQuests, dangerDots, maxPrimes, QUEST_TYPE_NAMES, questValue } from '../../sim/quests';
 import type { GameState, Quest } from '../../sim/types';
-import { ClassDot, Gauge, RankBadge, RichText, Tabs } from '../components';
+import { ClassDot, Gauge, NumField, RankBadge, RichText, Tabs } from '../components';
 import { game, lastError } from '../store';
 
 const DOTS = ['', 'Faible', 'Modéré', 'Sérieux', 'Élevé', 'Extrême'];
@@ -23,7 +24,7 @@ function Notice({ s, q }: { s: GameState; q: Quest }) {
       <h4>{q.title}</h4>
       <div class="hint">Pour {q.client}{q.bonus > 0 && <> · <span class="tag amber">bonus de la guilde {money(q.bonus)}</span></>}</div>
       <div class="row" style={{ marginTop: 6 }}>
-        <span class="danger-dots" title="Danger estimé par le greffier (peut se tromper de ±15 %)">{'●'.repeat(d)}{'○'.repeat(5 - d)}</span>
+        <span class="danger-dots" title={onDuty(s, 'greffier') ? 'Danger estimé par le greffier : exact' : 'Danger estimé (peut se tromper de ±15 % ; exact avec un greffier)'}>{'●'.repeat(d)}{'○'.repeat(5 - d)}</span>
         <small>{DOTS[d]}</small><span class="spacer" />
         <small>{q.minMembers === q.maxMembers ? `${q.minMembers} aventurier` : `${q.minMembers} à ${q.maxMembers} aventuriers`}</small>
       </div>
@@ -32,7 +33,7 @@ function Notice({ s, q }: { s: GameState; q: Quest }) {
           : !run ? `Expire ${stamp(q.expires)}` : run.stage === 'preparation' ? `Réservée : départ ${stamp(run.departTick)}` : `En cours (${run.members.length} aventurier${run.members.length > 1 ? 's' : ''})`}
       </div>
       {!run && !guild && (bonus
-        ? <div class="row" style={{ marginTop: 6 }}><input type="number" min={50} step={50} value={amount} style={{ width: 70 }} aria-label="Montant du bonus" onInput={(e) => setAmount(Number((e.target as HTMLInputElement).value) || 0)} />
+        ? <div class="row" style={{ marginTop: 6 }}><NumField min={50} step={50} value={amount} width={70} label="Montant du bonus" live onCommit={setAmount} />
           <small>{money(amount)}</small><button class="btn small" onClick={() => { game.command({ type: 'addBonus', questId: q.id, amount }); setBonus(false); }}>Ajouter</button></div>
         : <button class="link" style={{ marginTop: 6 }} onClick={() => setBonus(true)}>+ Ajouter un bonus</button>)}
     </div>
@@ -60,10 +61,10 @@ function PrimeForm({ s }: { s: GameState }) {
         <label class="field">Zone<select value={zone} onChange={(e) => setZone((e.target as HTMLSelectElement).value)}>
           {ZONE_IDS.map((z) => <option value={z}>{ZONES[z].nom}</option>)}</select></label>
         <label class="field">Cible<select value={t} onChange={(e) => setTarget((e.target as HTMLSelectElement).value)}>
-          {targets.map((x) => <option value={x}>{type === 'cueillette' ? RESOURCES[x].nom : SPECIES[x].pluriel}</option>)}</select></label>
-        <label class="field">Nombre<input type="number" min={1} max={30} value={count} style={{ width: 64 }} onInput={(e) => setCount(Number((e.target as HTMLInputElement).value) || 1)} /></label>
-        <label class="field">Récompense (pc)<input type="number" min={50} step={50} value={reward} style={{ width: 90 }} onInput={(e) => setReward(Number((e.target as HTMLInputElement).value) || 0)} /></label>
-        <label class="field">Durée (jours)<input type="number" min={2} max={14} value={days} style={{ width: 60 }} onInput={(e) => setDays(Number((e.target as HTMLInputElement).value) || 2)} /></label>
+          {targets.map((x) => <option value={x}>{type === 'cueillette' ? RESOURCES[x].nom : `${SPECIES[x].pluriel}${huntClosed(s, zone, x) ? ' (chasse fermée)' : ''}`}</option>)}</select></label>
+        <label class="field">Nombre<NumField min={1} max={30} value={count} width={64} live onCommit={setCount} /></label>
+        <label class="field">Récompense (pc)<NumField min={50} step={50} value={reward} width={90} live onCommit={setReward} /></label>
+        <label class="field">Durée (jours)<NumField min={2} max={14} value={days} width={60} live onCommit={setDays} /></label>
         <button class="btn seal" disabled={!can || reward > s.treasury} onClick={() => game.command({ type: 'createPrime', questType: type, zone, target: t, count, reward, days })}>Publier ({money(reward)})</button>
       </div>
       {err && <p class="hint" style={{ color: 'var(--seal)' }}>{err}</p>}

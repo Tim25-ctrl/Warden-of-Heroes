@@ -1,14 +1,12 @@
 // Mode consultation (GDD 7.9) : l'essentiel sur téléphone, avec les actions rapides.
 import { BEDS, CLASSES, DISHES, DORM_LEVELS } from '../../sim/data';
-import { bedPrice, dishPrice, dishUnlocked } from '../../sim/economy';
+import { bedPrice, bedRef, dishPrice, dishRef, dishUnlocked, innPrice, tavernPrice } from '../../sim/economy';
 import { dayOf, money } from '../../sim/format';
 import { questValue } from '../../sim/quests';
 import type { BedType, DishId, GameState } from '../../sim/types';
-import { RichText } from '../components';
+import { PriceInput, RichText } from '../components';
 import { game } from '../store';
 import { DecisionCard } from './Chroniques';
-
-const step = (v: number, d: number) => Math.round((v + d) * 20) / 20;
 
 export function Consultation({ s }: { s: GameState }) {
   const alerts = s.journal.filter((e) => e.lvl === 'critique' && e.tick > s.tick - 48).slice(-6).reverse();
@@ -63,24 +61,12 @@ export function Consultation({ s }: { s: GameState }) {
       <div class="panel">
         <h3>Tarifs</h3>
         {beds.map((b) => (
-          <div class="card-row">
-            <div>{BEDS[b].nom}<div class="hint">{money(bedPrice(s, b))} la nuit</div></div>
-            <div class="row">
-              <button class="btn ghost" aria-label={`Baisser le prix : ${BEDS[b].nom}`} onClick={() => game.command({ type: 'setBedCurseur', bed: b, value: step(s.dortoirs.curseurs[b], -0.05) })}>−</button>
-              <span class="num">×{s.dortoirs.curseurs[b].toFixed(2)}</span>
-              <button class="btn ghost" aria-label={`Monter le prix : ${BEDS[b].nom}`} onClick={() => game.command({ type: 'setBedCurseur', bed: b, value: step(s.dortoirs.curseurs[b], 0.05) })}>+</button>
-            </div>
-          </div>
+          <PriceInput label={BEDS[b].nom} sub="la nuit" price={bedPrice(s, b)} refPrice={bedRef(s, b)} competitor={innPrice(s)}
+            onCommit={(v) => game.command({ type: 'setBedPrix', bed: b, price: v })} />
         ))}
         {dishes.map((d) => (
-          <div class="card-row">
-            <div>{DISHES[d].nom}<div class="hint">{money(dishPrice(s, d))}</div></div>
-            <div class="row">
-              <button class="btn ghost" aria-label={`Baisser le prix : ${DISHES[d].nom}`} onClick={() => game.command({ type: 'setDishCurseur', dish: d, value: step(s.refectoire.curseurs[d], -0.05) })}>−</button>
-              <span class="num">×{s.refectoire.curseurs[d].toFixed(2)}</span>
-              <button class="btn ghost" aria-label={`Monter le prix : ${DISHES[d].nom}`} onClick={() => game.command({ type: 'setDishCurseur', dish: d, value: step(s.refectoire.curseurs[d], 0.05) })}>+</button>
-            </div>
-          </div>
+          <PriceInput label={DISHES[d].nom} price={dishPrice(s, d)} refPrice={dishRef(s, d)} competitor={tavernPrice(s)}
+            onCommit={(v) => game.command({ type: 'setDishPrix', dish: d, price: v })} />
         ))}
       </div>
 

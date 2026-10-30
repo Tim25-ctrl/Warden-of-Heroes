@@ -2,7 +2,7 @@
 import { createAdventurer } from './adventurers';
 import { stepAdventurers } from './ai';
 import { DENREES, P, REMEDES } from './data';
-import { buildingValue, clamp, placeOrder, syncDifficulty } from './economy';
+import { bedRef, buildingValue, careRef, clamp, cotisationRef, defaultPrices, dishRef, placeOrder, saleRef, sessionRef, syncDifficulty } from './economy';
 import { dayOf, hourOf, money, weekdayOf } from './format';
 import { buyRemedy, craftHour, gardenHarvest, remedyRestock } from './infirmary';
 import { closeDay, log, newDay, spend } from './journal';
@@ -19,12 +19,12 @@ import progression from './data/progression.json';
 import { borrow, diff, gaspardAck, hourlyLegend, initLegend, morningLegend, pickForPantheon, repay, setDifficulty, weeklyRenown } from './legend';
 import { modMult } from './mods';
 import { range, seedStreams } from './rng';
-import { decide, hourlyWorld, initWorld, morningWorld, repairRoom } from './world';
+import { addRival, decide, hourlyWorld, initWorld, morningWorld, repairRoom } from './world';
 import { buyModule, hourlyRooms, morningRooms, repairFurniture, restockCheck, setBeds, startUpgrade } from './rooms';
 import { checkTeams, eveningSocial } from './social';
 import { createStaff, fire, hire, payrollAndProgress, renewStaffCandidates } from './staff';
 import { createProf, dailyProfOffers, fireProf, hireProf, profPayroll } from './training';
-import type { ClassId, Command, DifficultyId, GameState, LogEntry, RemedeId } from './types';
+import type { BedType, ClassId, Command, DifficultyId, DishId, GameState, LogEntry, RemedeId } from './types';
 
 export interface NewGameOptions {
   seed: number; mode?: 'classique' | 'chronique'; startHour?: number;
@@ -33,8 +33,35 @@ export interface NewGameOptions {
 
 const zeroRemedes = () => Object.fromEntries(Object.keys(REMEDES).map((k) => [k, 0])) as Record<RemedeId, number>;
 
-/** Version du format de sauvegarde : une sauvegarde d'une autre version ne se charge pas. */
-export const SAVE_VERSION = 4;
+/** Version du format de sauvegarde. Les sauvegardes depuis MIN_SAVE_VERSION sont converties au chargement. */
+export const SAVE_VERSION = 5;
+export const MIN_SAVE_VERSION = 4;
+
+/** Convertit une sauvegarde d'une version précédente (v4 : prix en curseurs autour d'une référence). */
+export function migrateSave(s: GameState): GameState {
+  const old = s as unknown as Record<string, any>;   // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (s.version === 4) {
+    // La cuisine devient une salle à part (v1.1) : elle reprend le niveau du réfectoire, pour garder les mêmes plats.
+    s.cuisine = { level: s.refectoire.level, works: null };
+    // Une troisième guilde rivale ouvre ses portes (v1.1).
+    if (!s.world.rivals.some((r) => r.profil === 'chasseurs')) addRival(s, 'chene', 'La Confrérie du Chêne', 'chasseurs', 25);
+    const cur = (v: number | undefined) => v ?? 1;
+    // Prix fixés directement (v1.1) : on garde le prix affiché au moment de la sauvegarde.
+    s.dortoirs.prix = {} as GameState['dortoirs']['prix'];
+    for (const b of Object.keys(old.dortoirs.curseurs ?? {}) as BedType[]) s.dortoirs.prix[b] = Math.max(1, Math.round(bedRef(s, b) * cur(old.dortoirs.curseurs[b])));
+    s.refectoire.prix = {} as GameState['refectoire']['prix'];
+    for (const d of Object.keys(old.refectoire.curseurs ?? {}) as DishId[]) s.refectoire.prix[d] = Math.max(1, Math.round(dishRef(s, d) * cur(old.refectoire.curseurs[d])));
+    s.infirmerie.prixSoins = Math.max(1, Math.round(careRef(s, 'plaie', 1) * cur(old.infirmerie.curseurSoins)));
+    s.infirmerie.prixVente = Math.max(1, Math.round(saleRef(s, 'potion') * cur(old.infirmerie.curseurVente)));
+    s.terrain.prixLibre = Math.max(1, Math.round(sessionRef(s, null) * cur(old.terrain.libreCurseur)));
+    for (const p of [...s.terrain.profs, ...s.profCandidates]) p.prix = Math.max(1, Math.round(sessionRef(s, p) * cur((p as unknown as { curseur?: number }).curseur)));
+    s.cotisationPrix = Math.max(1, Math.round(cotisationRef(s) * cur(old.cotisationCurseur)));
+    delete old.dortoirs.curseurs; delete old.refectoire.curseurs; delete old.infirmerie.curseurSoins; delete old.infirmerie.curseurVente;
+    delete old.terrain.libreCurseur; delete old.cotisationCurseur;
+    s.version = 5;
+  }
+  return s;
+}
 
 export function createGame(o: NewGameOptions): GameState {
   // En mode Chronique, l'horloge du jeu suit l'heure locale du joueur (0.5).
@@ -55,17 +82,17 @@ export function createGame(o: NewGameOptions): GameState {
     taxRate: P.comptoir.tauxDefaut,
     exemptBeginners: false,
     exemptAide: false,
-    cotisationCurseur: 1,
+    cotisationPrix: 0,
     dortoirs: {
       level: 1, works: null,
       beds: { paillasse: 12, commun: 0, individuelle: 0, suite: 0 }, pendingBeds: null,
       proprete: 70,
-      curseurs: { paillasse: 1, commun: 1, individuelle: 1, suite: 1 },
+      prix: { paillasse: 0, commun: 0, individuelle: 0, suite: 0 },
     },
     refectoire: {
       level: 1, works: null,
       menu: ['gruau', 'ragout'],
-      curseurs: { gruau: 1, ragout: 1, roti: 1, festin: 1, biere: 1, vin: 1, panier: 1 },
+      prix: { gruau: 0, ragout: 0, roti: 0, festin: 0, biere: 0, vin: 0, panier: 0 },
       pantry: [
         { denree: 'cereales', qty: 60, fresh: 1 },
         { denree: 'legumes', qty: 30, fresh: 1 },
@@ -75,11 +102,12 @@ export function createGame(o: NewGameOptions): GameState {
       queue: [],
       damage: 0,
     },
+    cuisine: { level: 1, works: null },
     infirmerie: {
-      level: 0, works: null, remedes: zeroRemedes(), curseurSoins: 1, curseurVente: 1,
+      level: 0, works: null, remedes: zeroRemedes(), prixSoins: 0, prixVente: 0,
       queue: [], craftedToday: 0, autoCraft: {}, restock: {}, treatedThisHour: 0,
     },
-    terrain: { level: 0, works: null, profs: [], libreCurseur: 1 },
+    terrain: { level: 0, works: null, profs: [], prixLibre: 0 },
     modules: [],
     memorial: [],
     restock: {
@@ -171,6 +199,8 @@ export function createGame(o: NewGameOptions): GameState {
   initPopulations(s);
   initWorld(s);
   s.danger = regionalDanger(s);
+  defaultPrices(s);
+  for (const p of s.profCandidates) p.prix = sessionRef(s, p);
   generateQuests(s, true);
   generateContractOffers(s);
   log(s, 'guilde', 'important', 'Vous prenez la tête de la guilde. Dix aventuriers comptent sur vous pour les loger et les nourrir.');
@@ -207,6 +237,10 @@ function midnight(s: GameState): void {
   }
   closeDay(s);
   s.stats.services = {};
+  s.refectoire.eatenYesterday = s.refectoire.eaten ?? {};
+  s.refectoire.eaten = {};
+  s.refectoire.ranOutYesterday = s.refectoire.ranOut ?? [];
+  s.refectoire.ranOut = [];
 }
 
 function morning(s: GameState): void {
@@ -263,13 +297,14 @@ export function stepDays(s: GameState, days: number): void {
 
 // ---------- Commandes du joueur ----------
 
-const cur = (v: number) => clamp(Math.round(v * 20) / 20, P.tarifs.curseurMin, P.tarifs.curseurMax);
+/** Prix saisi par le joueur : au moins 1 pc. */
+const prix = (v: number) => clamp(Math.round(v), 1, 10_000_000);
 
 /** Applique une commande. Renvoie un message d'erreur éventuel, à afficher au joueur. */
 export function applyCommand(s: GameState, c: Command): string | null {
   switch (c.type) {
-    case 'setBedCurseur': s.dortoirs.curseurs[c.bed] = cur(c.value); break;
-    case 'setDishCurseur': s.refectoire.curseurs[c.dish] = cur(c.value); break;
+    case 'setBedPrix': s.dortoirs.prix[c.bed] = prix(c.price); break;
+    case 'setDishPrix': s.refectoire.prix[c.dish] = prix(c.price); break;
     case 'setMenu': s.refectoire.menu = [...c.menu]; break;
     case 'setBeds': setBeds(s, c.beds); break;
     case 'upgradeRoom': startUpgrade(s, c.room); break;
@@ -285,8 +320,8 @@ export function applyCommand(s: GameState, c: Command): string | null {
     case 'hireProf': hireProf(s, c.id); break;
     case 'fireProf': fireProf(s, c.id); break;
     case 'setProfSlot': { const p = s.terrain.profs.find((x) => x.id === c.id); if (p) p.slots[c.slot] = c.open; break; }
-    case 'setProfCurseur': { const p = s.terrain.profs.find((x) => x.id === c.id); if (p) p.curseur = cur(c.value); break; }
-    case 'setLibreCurseur': s.terrain.libreCurseur = cur(c.value); break;
+    case 'setProfPrix': { const p = s.terrain.profs.find((x) => x.id === c.id); if (p) p.prix = prix(c.price); break; }
+    case 'setLibrePrix': s.terrain.prixLibre = prix(c.price); break;
     case 'acceptCandidate': acceptCandidate(s, c.id); break;
     case 'refuseCandidate': refuseCandidate(s, c.id); break;
     case 'excludeAdventurer': excludeAdventurer(s, c.id); break;
@@ -294,13 +329,14 @@ export function applyCommand(s: GameState, c: Command): string | null {
     case 'setCreditCap': { const a = s.adventurers.find((x) => x.id === c.id); if (a) a.creditCap = c.cap; break; }
     case 'setTaxRate': s.taxRate = clamp(Math.round(c.value * 100) / 100, 0, P.comptoir.tauxMax); break;
     case 'setExemptions': s.exemptBeginners = c.beginners; s.exemptAide = c.aide; break;
-    case 'setCotisation': s.cotisationCurseur = cur(c.value); break;
+    case 'setCotisation': s.cotisationPrix = prix(c.price); break;
     case 'sellLoot': {
       if (c.index === 'all') while (s.resserre.length) sellResserreLot(s, 0);
       else sellResserreLot(s, c.index);
       break;
     }
     case 'setAutoSell': s.policy.autoSell = c.mode; break;
+    case 'setCourtierRachat': s.policy.courtierRachat = c.enabled; break;
     case 'setRachat': s.policy.rachatCurseur = clamp(Math.round(c.curseur * 20) / 20, 0.7, 1); s.policy.rachatRules = c.rules.map((r) => ({ ...r })); break;
     case 'setSanction': s.policy.sanction = c.value; break;
     case 'setCredit': s.policy.credit = c.enabled; s.policy.creditCap = Math.max(0, c.cap); break;
@@ -312,8 +348,8 @@ export function applyCommand(s: GameState, c: Command): string | null {
       break;
     }
     case 'setRemedeRestock': s.infirmerie.restock[c.remede] = { ...c.rule }; break;
-    case 'setInfirmerieCurseur':
-      if (c.kind === 'soins') s.infirmerie.curseurSoins = cur(c.value); else s.infirmerie.curseurVente = cur(c.value);
+    case 'setInfirmeriePrix':
+      if (c.kind === 'soins') s.infirmerie.prixSoins = prix(c.price); else s.infirmerie.prixVente = prix(c.price);
       break;
     case 'queueRecipe': for (let i = 0; i < clamp(c.times, 1, 20); i++) s.infirmerie.queue.push(c.recipe); break;
     case 'setAutoCraft': s.infirmerie.autoCraft[c.remede] = Math.max(0, c.min); break;

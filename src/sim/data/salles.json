@@ -88,39 +88,64 @@
     {
       "niveau": 1,
       "places": 8,
-      "plats": 2,
-      "garde": 100,
       "cout": 0,
-      "valeur": 10000
+      "valeur": 6000
     },
     {
       "niveau": 2,
       "places": 16,
-      "plats": 3,
-      "garde": 200,
-      "cout": 12000
+      "cout": 8000
     },
     {
       "niveau": 3,
       "places": 24,
-      "plats": 4,
-      "garde": 350,
-      "cout": 25000
+      "cout": 15000
     },
     {
       "niveau": 4,
       "places": 32,
-      "plats": 5,
-      "garde": 500,
-      "cout": 70000,
+      "cout": 40000,
       "rang": 3
     },
     {
       "niveau": 5,
       "places": 40,
+      "cout": 100000,
+      "rang": 4
+    }
+  ],
+  "cuisine": [
+    {
+      "niveau": 1,
+      "plats": 2,
+      "garde": 100,
+      "cout": 0,
+      "valeur": 4000
+    },
+    {
+      "niveau": 2,
+      "plats": 3,
+      "garde": 200,
+      "cout": 6000
+    },
+    {
+      "niveau": 3,
+      "plats": 4,
+      "garde": 350,
+      "cout": 14000
+    },
+    {
+      "niveau": 4,
+      "plats": 5,
+      "garde": 500,
+      "cout": 35000,
+      "rang": 3
+    },
+    {
+      "niveau": 5,
       "plats": 6,
       "garde": 700,
-      "cout": 180000,
+      "cout": 90000,
       "rang": 4
     }
   ],
@@ -128,12 +153,12 @@
     "cuisinier": {
       "nom": "Cuisinier",
       "salaire": 100,
-      "salle": "refectoire"
+      "salle": "cuisine"
     },
     "commis": {
       "nom": "Commis de cuisine",
       "salaire": 40,
-      "salle": "refectoire"
+      "salle": "cuisine"
     },
     "valet": {
       "nom": "Valet de dortoir",
@@ -161,6 +186,18 @@
       "nom": "Inspecteur du butin",
       "salaire": 150,
       "salle": "comptoir"
+    },
+    "courtier": {
+      "nom": "Courtier",
+      "salaire": 150,
+      "salle": "comptoir",
+      "unique": true
+    },
+    "greffier": {
+      "nom": "Greffier",
+      "salaire": 120,
+      "salle": "comptoir",
+      "unique": true
     }
   },
   "modules": {
@@ -201,21 +238,21 @@
     },
     "saloir": {
       "nom": "Saloir et fumoir",
-      "salle": "refectoire",
+      "salle": "cuisine",
       "cout": 15000,
       "niveau": 1,
       "effet": "Conservation des viandes ×5"
     },
     "cave": {
       "nom": "Cave à vin",
-      "salle": "refectoire",
+      "salle": "cuisine",
       "cout": 25000,
       "niveau": 2,
       "effet": "Débloque le vin fin"
     },
     "glaciere": {
       "nom": "Glacière",
-      "salle": "refectoire",
+      "salle": "cuisine",
       "cout": 40000,
       "niveau": 3,
       "effet": "Perte de fraîcheur −50 %"
@@ -277,18 +314,18 @@
       "effet": "Rendement de fabrication +30 %"
     },
     "resserre1": {
-      "nom": "Resserre agrandie",
+      "nom": "Entrepôt agrandi",
       "salle": "siege",
       "cout": 15000,
       "niveau": 0,
-      "effet": "Stock de dépouilles +100"
+      "effet": "Entrepôt des dépouilles +100"
     },
     "resserre2": {
-      "nom": "Resserre agrandie (2)",
+      "nom": "Entrepôt agrandi (2)",
       "salle": "siege",
       "cout": 15000,
       "niveau": 0,
-      "effet": "Stock de dépouilles +100",
+      "effet": "Entrepôt des dépouilles +100",
       "requiert": "resserre1"
     },
     "salle_froide": {

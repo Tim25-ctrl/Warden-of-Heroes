@@ -5,7 +5,7 @@ import { money, stamp, weekdayOf } from '../../sim/format';
 import { canHire, capOf, ROLE_HELP, salaryOf, STAFF_TRAITS } from '../../sim/staff';
 import { canHireProf, profSalary } from '../../sim/training';
 import type { GameState, StaffMember, StaffRole } from '../../sim/types';
-import { Gauge, Tabs } from '../components';
+import { Gauge, NumField, Tabs } from '../components';
 import { game } from '../store';
 
 const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
@@ -90,13 +90,13 @@ function Consignes({ s }: { s: GameState }) {
       <p>{it ? `${it.name} exécute les consignes sans erreur et obtient une remise sur les achats.` : 'Sans intendant, les consignes s\'appliquent quand même, mais les commandes automatiques se trompent parfois de quantité et sans remise.'}</p>
       <h4>Réserve de trésorerie</h4>
       <label class="row">Les achats automatiques ne font jamais descendre la trésorerie sous
-        <input type="number" min={0} step={1000} value={s.policy.reserve} style={{ width: 100 }} aria-label="Réserve en pièces de cuivre"
-          onChange={(e) => game.command({ type: 'setReserve', value: Number((e.target as HTMLInputElement).value) || 0 })} />
+        <NumField min={0} step={1000} value={s.policy.reserve} width={100} label="Réserve en pièces de cuivre"
+          onCommit={(v) => game.command({ type: 'setReserve', value: v })} />
         <small>{money(s.policy.reserve)}</small></label>
       <h4 style={{ marginTop: 12 }}>Recrues à la porte</h4>
       <label class="row"><input type="checkbox" checked={rule.enabled} onChange={() => game.command({ type: 'setAutoAccept', rule: { ...rule, enabled: !rule.enabled } })} />
         Accepter automatiquement les candidats de niveau
-        <input type="number" min={1} max={30} value={rule.minLevel} style={{ width: 52 }} aria-label="Niveau minimum" onChange={(e) => game.command({ type: 'setAutoAccept', rule: { ...rule, minLevel: Number((e.target as HTMLInputElement).value) || 1 } })} /> ou plus</label>
+        <NumField min={1} max={30} value={rule.minLevel} width={52} label="Niveau minimum" onCommit={(v) => game.command({ type: 'setAutoAccept', rule: { ...rule, minLevel: v } })} /> ou plus</label>
       <label class="row" style={{ marginLeft: 24 }}><input type="checkbox" checked={rule.refuseMalhonnete} onChange={() => game.command({ type: 'setAutoAccept', rule: { ...rule, refuseMalhonnete: !rule.refuseMalhonnete } })} />sauf s'ils sont visiblement malhonnêtes</label>
       <p class="hint" style={{ marginTop: 12 }}>Les autres consignes se règlent là où elles servent : réapprovisionnement du garde-manger et des remèdes (Siège), fabrication automatique (apothicairerie), vente et rachat des dépouilles (Comptoir).</p>
     </div>

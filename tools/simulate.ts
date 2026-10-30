@@ -1,13 +1,16 @@
 // Simulateur d'équilibrage sans affichage (GDD 8.10.1).
 // Usage : npm run sim -- --days 100 --seeds 8 --bot prudent [--verbose]
+// --dump fichier.json : enregistre l'état final de la première graine (à charger dans le jeu pour tester l'interface).
+import { writeFileSync } from 'node:fs';
 import { pvMax } from '../src/sim/adventurers';
 import { applyCommand, createGame, step } from '../src/sim/engine';
 import { money } from '../src/sim/format';
 import { FLOWS } from '../src/sim/journal';
 import { canHireProf, profSalary } from '../src/sim/training';
 import { upgradeCost } from '../src/sim/rooms';
-import type { GameState, RoomId } from '../src/sim/types';
-import { DORM_LEVELS, INF_LEVELS, MESS_LEVELS, P, TERRAIN_LEVELS, TIERS } from '../src/sim/data';
+import type { BedType, DishId, GameState, RoomId } from '../src/sim/types';
+import { bedRef, careRef, cotisationRef, dishRef, saleRef, sessionRef } from '../src/sim/economy';
+import { DORM_LEVELS, INF_LEVELS, MESS_LEVELS, P, ROOM_IDS, TERRAIN_LEVELS, TIERS } from '../src/sim/data';
 import { PROG, sealConditions } from '../src/sim/legend';
 
 const args = process.argv.slice(2);
@@ -19,6 +22,7 @@ const VERBOSE = args.includes('--verbose');
 const FIRST_SEED = Number(arg('seed', '1'));
 const POP_MAX = Number(arg('pop', '60'));      // le robot accepte les candidats tant qu'il a des lits
 const TRACE = args.includes('--trace');
+const DUMP = arg('dump', '');
 const FOLLOW = Number(arg('suivre', '0'));   // --suivre J : suit le meilleur aventurier à partir du jour J (première graine)
 const PROFS_MAX = Number(arg('profs', '5'));
 const PROF_SLOTS = arg('creneaux', 'apresmidi').split(',');
@@ -59,7 +63,7 @@ function answerDecisions(s: GameState): void {
     else if (d.kind === 'evt:rixe' && s.treasury > 5000) opt = 'caution';
     applyCommand(s, { type: 'decide', id: d.id, option: opt });
   }
-  for (const r of ['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]) {
+  for (const r of ROOM_IDS) {
     if (s.world.damaged[r] && s.treasury > 8000) applyCommand(s, { type: 'repairRoom', room: r });
   }
 }
@@ -93,20 +97,27 @@ function bot(s: GameState): void {
   applyCommand(s, { type: 'setAutoSell', mode: 'sans_usage' });
   if (!s.policy.credit) applyCommand(s, { type: 'setCredit', enabled: true, cap: 500 });
 
-  // Prix un peu au-dessus de la référence : la tolérance des aventuriers le permet (×1,1 minimum)
-  for (const b of ['paillasse', 'commun', 'individuelle'] as const) if (s.dortoirs.curseurs[b] !== 1.05) applyCommand(s, { type: 'setBedCurseur', bed: b, value: 1.05 });
-  for (const d of ['ragout', 'roti', 'biere', 'vin'] as const) if (s.refectoire.curseurs[d] !== 1.05) applyCommand(s, { type: 'setDishCurseur', dish: d, value: 1.05 });
+  // Le robot réajuste ses prix chaque matin sur la valeur perçue par les aventuriers : un peu au-dessus pour
+  // certains lits et plats (la tolérance des aventuriers le permet, ×1,1 minimum), au juste prix pour le reste.
+  const up = (k: string) => (['paillasse', 'commun', 'individuelle', 'ragout', 'roti', 'biere', 'vin'].includes(k) ? 1.05 : 1);
+  for (const b of Object.keys(s.dortoirs.prix) as BedType[]) applyCommand(s, { type: 'setBedPrix', bed: b, price: Math.round(bedRef(s, b) * up(b)) });
+  for (const d of Object.keys(s.refectoire.prix) as DishId[]) applyCommand(s, { type: 'setDishPrix', dish: d, price: Math.round(dishRef(s, d) * up(d)) });
+  applyCommand(s, { type: 'setInfirmeriePrix', kind: 'soins', price: careRef(s, 'plaie', 1) });
+  applyCommand(s, { type: 'setInfirmeriePrix', kind: 'vente', price: saleRef(s, 'potion') });
+  applyCommand(s, { type: 'setLibrePrix', price: sessionRef(s, null) });
+  for (const p of s.terrain.profs) applyCommand(s, { type: 'setProfPrix', id: p.id, price: sessionRef(s, p) });
+  applyCommand(s, { type: 'setCotisation', price: cotisationRef(s) });
   if (s.taxRate !== 0.18) applyCommand(s, { type: 'setTaxRate', value: 0.18 });
 
   // Construction : infirmerie d'abord (elle évite les morts), puis la capacité d'accueil, puis le reste.
   // Le robot n'économise que pour l'essentiel (infirmerie, dortoirs pleins) ; sinon il bâtit le premier projet abordable.
   const full = s.adventurers.length >= beds - 1;
   const plan: [RoomId, number, number, boolean][] = [   // salle, niveau visé, réserve à garder, essentiel
-    ['infirmerie', 1, 3000, true], ['dortoirs', 2, 3000, full], ['terrain', 1, 3000, false], ['refectoire', 2, 5000, false],
-    ['dortoirs', 3, 8000, full], ['dortoirs', 4, 50000, full], ['infirmerie', 2, 10000, false], ['refectoire', 3, 15000, false], ['terrain', 2, 15000, false],
+    ['infirmerie', 1, 3000, true], ['dortoirs', 2, 3000, full], ['terrain', 1, 3000, false], ['cuisine', 2, 12000, false], ['refectoire', 2, 9000, false],
+    ['dortoirs', 3, 8000, full], ['dortoirs', 4, 50000, full], ['infirmerie', 2, 10000, false], ['cuisine', 3, 12000, false], ['refectoire', 3, 15000, false], ['terrain', 2, 15000, false],
     ['infirmerie', 3, 20000, false], ['terrain', 3, 20000, false],
-    ['refectoire', 4, 50000, false], ['infirmerie', 4, 50000, false], ['terrain', 4, 50000, false],
-    ['dortoirs', 5, 80000, full], ['refectoire', 5, 80000, false], ['infirmerie', 5, 80000, false], ['terrain', 5, 80000, false],
+    ['cuisine', 4, 40000, false], ['refectoire', 4, 50000, false], ['infirmerie', 4, 50000, false], ['terrain', 4, 50000, false],
+    ['dortoirs', 5, 80000, full], ['cuisine', 5, 80000, false], ['refectoire', 5, 80000, false], ['infirmerie', 5, 80000, false], ['terrain', 5, 80000, false],
   ];
   for (const [room, lvl, buffer, essential] of plan) {
     if (s[room].level >= lvl || s[room].works) continue;
@@ -137,6 +148,9 @@ function bot(s: GameState): void {
   if (count('valet') * 15 < places && s.treasury > 8000) hireBest(s, 'valet');
   if (count('intendant') === 0 && s.treasury > 30000) hireBest(s, 'intendant');
   if (count('inspecteur') === 0 && s.adventurers.length >= 15 && s.treasury > 20000) hireBest(s, 'inspecteur');
+  if (count('courtier') === 0 && s.adventurers.length >= 15 && s.treasury > 15000) hireBest(s, 'courtier');
+  if (count('courtier') > 0 && !s.policy.courtierRachat) applyCommand(s, { type: 'setCourtierRachat', enabled: true });
+  if (count('greffier') === 0 && s.adventurers.length >= 15 && s.treasury > 15000) hireBest(s, 'greffier');
   if (s.refectoire.level >= 2 && !s.refectoire.menu.includes('panier')) applyCommand(s, { type: 'setMenu', menu: [...s.refectoire.menu, 'panier'] });
   if (s.refectoire.level >= 3 && !s.refectoire.menu.includes('roti') && s.staff.some((m) => m.role === 'cuisinier' && m.c >= 40)) {
     applyCommand(s, { type: 'setMenu', menu: [...s.refectoire.menu, 'roti'] });
@@ -231,7 +245,7 @@ function run(seed: number): Result {
         const byR: Record<string, number[]> = {};
         for (const d of launched) (byR[d.rang] ??= []).push(d.reward);
         let rec = 0; for (const d of s.ledger) for (const v of Object.values(d.recettes)) rec += v;
-        console.log(`J${day(s)} avent ${s.adventurers.length} ${JSON.stringify(ranks)} trés ${money(s.treasury)} recettes/j ${money(Math.round((rec - lastRec) / 7))} renom ${Math.round(s.renown)} salles ${s.dortoirs.level}${s.refectoire.level}${s.infirmerie.level}${s.terrain.level}`);
+        console.log(`J${day(s)} avent ${s.adventurers.length} ${JSON.stringify(ranks)} trés ${money(s.treasury)} recettes/j ${money(Math.round((rec - lastRec) / 7))} renom ${Math.round(s.renown)} salles ${s.dortoirs.level}${s.refectoire.level}${s.cuisine.level}${s.infirmerie.level}${s.terrain.level}`);
         lastRec = rec;
         const recent = (re: RegExp) => s.adventurers.reduce((n, x) => n + x.thoughts.filter((th) => th.tick > s.tick - 168 && re.test(th.text)).length, 0);
         const lv = s.adventurers.map((x) => x.level).sort((x, y) => y - x);
@@ -260,13 +274,14 @@ function run(seed: number): Result {
     if (s.tick % 24 === 3) outside += s.adventurers.filter((a) => a.activity.kind === 'dehors').length;
     for (const r of s.runs) if (!seenRuns.has(r.id) && r.stage !== 'preparation') { seenRuns.add(r.id); types[r.quest.type] = (types[r.quest.type] ?? 0) + 1; }
     if (!firstRoom && roomsBuilt(s) >= 3) firstRoom = day(s);
-    if (!allL5 && (['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]).every((r) => s[r].level >= 5)) allL5 = day(s);
+    if (!allL5 && ROOM_IDS.every((r) => s[r].level >= 5)) allL5 = day(s);
     maxAdv = Math.max(maxAdv, s.adventurers.length);
     if (s.tick % (24 * 28) === 0 && s.adventurers.length) morale.push(Math.round(s.adventurers.reduce((a, x) => a + x.morale, 0) / s.adventurers.length));
     if (!fourRooms && roomsBuilt(s) >= 4) fourRooms = day(s);
-    if (!firstLevel3 && (['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]).some((r) => s[r].level >= 3)) firstLevel3 = day(s);
+    if (!firstLevel3 && ROOM_IDS.some((r) => s[r].level >= 3)) firstLevel3 = day(s);
     if (day(s) === 31 && s.tick % 24 === 1) net30 = netOver(s, 24, 30);
   }
+  if (DUMP && seed === FIRST_SEED) writeFileSync(DUMP, JSON.stringify(s));
   const revenue: Record<string, number> = {};
   for (const d of s.ledger) for (const [k, v] of Object.entries(d.recettes)) revenue[k] = (revenue[k] ?? 0) + v;
   const expenses: Record<string, number> = {};
@@ -294,7 +309,7 @@ function run(seed: number): Result {
     gone: s.departed.reduce((o, d) => { const k = `${d.reason} ${d.level >= 13 ? 'niv13+' : 'niv1-12'}`; o[k] = (o[k] ?? 0) + 1; return o; }, {} as Record<string, number>),
     missing: sealConditions(s).filter((c) => !c.ok).map((c) => c.label).join(' ; '),
     conds: Object.entries(condDay).map(([k, v]) => `${k} ${v ? 'J' + v : '—'}`).join(' · '),
-    allL5, rooms: `${s.dortoirs.level}${s.refectoire.level}${s.infirmerie.level}${s.terrain.level}`, maxAdv, morale,
+    allL5, rooms: `${s.dortoirs.level}${s.refectoire.level}${s.cuisine.level}${s.infirmerie.level}${s.terrain.level}`, maxAdv, morale,
     rivals: s.world.rivals.map((r) => `${r.nom} ${Math.round(r.renown)}`).join(', '), issues, frauds: s.fraud.detected, outside,
   };
 }

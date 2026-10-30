@@ -4,13 +4,13 @@ import { addAilment, canQuest } from './ailments';
 import { fight, type CombatResult } from './combat';
 import { processReturn } from './comptoir';
 import { CLASSES, DISHES, isPlant, NAMES, P, RESOURCES, SPECIES, ZONE_IDS, ZONES } from './data';
-import { applyPurchase, clamp, consumeDish, dishPrice, dishRef, dishServable, IP, judge } from './economy';
+import { applyPurchase, clamp, consumeDish, dishPrice, dishRef, dishServable, IP, judge, onDuty } from './economy';
 import { advLink, hourOf, money } from './format';
 import { earn, log, spend, think, flow } from './journal';
 import { stockUp } from './infirmary';
 import { killAdventurer } from './lifecycle';
 import { addLot } from './market';
-import { harvested, killed, popOf, zoneDanger } from './populations';
+import { harvested, killed, popOf, zoneDanger, huntClosed } from './populations';
 import { modMult, townSpend } from './mods';
 import { diff, onKill } from './legend';
 import { chance, pick, randInt, range, weighted } from './rng';
@@ -23,7 +23,8 @@ export const FAR_FUTURE = 1e9;
 export function boardCapacity(s: GameState): number {
   // Ajusté en v1.1 : une place de plus par 4 aventuriers au-delà de 20, pour qu'une grande guilde ait de quoi faire.
   const q = P.quetes;
-  return q.tableauBase + 2 * (s.rank - 1) + Math.floor(Math.max(0, s.adventurers.length - q.tableauSeuilAventuriers) / q.tableauParAventuriers);
+  return q.tableauBase + 2 * (s.rank - 1) + Math.floor(Math.max(0, s.adventurers.length - q.tableauSeuilAventuriers) / q.tableauParAventuriers)
+    + (onDuty(s, 'greffier') ? q.greffier.places : 0);
 }
 
 export const QUEST_TYPE_NAMES: Record<QuestType, string> = {
@@ -109,7 +110,8 @@ function finishDanger(s: GameState, q: Quest, foe: string | null, n: number, enc
   q.encounters = encounters;
   q.difficulty = foe ? foeStrength(foe, n) * (1 + 0.15 * (encounters - 1)) * mult : 0;
   const err = P.quetes.erreurDanger;
-  q.dangerEst = q.difficulty * (1 + range(s, 'quetes', -err, err));
+  const e = range(s, 'quetes', -err, err);
+  q.dangerEst = q.difficulty * (1 + (onDuty(s, 'greffier') ? 0 : e));   // le greffier ne se trompe pas
   const ri = rangIndex(q.rang);
   q.minMembers = ri === 0 ? 1 : ri <= 2 ? 2 : ri <= 4 ? 3 : 4;
   q.maxMembers = ri === 0 ? 3 : ri === 1 ? 4 : 5;
@@ -126,7 +128,7 @@ function pickSpecies(s: GameState, zone: string): string | null {
   const w: Record<string, number> = {};
   for (const [id, x] of Object.entries(ZONES[zone].especes)) {
     const p = popOf(s, zone, id);
-    if (id !== 'dragon' && p > 0) w[id] = x * p;
+    if (id !== 'dragon' && p > 0 && !huntClosed(s, zone, id)) w[id] = x * p;
   }
   return Object.keys(w).length ? weighted(s, 'quetes', w) : null;
 }
@@ -168,7 +170,8 @@ export function makeLegendQuest(s: GameState, zone: string, speciesId: string, n
   q.expires = expires;
   finishDanger(s, q, speciesId, 1, 1, 1);
   q.difficulty = foeStrength(speciesId, 1, DEF_REF, true);
-  q.dangerEst = q.difficulty * (1 + range(s, 'quetes', -P.quetes.erreurDanger, P.quetes.erreurDanger));
+  const e = range(s, 'quetes', -P.quetes.erreurDanger, P.quetes.erreurDanger);
+  q.dangerEst = q.difficulty * (1 + (onDuty(s, 'greffier') ? 0 : e));
   q.minMembers = 3;
   q.maxMembers = 5;
   return q;
@@ -282,7 +285,7 @@ export function generateQuests(s: GameState, firstDay = false): void {
       const cand = makeQuest(s, t);
       if (!cand) continue;
       const ri = rangIndex(cand.rang);
-      if (ri > reach && !chance(s, 'quetes', q.portee.horsPortee)) continue;
+      if (ri > reach && !chance(s, 'quetes', onDuty(s, 'greffier') ? q.greffier.horsPortee : q.portee.horsPortee)) continue;
       if (reach - ri >= q.portee.ecartSous && !chance(s, 'quetes', q.portee.sousPortee)) continue;
       quest = cand;
     }
@@ -340,6 +343,7 @@ export function createPrime(s: GameState, type: 'chasse' | 'extermination' | 'cu
     q = makeCueillette(s, zone, target, count, 'guilde');
   } else {
     if (ZONES[zone].especes[target] === undefined || target === 'dragon') return 'Cette espèce ne vit pas dans cette zone.';
+    if (huntClosed(s, zone, target)) return `La chasse aux ${SPECIES[target].pluriel} est fermée ${ZONES[zone].lieu} : ils sont trop rares.`;
     if (type === 'chasse') q = makeChasse(s, zone, target, count, 'guilde');
     else {
       q = makeExtermination(s, zone, target, 'guilde');

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { dayOf, money } from '../sim/format';
 import type { AbsenceReport } from '../sim/engine';
 import type { GameState, LogEntry } from '../sim/types';
-import { NavContext, RichText, type Nav, type Screen } from './components';
+import { NavContext, NumField, RichText, type Nav, type Screen } from './components';
 import { Journal } from './Journal';
 import { compatible, INCOMPATIBLE, listSaves, slotLabel, type SaveEntry } from './saves';
 import { Carte } from './screens/Carte';
@@ -44,7 +44,7 @@ const NAV: [Screen, string, string][] = [
   ['carte', '🗺', 'Carte'],
   ['charte', '🔱', 'Charte'],
   ['guilde', '📖', 'Livre de la guilde'],
-  ['livre', '📒', 'Grand Livre'],
+  ['livre', '📒', 'Livre de comptes'],
   ['options', '⚙', 'Options'],
 ];
 
@@ -93,14 +93,14 @@ function StartScreen() {
           </div>
           <div class="row">
             <label class="field">Graine du monde
-              <input type="number" value={seed} onInput={(e) => setSeed(Number((e.target as HTMLInputElement).value) || 0)} />
+              <NumField min={0} value={seed} label="Graine du monde" live onCommit={setSeed} />
             </label>
             <span class="spacer" />
             <button class="btn seal" onClick={() => game.newGame(seed, mode, difficulty)}>Prendre la tête de la guilde</button>
           </div>
           <p class="hint" style={{ marginTop: 8 }}>{mode === 'chronique'
             ? "Le mode est choisi une fois pour toutes. Un intendant t'est offert : ses consignes font tourner la guilde pendant ton absence."
-            : 'Version 1.0. La difficulté reste modifiable en cours de partie (Options).'}</p>
+            : `Version ${__APP_VERSION__}. La difficulté reste modifiable en cours de partie (Options).`}</p>
         </div>
         {saves === null && <p class="hint">Recherche des sauvegardes…</p>}
       </div>
@@ -196,7 +196,10 @@ export function App() {
     return () => mq.removeEventListener('change', on);
   }, []);
   const consultation = phone || getPrefs().consultation;
-  useEffect(() => { if (consultation && !NAV_CONSULTATION.some(([id]) => id === screen)) setScreen('resume'); }, [consultation]);
+  useEffect(() => {
+    const list = consultation ? NAV_CONSULTATION : NAV;
+    if (!list.some(([id]) => id === screen)) setScreen(consultation ? 'resume' : 'siege');
+  }, [consultation]);
 
   const nav: Nav = {
     screen, advId,
@@ -238,7 +241,7 @@ export function App() {
   const pending = s.world.decisions.filter((d) => !later.includes(d.id));
   return (
     <NavContext.Provider value={nav}>
-      <div class={`app ${journalOpen && !consultation ? '' : 'journal-closed'} ${consultation ? 'consult' : ''}`}>
+      <div class={`app ${journalOpen && !consultation ? '' : 'journal-closed'} ${consultation ? 'consult' : ''} ${s.gaspard?.queue.length ? 'has-gaspard' : ''}`}>
         <TopBar s={s} speed={speed} />
         <nav class="nav" aria-label="Écrans">
           {(consultation ? NAV_CONSULTATION : NAV).map(([id, ico, label]) => (

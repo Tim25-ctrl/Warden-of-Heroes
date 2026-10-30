@@ -23,7 +23,7 @@
     "texte": "Un marchand ambulant propose un lot de {lot} à −30 %."
   },
   "vol_resserre": {
-    "nom": "Vol dans la Resserre", "categorie": "petit", "theme": "economie", "poids": 2, "duree": 1,
+    "nom": "Vol au garde-manger", "categorie": "petit", "theme": "economie", "poids": 2, "duree": 1,
     "action": "vol",
     "texte": "Des voleurs se sont introduits dans le garde-manger : {perte}."
   },
@@ -67,7 +67,7 @@
   },
   "concours": {
     "nom": "Concours de cuisine", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
-    "conditions": { "refectoireMin": 3 },
+    "conditions": { "cuisineMin": 3 },
     "choix": [{ "id": "participer", "label": "Participer", "cost": 2000 }, { "id": "non", "label": "Ne pas participer" }],
     "defaut": "non",
     "texte": "Le Bourg organise un concours de cuisine. Le réfectoire de la guilde y participe-t-il ?"
@@ -75,7 +75,7 @@
   "inspecteur": {
     "nom": "Inspecteur royal", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
     "action": "inspecteur",
-    "texte": "Un inspecteur royal contrôle les comptes de la guilde."
+    "texte": "Un inspecteur royal contrôle les comptes de la guilde ; {verdict}."
   },
   "rixe": {
     "nom": "Rixe en ville", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
@@ -103,7 +103,7 @@
   },
   "gourmet": {
     "nom": "Gourmet de passage", "categorie": "petit", "theme": "societe", "poids": 2, "duree": 1,
-    "conditions": { "refectoireMin": 5 },
+    "conditions": { "cuisineMin": 5 },
     "action": "gourmet",
     "texte": "Un noble gourmet vient dîner au réfectoire."
   },

@@ -1,9 +1,9 @@
 // Sauvegardes dans le navigateur (IndexedDB) et export / import de fichier (GDD 8.5).
-import { SAVE_VERSION } from '../sim/engine';
+import { MIN_SAVE_VERSION, SAVE_VERSION } from '../sim/engine';
 import type { GameState } from '../sim/types';
 
 /** Une sauvegarde d'une version précédente du jeu ne peut pas être reprise. */
-export const compatible = (state: GameState | undefined) => state?.version === SAVE_VERSION;
+export const compatible = (state: GameState | undefined) => !!state && state.version >= MIN_SAVE_VERSION && state.version <= SAVE_VERSION;
 export const INCOMPATIBLE = "Sauvegarde d'une version précédente du jeu : elle ne peut plus être chargée.";
 
 export type Slot = 'auto' | 'auto-chronique' | '1' | '2' | '3';

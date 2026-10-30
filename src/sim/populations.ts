@@ -23,6 +23,35 @@ export function initPopulations(s: GameState): void {
 
 export const popOf = (s: GameState, zone: string, id: string) => s.populations[zone]?.[id] ?? 0;
 
+/**
+ * Chasse fermée (v1.1) : sous 15 de population, la ville ne publie plus de chasse contre une espèce dans
+ * cette zone, et elle se reconstitue d'elle-même. Rouverte à 25. Les golems et le dragon ne sont pas concernés.
+ */
+export function huntClosed(s: GameState, zone: string, id: string): boolean {
+  return !!s.world?.closedHunts?.includes(`${zone}:${id}`);
+}
+
+function updateClosedHunts(s: GameState): void {
+  if (!s.world) return;
+  const closed = (s.world.closedHunts ??= []);
+  for (const z of ZONE_IDS) {
+    for (const id of Object.keys(ZONES[z].especes)) {
+      const sp = SPECIES[id];
+      if (!sp || sp.r <= 0) continue;
+      const key = `${z}:${id}`;
+      const p = popOf(s, z, id);
+      const isClosed = closed.includes(key);
+      if (!isClosed && p < P.populations.chasseFermee) {
+        closed.push(key);
+        log(s, 'monde', 'info', `La chasse aux ${sp.pluriel} est fermée ${ZONES[z].lieu} : ils se font trop rares. Plus de quête contre eux tant qu'ils ne se sont pas reconstitués.`);
+      } else if (isClosed && p >= P.populations.chasseRouverte) {
+        closed.splice(closed.indexOf(key), 1);
+        log(s, 'monde', 'info', `La chasse aux ${sp.pluriel} rouvre ${ZONES[z].lieu}.`);
+      }
+    }
+  }
+}
+
 /** Croissance logistique quotidienne (2.7). Les plantes repoussent comme les monstres. */
 export function dailyPopulations(s: GameState): void {
   for (const z of ZONE_IDS) {
@@ -40,6 +69,7 @@ export function dailyPopulations(s: GameState): void {
       }
     }
   }
+  updateClosedHunts(s);
   s.danger = regionalDanger(s);
 }
 

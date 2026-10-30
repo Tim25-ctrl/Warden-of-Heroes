@@ -1,6 +1,6 @@
 // Prix, qualité, tolérance des aventuriers, garde-manger (GDD 1.3, 1.5 à 1.8).
 import {
-  BEDS, DENREES, DISHES, DORM_LEVELS, ETATS, HOSPITAL_BED_PRICE, INF_LEVELS, MESS_LEVELS, MODULES, P, REMEDES, SERVICES,
+  BEDS, DENREES, DISHES, DORM_LEVELS, ETATS, HOSPITAL_BED_PRICE, INF_LEVELS, KITCHEN_LEVELS, MESS_LEVELS, MODULES, P, REMEDES, ROOM_IDS, SERVICES,
   TERRAIN_LEVELS, TRAINING,
 } from './data';
 import { hourOf } from './format';
@@ -9,7 +9,7 @@ import { diff } from './legend';
 import { spend } from './journal';
 import { rand } from './rng';
 import type {
-  Adventurer, BedType, DenreeId, DishId, EtatId, GameState, Money, Professor, RemedeId, RoomId,
+  Adventurer, BedType, DenreeId, DishId, EtatId, GameState, Money, Professor, RemedeId, RoomId, StaffMember, StaffRole,
 } from './types';
 
 export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -25,6 +25,7 @@ export const hasModule = (s: GameState, id: string) => s.modules.includes(id);
 
 export function dormLevel(s: GameState) { return DORM_LEVELS[s.dortoirs.level - 1]; }
 export function messLevel(s: GameState) { return MESS_LEVELS[s.refectoire.level - 1]; }
+export function kitchenLevel(s: GameState) { return KITCHEN_LEVELS[s.cuisine.level - 1]; }
 
 export function dormQuality(s: GameState): number {
   let bonus = 0;
@@ -38,8 +39,9 @@ export function dormQuality(s: GameState): number {
 export function bedRef(s: GameState, bed: BedType): Money {
   return Math.max(1, Math.round(BEDS[bed].prix * MQ(dormQuality(s)) * IP(s)));
 }
+/** Les prix sont fixés directement par le joueur (v1.1) ; la référence reste la valeur que les aventuriers leur donnent. */
 export function bedPrice(s: GameState, bed: BedType): Money {
-  return Math.max(1, Math.round(bedRef(s, bed) * s.dortoirs.curseurs[bed]));
+  return s.dortoirs.prix[bed];
 }
 export function bedsAvailable(s: GameState, bed: BedType): number {
   let n = s.dortoirs.beds[bed];
@@ -55,6 +57,11 @@ export function bedsUsed(s: GameState, bed: BedType): number {
 }
 
 // ---------- Personnel ----------
+
+/** Le premier employé présent pour ce rôle (le courtier, le greffier…), s'il y en a un. */
+export function onDuty(s: GameState, role: StaffRole): StaffMember | undefined {
+  return s.staff.find((m) => m.role === role && !isAbsent(s, m));
+}
 
 export function isAbsent(s: GameState, m: { trait: string | null; id: number; absentUntil?: number }): boolean {
   if (m.absentUntil !== undefined && m.absentUntil > s.tick) return true;   // malade pendant une épidémie (5.7)
@@ -84,6 +91,8 @@ export function kitchenRate(s: GameState): number {
     if (m.role === 'cuisinier') rate += (6 + m.c / 10) * bonus;
     if (m.role === 'commis') rate += 4 * bonus;
   }
+  // Cuisine en travaux ou endommagée : moitié moins de portions
+  if (s.cuisine.works || damaged(s, 'cuisine')) rate /= 2;
   return Math.floor(rate);
 }
 
@@ -103,7 +112,8 @@ export function dishFreshness(s: GameState, dish: DishId): number {
 }
 
 export function dishQuality(s: GameState, dish: DishId): number {
-  return clamp(0.5 * chefSkill(s) + 0.2 * dishFreshness(s, dish) * 100 + 4 * s.refectoire.level - s.refectoire.damage, 0, 100);
+  // La salle (ambiance) et la cuisine (équipement) comptent chacune pour moitié.
+  return clamp(0.5 * chefSkill(s) + 0.2 * dishFreshness(s, dish) * 100 + 2 * (s.refectoire.level + s.cuisine.level) - s.refectoire.damage, 0, 100);
 }
 
 /** Coût d'une portion de viande de monstre au cours du jour (1 unité = 4 portions). */
@@ -119,12 +129,12 @@ export function dishRef(s: GameState, dish: DishId): Money {
   return Math.max(1, Math.round(base * MQ(dishQuality(s, dish)) * IP(s)));
 }
 export function dishPrice(s: GameState, dish: DishId): Money {
-  return Math.max(1, Math.round(dishRef(s, dish) * s.refectoire.curseurs[dish]));
+  return s.refectoire.prix[dish];
 }
 
 export function dishUnlocked(s: GameState, dish: DishId): boolean {
   const d = DISHES[dish];
-  return d.niveau <= s.refectoire.level && (!d.module || hasModule(s, d.module));
+  return d.niveau <= s.cuisine.level && (!d.module || hasModule(s, d.module));
 }
 
 export function dishServable(s: GameState, dish: DishId): boolean {
@@ -156,7 +166,9 @@ export function stockOf(s: GameState, d: DenreeId): number {
 export function pantryTotal(s: GameState): number {
   return s.refectoire.pantry.reduce((a, l) => a + l.qty, 0);
 }
-export function pantryCapacity(s: GameState): number { return messLevel(s).garde; }
+export function pantryCapacity(s: GameState): number { return kitchenLevel(s).garde; }
+/** Nombre de repas au menu (les boissons et paniers ne comptent pas). */
+export function menuSize(s: GameState): number { return kitchenLevel(s).plats; }
 
 export function pendingOf(s: GameState, d?: DenreeId): number {
   return s.orders.reduce((a, o) => (!d || o.denree === d ? a + o.qty : a), 0);
@@ -166,8 +178,10 @@ export function consumeDish(s: GameState, dish: DishId): { fresh: number; specie
   let freshSum = 0;
   let n = 0;
   let species: string | undefined;
+  const eaten = (s.refectoire.eaten ??= {});
   for (const [den, q] of Object.entries(DISHES[dish].ingredients) as [DenreeId, number][]) {
     let need = q;
+    eaten[den] = (eaten[den] ?? 0) + Math.min(q, stockOf(s, den));
     for (const lot of s.refectoire.pantry) {
       if (lot.denree !== den || lot.qty <= 0) continue;
       const take = Math.min(need, lot.qty);
@@ -180,6 +194,8 @@ export function consumeDish(s: GameState, dish: DishId): { fresh: number; specie
     }
   }
   s.refectoire.pantry = s.refectoire.pantry.filter((l) => l.qty > 0);
+  const out = (s.refectoire.ranOut ??= []);
+  for (const den of Object.keys(DISHES[dish].ingredients) as DenreeId[]) if (stockOf(s, den) === 0 && !out.includes(den)) out.push(den);
   return { fresh: n ? freshSum / n : 1, species };
 }
 
@@ -280,20 +296,23 @@ export function infBeds(s: GameState): number {
 export function careRef(s: GameState, etat: EtatId, g: number): Money {
   return Math.max(1, Math.round(ETATS[etat].prix[g] * MQ(infQuality(s)) * IP(s)));
 }
+/** Le joueur fixe le prix d'une plaie sérieuse ; le reste de la grille garde les mêmes proportions. */
 export function carePrice(s: GameState, etat: EtatId, g: number): Money {
-  return Math.max(1, Math.round(careRef(s, etat, g) * s.infirmerie.curseurSoins));
+  return Math.max(1, Math.round(s.infirmerie.prixSoins * ETATS[etat].prix[g] / ETATS.plaie.prix[1]));
 }
 export function bedDayRef(s: GameState): Money {
   return Math.round(HOSPITAL_BED_PRICE * MQ(infQuality(s)) * IP(s));
 }
 export function bedDayPrice(s: GameState): Money {
-  return Math.max(1, Math.round(bedDayRef(s) * s.infirmerie.curseurSoins));
+  return Math.max(1, Math.round(s.infirmerie.prixSoins * HOSPITAL_BED_PRICE / ETATS.plaie.prix[1]));
 }
+const saleBase = (r: RemedeId) => REMEDES[r].vente ?? REMEDES[r].prix * 2;
 export function saleRef(s: GameState, r: RemedeId): Money {
-  return Math.round((REMEDES[r].vente ?? REMEDES[r].prix * 2) * MQ(infQuality(s)) * IP(s));
+  return Math.round(saleBase(r) * MQ(infQuality(s)) * IP(s));
 }
+/** Le joueur fixe le prix d'une potion ; les autres remèdes suivent dans les mêmes proportions. */
 export function salePrice(s: GameState, r: RemedeId): Money {
-  return Math.max(1, Math.round(saleRef(s, r) * s.infirmerie.curseurVente));
+  return Math.max(1, Math.round(s.infirmerie.prixVente * saleBase(r) / saleBase('potion')));
 }
 export function remedyBuyPrice(s: GameState, r: RemedeId): Money {
   return Math.max(1, Math.round(REMEDES[r].prix * IP(s) * (1 - intendantDiscount(s))));
@@ -310,8 +329,7 @@ export function sessionRef(s: GameState, p: Professor | null): Money {
   return Math.max(1, Math.round(base * MQ(terrainQuality(s)) * IP(s)));
 }
 export function sessionPrice(s: GameState, p: Professor | null): Money {
-  const cur = p ? p.curseur : s.terrain.libreCurseur;
-  return Math.max(1, Math.round(sessionRef(s, p) * cur));
+  return p ? p.prix : s.terrain.prixLibre;
 }
 
 // ---------- Concurrents de la ville (1.3.5) ----------
@@ -333,12 +351,35 @@ export function bonesetterPrice(s: GameState): Money {
   return Math.round(P.concurrents.rebouteux.prixBase * IP(s));
 }
 
+export function cotisationRef(s: GameState): Money {
+  return Math.round(100 * (1 + 0.5 * (s.rank - 1)));
+}
 export function cotisationPrice(s: GameState): Money {
-  return Math.round(100 * (1 + 0.5 * (s.rank - 1)) * s.cotisationCurseur);
+  return s.cotisationPrix;
+}
+
+/** Jugement des clients sur un prix, comparé à la valeur qu'ils donnent au service (affiché à la place d'une référence chiffrée). */
+export function priceVerdict(price: Money, ref: Money): { label: string; tone: 'sage' | '' | 'amber' | 'seal'; ratio: number } {
+  const ratio = price / Math.max(1, ref);
+  if (ratio < 0.7) return { label: 'bradé', tone: 'sage', ratio };
+  if (ratio <= 0.92) return { label: 'bon marché', tone: 'sage', ratio };
+  if (ratio <= 1.1) return { label: 'correct', tone: '', ratio };
+  if (ratio <= 1.4) return { label: 'cher', tone: 'amber', ratio };
+  return { label: 'hors de prix', tone: 'seal', ratio };
+}
+
+/** Prix de départ : la valeur que les aventuriers donnent à chaque service. */
+export function defaultPrices(s: GameState): void {
+  for (const b of Object.keys(BEDS) as BedType[]) s.dortoirs.prix[b] = bedRef(s, b);
+  for (const d of Object.keys(DISHES) as DishId[]) s.refectoire.prix[d] = dishRef(s, d);
+  s.infirmerie.prixSoins = careRef(s, 'plaie', 1);
+  s.infirmerie.prixVente = saleRef(s, 'potion');
+  s.terrain.prixLibre = sessionRef(s, null);
+  s.cotisationPrix = cotisationRef(s);
 }
 
 export function roomLevelCost(room: RoomId, level: number): number | null {
-  const table = room === 'dortoirs' ? DORM_LEVELS : room === 'refectoire' ? MESS_LEVELS
+  const table = room === 'dortoirs' ? DORM_LEVELS : room === 'refectoire' ? MESS_LEVELS : room === 'cuisine' ? KITCHEN_LEVELS
     : room === 'infirmerie' ? INF_LEVELS : TERRAIN_LEVELS;
   const l = table[level - 1] as { cout: number; valeur?: number } | undefined;
   return l ? (l.valeur ?? l.cout) : null;
@@ -346,7 +387,7 @@ export function roomLevelCost(room: RoomId, level: number): number | null {
 
 export function buildingValue(s: GameState): Money {
   let v = 0;
-  for (const room of ['dortoirs', 'refectoire', 'infirmerie', 'terrain'] as RoomId[]) {
+  for (const room of ROOM_IDS) {
     for (let i = 1; i <= s[room].level; i++) v += roomLevelCost(room, i) ?? 0;
   }
   for (const m of s.modules) v += MODULES[m]?.cout ?? 0;

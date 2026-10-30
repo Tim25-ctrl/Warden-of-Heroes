@@ -60,7 +60,7 @@ export function Chroniques({ s }: { s: GameState }) {
     .sort((a, b) => Math.abs(b.f - 1) - Math.abs(a.f - 1)).slice(0, 6);
   const modes = w.mods.filter((m) => m.key.startsWith('demande:') && !m.key.startsWith('demande:cat') && m.until > s.tick);
   const damaged = (Object.keys(w.damaged) as (keyof typeof w.damaged)[]).filter((r) => w.damaged[r]);
-  const roomName = { dortoirs: 'Dortoirs', refectoire: 'Réfectoire', infirmerie: 'Infirmerie', terrain: "Terrain d'entraînement" };
+  const roomName = { dortoirs: 'Dortoirs', refectoire: 'Réfectoire', cuisine: 'Cuisine', infirmerie: 'Infirmerie', terrain: "Terrain d'entraînement" };
   const tier = dangerTier(s.danger);
   return (
     <div>
@@ -132,7 +132,7 @@ export function Chroniques({ s }: { s: GameState }) {
             <tbody>
               <tr><td><strong>Ta guilde</strong></td><td class="num">{Math.round(s.renown)}</td><td class="num">{s.adventurers.length}</td><td class="num">—</td><td class="num">{Math.round(s.taxRate * 100)} %</td></tr>
               {w.rivals.map((r) => (
-                <tr><td>{r.nom}{r.bankruptSince !== null && <span class="tag seal"> en faillite</span>}<div class="hint">{r.profil === 'prestige' ? 'Prestigieuse, proche de la noblesse' : 'Mercenaires bon marché'}</div></td>
+                <tr><td>{r.nom}{r.bankruptSince !== null && <span class="tag seal"> en faillite</span>}<div class="hint">{r.profil === 'prestige' ? 'Prestigieuse, proche de la noblesse' : r.profil === 'chasseurs' ? 'Chasseurs et cueilleurs des bois et des marais' : 'Mercenaires bon marché'}</div></td>
                   <td class="num">{Math.round(r.renown)}</td><td class="num">{r.size}</td><td class="num">×{r.tarifs.toFixed(1)}</td><td class="num">{Math.round(r.taux * 100)} %</td></tr>
               ))}
             </tbody>

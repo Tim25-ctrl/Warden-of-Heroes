@@ -1,7 +1,8 @@
 // Composants partagés de l'interface.
 import { createContext, type ComponentChildren } from 'preact';
-import { useContext, useEffect, useState } from 'preact/hooks';
+import { useContext, useState } from 'preact/hooks';
 import { CLASSES } from '../sim/data';
+import { priceVerdict } from '../sim/economy';
 import { money } from '../sim/format';
 import type { ActivityKind, ClassId, Money as M, Rang } from '../sim/types';
 
@@ -96,36 +97,98 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: [T, st
   );
 }
 
-/** Curseur de prix ×0,5 à ×3,0 autour du prix de référence (1.3.3). */
-export function PriceSlider(props: {
-  label: string; sub?: string; value: number; price: M; refPrice: M; competitor?: M; refusals?: number;
-  onCommit: (v: number) => void; disabled?: boolean;
-}) {
-  const [local, setLocal] = useState(props.value);
-  useEffect(() => setLocal(props.value), [props.value]);
-  const shown = Math.max(1, Math.round(props.refPrice * local));
-  const ratio = local;
-  const tone = ratio <= 0.9 ? 'sage' : ratio <= 1.1 ? '' : ratio <= 1.4 ? 'amber' : 'seal';
+/** Lit un montant tapé par le joueur : « 2 po 5 pa », « 26 pc » ou un simple nombre (en pc). */
+export function parseMoney(text: string): number | null {
+  const t = text.toLowerCase().replace(/(\d)[\s  ](?=\d)/g, '$1').trim();
+  if (!t) return null;
+  if (/^\d+$/.test(t)) return Number(t);
+  const re = /(\d+)\s*(po|pa|pc)/g;
+  let total = 0;
+  let found = false;
+  for (const m of t.matchAll(re)) { found = true; total += Number(m[1]) * (m[2] === 'po' ? 100 : m[2] === 'pa' ? 10 : 1); }
+  if (!found || t.replace(re, '').trim() !== '') return null;
+  return total;
+}
+
+/** Champ de montant : affiche « 2 pa 6 pc », accepte la même écriture ou un nombre de pièces de cuivre. */
+export function MoneyField({ value, onCommit, label, min = 1, width = 110 }: { value: M; onCommit: (v: M) => void; label: string; min?: number; width?: number }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    const v = parseMoney(draft);
+    setDraft(null);
+    if (v !== null && Math.max(min, v) !== value) onCommit(Math.max(min, v));
+  };
   return (
-    <div class="slider-row">
+    <input type="text" class="money-field" inputMode="text" value={draft ?? money(value)} aria-label={label} style={{ width }}
+      title="Écris par exemple « 2 pa 6 pc » ou « 26 » (en pièces de cuivre)"
+      onFocus={(e) => (e.target as HTMLInputElement).select()}
+      onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') { commit(); (e.target as HTMLInputElement).blur(); } if (e.key === 'Escape') setDraft(null); }} />
+  );
+}
+
+/**
+ * Prix fixé directement par le joueur (v1.1). Pas de référence chiffrée : on montre le verdict des clients,
+ * le prix du concurrent en ville et les refus du jour.
+ */
+export function PriceInput(props: {
+  label: string; sub?: string; price: M; refPrice: M; competitor?: M; refusals?: number;
+  onCommit: (price: M) => void; disabled?: boolean;
+}) {
+  const v = priceVerdict(props.price, props.refPrice);
+  const step = props.price < 20 ? 1 : Math.max(1, Math.round(props.price * 0.05));
+  return (
+    <div class="slider-row price-row">
       <div>
         <div><strong>{props.label}</strong> {props.sub && <span class="hint">{props.sub}</span>}</div>
-        <div class="ref" title="Prix de référence = prix de base × qualité × prospérité">
-          Référence {money(props.refPrice)}
-          {props.competitor !== undefined && <> · concurrent {money(props.competitor)}</>}
-          {props.refusals ? <> · <span class="tag seal">{props.refusals} refus aujourd'hui</span></> : null}
+        <div class="ref">
+          {props.competitor !== undefined ? <>En ville : {money(props.competitor)}</> : null}
+          {props.refusals ? <>{props.competitor !== undefined ? ' · ' : ''}<span class="tag seal">{props.refusals} refus aujourd'hui</span></> : null}
         </div>
       </div>
-      <input
-        type="range" min={0.5} max={3} step={0.05} value={local} disabled={props.disabled}
-        aria-label={`Curseur de prix : ${props.label}`}
-        onInput={(e) => setLocal(Number((e.target as HTMLInputElement).value))}
-        onChange={(e) => props.onCommit(Number((e.target as HTMLInputElement).value))}
-      />
-      <div class="price">
-        {money(shown)} <span class={`tag ${tone}`}>×{local.toFixed(2).replace('.', ',')}</span>
+      <div class="row price-edit">
+        <button class="btn ghost small" disabled={props.disabled || props.price <= 1} aria-label={`Baisser le prix : ${props.label}`} onClick={() => props.onCommit(Math.max(1, props.price - step))}>−</button>
+        <MoneyField value={props.price} label={`Prix : ${props.label}`} onCommit={props.onCommit} />
+        <button class="btn ghost small" disabled={props.disabled} aria-label={`Monter le prix : ${props.label}`} onClick={() => props.onCommit(props.price + step)}>+</button>
       </div>
+      <div class="price"><span class={`tag ${v.tone}`} title="Ce qu'en pensent les aventuriers, selon la qualité du service">{v.label}</span></div>
     </div>
+  );
+}
+
+/**
+ * Champ numérique. La saisie reste locale jusqu'à Entrée ou la sortie du champ : les mises à jour
+ * de la partie (plusieurs par seconde) ne l'écrasent plus, et un champ vidé ne saute plus à 1.
+ * `live` : chaque valeur valide est transmise pendant la frappe (pour un état local de l'écran).
+ */
+export function NumField({ value, onCommit, min, max, step, width, label, live }: {
+  value: number; onCommit: (v: number) => void; min?: number; max?: number; step?: number; width?: number; label?: string; live?: boolean;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const parse = (t: string): number | null => {
+    const n = Number(t);
+    if (t.trim() === '' || !Number.isFinite(n)) return null;
+    return Math.min(max ?? Infinity, Math.max(min ?? -Infinity, Math.round(n)));
+  };
+  const commit = () => {
+    if (draft === null) return;
+    const v = parse(draft);
+    setDraft(null);
+    if (v !== null && v !== value) onCommit(v);
+  };
+  return (
+    <input type="number" inputMode="numeric" min={min} max={max} step={step} value={draft ?? String(value)}
+      style={width ? { width } : undefined} aria-label={label}
+      onInput={(e) => {
+        const t = (e.target as HTMLInputElement).value;
+        setDraft(t);
+        const v = live ? parse(t) : null;
+        if (v !== null && v !== value) onCommit(v);
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') commit(); }} />
   );
 }
 
