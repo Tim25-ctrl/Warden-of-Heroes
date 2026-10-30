@@ -9,6 +9,10 @@ import { hospitalized } from '../../sim/infirmary';
 import { type CleanRoom, propreteOf } from '../../sim/rooms';
 import type { Adventurer, BedType, GameState, QuestRun, StaffRole } from '../../sim/types';
 import { ACTIVITY_LABELS, plain } from '../components';
+import guildeUrl from '../../assets/guilde.jpg';
+
+/** Décor illustré du siège (v1.1, D-158) : le bâtiment vide ; le jeu y dessine lits, tables et personnages. */
+const BG = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: guildeUrl }) : null;
 
 export type RoomHit = 'dortoirs' | 'infirmerie' | 'refectoire' | 'comptoir' | 'cuisine' | 'terrain' | 'ville' | 'quete';
 
@@ -16,18 +20,24 @@ const W = 1000;
 const H = 520;
 
 interface Box { x: number; y: number; w: number; h: number }
-/** Étage : dortoirs et infirmerie. Rez-de-chaussée : comptoir, réfectoire, cuisine. Cour : terrain. À droite : la ville et les routes. */
+/**
+ * Salles calées sur le décor illustré (1440 × 736, ramené à 1000 × 520).
+ * Étage : dortoirs et infirmerie. Rez-de-chaussée : comptoir, réfectoire, cuisine. Cour : terrain. À droite, sur la rue : la ville et les routes.
+ */
 const ROOMS: Record<RoomHit, Box> = {
-  dortoirs: { x: 28, y: 78, w: 472, h: 126 },
-  infirmerie: { x: 508, y: 78, w: 244, h: 126 },
-  comptoir: { x: 28, y: 220, w: 200, h: 164 },
-  refectoire: { x: 236, y: 220, w: 352, h: 164 },
-  cuisine: { x: 596, y: 220, w: 156, h: 164 },
-  terrain: { x: 20, y: 404, w: 740, h: 108 },
-  ville: { x: 780, y: 20, w: 210, h: 180 },
-  quete: { x: 780, y: 214, w: 210, h: 298 },
+  dortoirs: { x: 78, y: 70, w: 572, h: 156 },
+  infirmerie: { x: 672, y: 70, w: 184, h: 156 },
+  comptoir: { x: 78, y: 244, w: 228, h: 160 },
+  refectoire: { x: 322, y: 244, w: 331, h: 160 },
+  cuisine: { x: 669, y: 244, w: 187, h: 160 },
+  terrain: { x: 8, y: 426, w: 858, h: 92 },
+  ville: { x: 866, y: 12, w: 128, h: 196 },
+  quete: { x: 866, y: 216, w: 128, h: 296 },
 };
-const DOOR = { x: 760, y: 372 };
+/** Planchers : la ligne où les personnages posent les pieds, à l'étage et au rez-de-chaussée. */
+const FLOOR_UP = 214;
+const FLOOR_DOWN = 392;
+const DOOR = { x: 860, y: 470 };
 
 interface Palette { [k: string]: string }
 function palette(): Palette {
@@ -53,23 +63,23 @@ interface Bed { type: BedType; x: number; y: number; w: number; h: number }
 
 /** Lits du dortoir. Quand ils ne tiennent plus dans la salle (grands niveaux), on les dessine plus petits. */
 function layoutBeds(s: GameState): Bed[] {
-  const box = ROOMS.dortoirs;
+  const x0 = ROOMS.dortoirs.x + 14, x1 = ROOMS.dortoirs.x + ROOMS.dortoirs.w - 14;
   const order: BedType[] = ['suite', 'individuelle', 'commun', 'paillasse'];
-  const bottom = box.y + box.h - 16;
   let beds: Bed[] = [];
-  for (const k of [1, 0.85, 0.7, 0.6, 0.5]) {
+  for (const k of [1, 0.85, 0.7, 0.6, 0.5, 0.42]) {
     beds = [];
-    let x = box.x + 14;
-    let y = box.y + 40;
+    let x = x0;
+    let row = 0;
     for (const t of order) {
       for (let i = 0; i < s.dortoirs.beds[t]; i++) {
         const w = (t === 'suite' ? 70 : t === 'individuelle' ? 46 : 30) * k;
-        if (x + w > box.x + box.w - 12) { x = box.x + 14; y += 30 * k; }
-        beds.push({ type: t, x, y, w, h: (t === 'suite' ? 24 : t === 'individuelle' ? 20 : 16) * k });
+        const h = (t === 'suite' ? 24 : t === 'individuelle' ? 20 : 16) * k;
+        if (x + w > x1) { x = x0; row += 1; }
+        beds.push({ type: t, x, y: FLOOR_UP + 8 - h - row * 28 * k, w, h });
         x += w + 6 * k;
       }
     }
-    if (beds.every((b) => b.y + b.h <= bottom)) break;
+    if (beds.every((b) => b.y >= 140)) break;   // pas plus haut que l'appui des fenêtres
   }
   return beds;
 }
@@ -79,8 +89,8 @@ function seatSlots(n: number): Slot[] {
   const slots: Slot[] = [];
   const tables = Math.ceil(n / 4);
   for (let t = 0; t < tables; t++) {
-    const tx = box.x + 26 + (t % 5) * 66;
-    const ty = box.y + 66 + Math.floor(t / 5) * 56;
+    const tx = box.x + 14 + (t % 4) * 58;
+    const ty = FLOOR_DOWN - 22 - Math.floor(t / 4) * 40;
     const pos = [[2, -12], [30, -12], [2, 24], [30, 24]];
     for (let k = 0; k < 4 && slots.length < n; k++) slots.push({ x: tx + pos[k][0], y: ty + pos[k][1] });
   }
@@ -89,8 +99,8 @@ function seatSlots(n: number): Slot[] {
 
 function infBedBoxes(n: number): Box[] {
   return Array.from({ length: n }, (_, i) => ({
-    x: ROOMS.infirmerie.x + 14 + (i % 7) * 32,
-    y: ROOMS.infirmerie.y + 44 + Math.floor(i / 7) * 28,
+    x: ROOMS.infirmerie.x + 10 + (i % 4) * 32,
+    y: FLOOR_UP - 6 - Math.floor(i / 4) * 18,
     w: 26, h: 14,
   }));
 }
@@ -104,15 +114,15 @@ function computeTargets(s: GameState): Map<number, Target> {
   const used = new Set<number>();
   const seatsList = seatSlots(Math.max(seats(s), 1));
   let seatI = 0;
-  const hall = grid(ROOMS.comptoir, 18, 6, 22, 56, 28, 30);
+  const hall = Array.from({ length: 18 }, (_, i) => ({ x: ROOMS.comptoir.x + 24 + (i % 7) * 28, y: FLOOR_DOWN - Math.floor(i / 7) * 14 }));
   let hallI = 0;
-  const villeSlots = grid(ROOMS.ville, 30, 7, 22, 80, 27, 24);
+  const villeSlots = grid(ROOMS.ville, 24, 4, 20, 58, 28, 24);
   let villeI = 0;
   const infSlots = infBedBoxes(20).map((b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 }));
   let infI = 0;
-  const terrainSlots = grid(ROOMS.terrain, 40, 17, 250, 40, 28, 24);
+  const terrainSlots = grid(ROOMS.terrain, 40, 17, 250, 44, 28, 22);
   let terI = 0;
-  const waiting = grid({ x: ROOMS.refectoire.x, y: ROOMS.refectoire.y + ROOMS.refectoire.h - 30, w: 0, h: 0 }, 15, 15, 16, 0, 22, 0);
+  const waiting = Array.from({ length: 15 }, (_, i) => ({ x: ROOMS.refectoire.x + 262 + (i % 3) * 20, y: FLOOR_DOWN - Math.floor(i / 3) * 14 }));
   let waitI = 0;
 
   for (const a of [...s.adventurers].sort((x, y) => x.id - y.id)) {
@@ -200,11 +210,11 @@ function hatch(ctx: CanvasRenderingContext2D, p: Palette, b: Box) {
 
 /** Sol de chaque salle entretenue, où marchent les agents d'entretien. */
 const CLEAN_FLOOR: Record<CleanRoom, { x0: number; x1: number; y: number }> = {
-  dortoirs: { x0: ROOMS.dortoirs.x + 30, x1: ROOMS.dortoirs.x + ROOMS.dortoirs.w - 30, y: ROOMS.dortoirs.y + ROOMS.dortoirs.h - 12 },
-  infirmerie: { x0: ROOMS.infirmerie.x + 24, x1: ROOMS.infirmerie.x + ROOMS.infirmerie.w - 70, y: ROOMS.infirmerie.y + ROOMS.infirmerie.h - 12 },
-  refectoire: { x0: ROOMS.refectoire.x + 30, x1: ROOMS.refectoire.x + ROOMS.refectoire.w - 30, y: ROOMS.refectoire.y + ROOMS.refectoire.h - 12 },
+  dortoirs: { x0: ROOMS.dortoirs.x + 30, x1: ROOMS.dortoirs.x + ROOMS.dortoirs.w - 30, y: FLOOR_UP + 6 },
+  infirmerie: { x0: ROOMS.infirmerie.x + 20, x1: ROOMS.infirmerie.x + ROOMS.infirmerie.w - 30, y: FLOOR_UP + 6 },
+  refectoire: { x0: ROOMS.refectoire.x + 20, x1: ROOMS.refectoire.x + ROOMS.refectoire.w - 30, y: FLOOR_DOWN + 6 },
 };
-const STAIR_X = 504;
+const STAIR_X = 600;   // l'escalier du décor, au fond du réfectoire
 const CLEAN_STOP = 14;   // secondes passées dans chaque salle
 const CLEAN_WALK = 3;    // dont secondes de marche
 
@@ -357,65 +367,31 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
       const sel = selRef.current;
       const spots: StaffSpot[] = [];
 
-      // Ciel et cour
-      ctx.fillStyle = night ? p.bgDeep : p.blueSoft;
-      ctx.fillRect(0, 0, W, H);
-      if (night) {
-        ctx.fillStyle = p.faint;
-        for (let i = 0; i < 40; i++) ctx.fillRect((i * 137) % 770, (i * 53) % 60 + 4, 1.5, 1.5);
+      // Le décor illustré : toit, murs, comptoir, âtre, cour et rue. Le soir et la nuit, il s'assombrit.
+      if (BG && BG.complete && BG.naturalWidth) ctx.drawImage(BG, 0, 0, W, H);
+      else { ctx.fillStyle = p.wall; ctx.fillRect(0, 0, W, H); }
+      if (night || dusk || p.dark) {
+        ctx.fillStyle = `rgba(14, 18, 42, ${(night ? 0.34 : dusk ? 0.14 : 0) + (p.dark ? 0.12 : 0)})`;
+        ctx.fillRect(0, 0, W, H);
       }
-      ctx.fillStyle = p.sageSoft;
-      ctx.fillRect(0, 392, 770, H - 392);
-
-      // Toit de tuiles
-      ctx.beginPath();
-      ctx.moveTo(10, 74); ctx.lineTo(390, 8); ctx.lineTo(770, 74); ctx.closePath();
-      ctx.fillStyle = p.accent;
-      ctx.fill();
-      ctx.save();
-      ctx.clip();
-      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-      ctx.lineWidth = 1.5;
-      for (let y = 18; y < 74; y += 9) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(780, y); ctx.stroke(); }
-      ctx.restore();
-      ctx.strokeStyle = p.wood;
-      ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(10, 74); ctx.lineTo(390, 8); ctx.lineTo(770, 74); ctx.stroke();
-      ctx.fillStyle = '#fff';
+      if (night) {
+        // Les chandelles éclairent l'intérieur.
+        for (const [lx, ly, lr] of [[490, 140, 90], [140, 150, 70], [360, 150, 70], [600, 150, 70], [760, 140, 70], [130, 310, 70], [792, 346, 80]]) {
+          const g = ctx.createRadialGradient(lx, ly, 4, lx, ly, lr);
+          g.addColorStop(0, 'rgba(255, 190, 110, 0.22)');
+          g.addColorStop(1, 'rgba(255, 190, 110, 0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(lx - lr, ly - lr, 2 * lr, 2 * lr);
+        }
+      }
       ctx.font = `700 17px ${p.title}`;
       ctx.textAlign = 'center';
-      ctx.fillText('Siège de la guilde', 390, 58);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(40, 20, 10, 0.75)';
+      ctx.strokeText('Siège de la guilde', 470, 38);
+      ctx.fillStyle = '#fff6e6';
+      ctx.fillText('Siège de la guilde', 470, 38);
       ctx.textAlign = 'left';
-
-      // Murs, salles, planchers, poutres
-      ctx.fillStyle = p.wall;
-      ctx.fillRect(20, 74, 740, 318);
-      for (const room of ['dortoirs', 'infirmerie', 'comptoir', 'refectoire', 'cuisine'] as const) {
-        const b = ROOMS[room];
-        // fenêtres
-        for (const wx of [b.x + b.w - 60, b.x + b.w - 34]) {
-          if (room === 'infirmerie' || room === 'cuisine') continue;
-          ctx.fillStyle = night ? p.amber : dusk ? p.gold : p.blueSoft;
-          ctx.globalAlpha = night ? 0.55 : 0.9;
-          ctx.fillRect(wx, b.y + 10, 18, 22);
-          ctx.globalAlpha = 1;
-          ctx.strokeStyle = p.wood;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(wx, b.y + 10, 18, 22);
-          ctx.beginPath(); ctx.moveTo(wx + 9, b.y + 10); ctx.lineTo(wx + 9, b.y + 32); ctx.stroke();
-        }
-        ctx.fillStyle = p.floor;
-        ctx.fillRect(b.x, b.y + b.h - 8, b.w, 8);
-      }
-      ctx.strokeStyle = p.wood;
-      ctx.lineWidth = 6;
-      ctx.strokeRect(20, 74, 740, 318);
-      ctx.beginPath();
-      ctx.moveTo(20, 212); ctx.lineTo(760, 212);
-      ctx.moveTo(504, 74); ctx.lineTo(504, 212);
-      ctx.moveTo(232, 212); ctx.lineTo(232, 392);
-      ctx.moveTo(592, 212); ctx.lineTo(592, 392);
-      ctx.stroke();
 
       const d = st.dortoirs;
       const r = st.refectoire;
@@ -451,11 +427,6 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
           ctx.fillStyle = p.seal;
           ctx.fillRect(b.x + b.w * 0.45, b.y + 2, 3, b.h - 4);
         }
-        const cx = ROOMS.infirmerie.x + ROOMS.infirmerie.w - 26;
-        const cy = ROOMS.infirmerie.y + 20;
-        ctx.fillStyle = p.seal;
-        ctx.fillRect(cx - 3, cy - 9, 6, 18);
-        ctx.fillRect(cx - 9, cy - 3, 18, 6);
         cartouche(ctx, p, ROOMS.infirmerie, 'Infirmerie', `${hospitalized(st)}/${infBeds(st)} lits`);
       } else {
         cartouche(ctx, p, ROOMS.infirmerie, 'Infirmerie', inf.works ? '' : 'à construire');
@@ -466,23 +437,17 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
         }
       }
       st.staff.filter((m) => m.role === 'soigneur' || m.role === 'apothicaire').forEach((m, i) => {
-        const x = ROOMS.infirmerie.x + ROOMS.infirmerie.w - 58 - i * 22;
-        const y = ROOMS.infirmerie.y + 28;
+        const x = ROOMS.infirmerie.x + ROOMS.infirmerie.w - 22 - i * 20;
+        const y = FLOOR_UP;
         pawn(ctx, p, x, y, p.sage);
         spots.push({ x, y, role: m.role, name: m.name, c: m.c });
       });
 
       // Comptoir : le grand comptoir de bois et son registre
       const cb = ROOMS.comptoir;
-      ctx.fillStyle = p.wood;
-      ctx.fillRect(cb.x + 18, cb.y + cb.h - 44, cb.w - 36, 34);
-      ctx.fillStyle = p.floor;
-      ctx.fillRect(cb.x + 14, cb.y + cb.h - 48, cb.w - 28, 7);
-      ctx.fillStyle = p.wall;
-      ctx.fillRect(cb.x + cb.w - 64, cb.y + cb.h - 56, 26, 9);
       st.staff.filter((m) => ['intendant', 'inspecteur', 'courtier', 'greffier'].includes(m.role)).forEach((m, i) => {
-        const x = cb.x + 38 + i * 30;
-        const y = cb.y + cb.h - 58;
+        const x = cb.x + 30 + i * 28;
+        const y = cb.y + 60;
         pawn(ctx, p, x, y, p.gold);
         spots.push({ x, y, role: m.role, name: m.name, c: m.c });
       });
@@ -508,27 +473,22 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
 
       // Cuisine : l'âtre et son feu
       const kb = ROOMS.cuisine;
-      const hx = kb.x + 14;
-      const hy = kb.y + kb.h - 74;
-      ctx.fillStyle = p.line;
-      roundRect(ctx, { x: hx, y: hy, w: 60, h: 64 }, 4);
-      ctx.fill();
-      ctx.fillStyle = '#1d1712';
-      ctx.beginPath();
-      ctx.moveTo(hx + 10, hy + 64); ctx.lineTo(hx + 10, hy + 30); ctx.quadraticCurveTo(hx + 30, hy + 10, hx + 50, hy + 30); ctx.lineTo(hx + 50, hy + 64);
-      ctx.fill();
+      const hx = 779;
+      const hy = 296;
       const fire = kitchenRate(st) > 0 ? 1 : 0.4;
+      ctx.globalAlpha = 0.85;
       for (let i = 0; i < 3; i++) {
-        const fh = (12 + 6 * Math.sin(now / 120 + i * 2)) * fire;
+        const fh = (10 + 5 * Math.sin(now / 120 + i * 2)) * fire;
         ctx.fillStyle = i === 1 ? p.gold : p.amber;
         ctx.beginPath();
-        ctx.moveTo(hx + 18 + i * 9, hy + 62);
-        ctx.quadraticCurveTo(hx + 22 + i * 9, hy + 62 - fh, hx + 26 + i * 9, hy + 62);
+        ctx.moveTo(hx + 4 + i * 8, hy + 62);
+        ctx.quadraticCurveTo(hx + 8 + i * 8, hy + 62 - fh, hx + 12 + i * 8, hy + 62);
         ctx.fill();
       }
+      ctx.globalAlpha = 1;
       st.staff.filter((m) => m.role === 'cuisinier' || m.role === 'commis').forEach((m, i) => {
-        const x = kb.x + 92 + (i % 3) * 22;
-        const y = kb.y + 62 + Math.floor(i / 3) * 32;
+        const x = kb.x + 20 + (i % 3) * 22;
+        const y = FLOOR_DOWN - Math.floor(i / 3) * 16;
         pawn(ctx, p, x, y, m.role === 'cuisinier' ? '#f4efe4' : '#d9cfbd');
         if (m.role === 'cuisinier') { ctx.fillStyle = '#fff'; ctx.fillRect(x - 4, y - 18, 8, 5); }
         spots.push({ x, y, role: m.role, name: m.name, c: m.c });
@@ -537,21 +497,17 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
 
       // Cour : le terrain d'entraînement
       const tb = ROOMS.terrain;
-      ctx.strokeStyle = p.wood;
-      ctx.lineWidth = 3;
-      for (let x = tb.x + 4; x < tb.x + tb.w; x += 34) { ctx.beginPath(); ctx.moveTo(x, tb.y + tb.h - 2); ctx.lineTo(x, tb.y + tb.h - 18); ctx.stroke(); }
-      ctx.beginPath(); ctx.moveTo(tb.x, tb.y + tb.h - 12); ctx.lineTo(tb.x + tb.w, tb.y + tb.h - 12); ctx.stroke();
       if (ter.level > 0) {
-        for (const dx of [200, 690]) {
+        for (const dx of [200, 700]) {
           ctx.strokeStyle = p.wood;
           ctx.lineWidth = 5;
-          ctx.beginPath(); ctx.moveTo(tb.x + dx, tb.y + 84); ctx.lineTo(tb.x + dx, tb.y + 40); ctx.moveTo(tb.x + dx - 14, tb.y + 54); ctx.lineTo(tb.x + dx + 14, tb.y + 54); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(tb.x + dx, tb.y + 70); ctx.lineTo(tb.x + dx, tb.y + 26); ctx.moveTo(tb.x + dx - 14, tb.y + 40); ctx.lineTo(tb.x + dx + 14, tb.y + 40); ctx.stroke();
           ctx.fillStyle = '#c9ad6e';
-          ctx.beginPath(); ctx.arc(tb.x + dx, tb.y + 36, 7, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(tb.x + dx, tb.y + 22, 7, 0, Math.PI * 2); ctx.fill();
         }
         ter.profs.forEach((pr, i) => {
-          const x = tb.x + 40 + i * 30;
-          const y = tb.y + 66;
+          const x = tb.x + 60 + i * 30;
+          const y = tb.y + 56;
           pawn(ctx, p, x, y, p.gold, false, 1.15);
           ctx.fillStyle = p.ink;
           ctx.font = `700 11px ${p.text}`;
@@ -565,7 +521,7 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
       if (ter.level === 0 && !ter.works) {
         ctx.fillStyle = p.faint;
         ctx.font = `14px ${p.text}`;
-        ctx.fillText('Cliquer pour construire', tb.x + 300, tb.y + 66);
+        ctx.fillText('Cliquer pour construire', tb.x + 300, tb.y + 60);
       }
 
       // Travaux
@@ -576,40 +532,40 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
       // En ville : silhouettes de maisons
       const vb = ROOMS.ville;
       roundRect(ctx, vb, 12);
+      ctx.globalAlpha = 0.86;
       ctx.fillStyle = p.panel;
       ctx.fill();
+      ctx.globalAlpha = 1;
       ctx.strokeStyle = sel === 'ville' ? p.accent : p.line;
       ctx.lineWidth = sel === 'ville' ? 3 : 1;
       ctx.stroke();
-      ctx.fillStyle = p.lineSoft;
-      for (const [hx2, hw, hh] of [[vb.x + 16, 40, 28], [vb.x + 62, 52, 36], [vb.x + 120, 34, 24], [vb.x + 160, 38, 30]]) {
-        ctx.fillRect(hx2, vb.y + 66 - hh, hw, hh);
-        ctx.beginPath(); ctx.moveTo(hx2 - 4, vb.y + 66 - hh); ctx.lineTo(hx2 + hw / 2, vb.y + 50 - hh); ctx.lineTo(hx2 + hw + 4, vb.y + 66 - hh); ctx.fill();
-      }
       const enVille = st.adventurers.filter((a) => ['auberge', 'taverne', 'soin', 'vendre', 'aide', 'dehors', 'forge'].includes(a.activity.kind)).length;
       cartouche(ctx, p, vb, 'En ville', enVille ? String(enVille) : '');
 
       // En quête : le panneau des routes
       const qb = ROOMS.quete;
       roundRect(ctx, qb, 12);
+      ctx.globalAlpha = 0.86;
       ctx.fillStyle = p.panel;
       ctx.fill();
+      ctx.globalAlpha = 1;
       ctx.strokeStyle = sel === 'quete' ? p.accent : p.line;
       ctx.lineWidth = sel === 'quete' ? 3 : 1;
       ctx.stroke();
       const active = st.runs.filter((x) => x.stage !== 'preparation');
-      cartouche(ctx, p, qb, 'En quête', `${active.length} équipe${active.length > 1 ? 's' : ''}`);
-      ctx.font = `13px ${p.text}`;
-      active.slice(0, 9).forEach((run: QuestRun, i) => {
-        const y = qb.y + 52 + i * 27;
+      cartouche(ctx, p, qb, 'En quête', String(active.length));
+      ctx.font = `12px ${p.text}`;
+      active.slice(0, 10).forEach((run: QuestRun, i) => {
+        const y = qb.y + 50 + i * 24;
         const members = run.members.map((id) => st.adventurers.find((a) => a.id === id)).filter(Boolean) as Adventurer[];
-        members.slice(0, 4).forEach((m, j) => pawn(ctx, p, qb.x + 18 + j * 13, y + 2, p[m.classe], false, 0.75));
+        members.slice(0, 3).forEach((m, j) => pawn(ctx, p, qb.x + 14 + j * 11, y + 2, p[m.classe], false, 0.7));
         ctx.fillStyle = p.soft;
         const stage = run.stage === 'aller' ? '→' : run.stage === 'retour' ? '←' : '⚔';
-        ctx.fillText(`${stage} ${ZONES[run.quest.zone].court}${run.quest.target && run.quest.count ? ` · ${run.kills}/${run.quest.count}` : ''}`, qb.x + 22 + Math.min(4, members.length) * 13, y + 5);
+        const tx = qb.x + 18 + Math.min(3, members.length) * 11;
+        ctx.fillText(`${stage} ${ZONES[run.quest.zone].court}`, tx, y + 5, qb.x + qb.w - tx - 6);
       });
-      if (active.length === 0) { ctx.fillStyle = p.faint; ctx.fillText('Personne sur les routes.', qb.x + 14, qb.y + 56); }
-      else if (active.length > 9) { ctx.fillStyle = p.faint; ctx.fillText(`et ${active.length - 9} autre(s)…`, qb.x + 14, qb.y + qb.h - 12); }
+      if (active.length === 0) { ctx.fillStyle = p.faint; ctx.fillText('Personne dehors.', qb.x + 12, qb.y + 56); }
+      else if (active.length > 10) { ctx.fillStyle = p.faint; ctx.fillText(`et ${active.length - 10} de plus…`, qb.x + 12, qb.y + qb.h - 10); }
 
       // Salle choisie
       if (sel && sel !== 'ville' && sel !== 'quete') {
@@ -672,11 +628,6 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
         spots.push({ x, y, role: m.role, name: m.name, c: m.c });
       });
 
-      // Nuit : une pénombre légère
-      if (night) {
-        ctx.fillStyle = p.dark ? 'rgba(0,0,0,0.18)' : 'rgba(20,30,60,0.12)';
-        ctx.fillRect(0, 0, W, H);
-      }
       staffSpots.current = spots;
       raf = requestAnimationFrame(frame);
     };

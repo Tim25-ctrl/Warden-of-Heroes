@@ -13,74 +13,76 @@ import type { GameState, QuestRun, Rival } from '../../sim/types';
 import { dangerTier } from '../../sim/world';
 import { game, lastError } from '../store';
 import { ClassDot, classColor, Gauge, Help, MoneyField, RichText } from '../components';
+import carteUrl from '../../assets/carte.jpg';
 
-const POS: Record<string, [number, number]> = {
-  ville: [110, 270], foret: [270, 200], collines: [420, 130], marais: [270, 370], ruines: [460, 320], pics: [600, 180],
-  chenaie: [170, 62], valroy: [500, 40], port: [150, 440], brisemine: [710, 100],
+type Pt = [number, number];
+
+/**
+ * Carte illustrée (v1.1, D-158) : 1280 × 832. Chaque lieu a son dessin (ART), l'endroit où s'écrit son nom (LABEL),
+ * et un nœud sur le réseau des routes de l'image (NODE). Les équipes suivent ces routes.
+ */
+const ART: Record<string, Pt> = {
+  ville: [296, 400], foret: [555, 370], collines: [896, 290], marais: [688, 616], ruines: [1000, 500], pics: [1120, 110],
+  chenaie: [320, 144], valroy: [736, 70], port: [240, 632], brisemine: [1176, 256],
 };
-/** Chemins entre zones voisines (v1.1) : les équipes les suivent pour aller d'une zone à l'autre. */
-const EDGES: [string, string][] = [
-  ['ville', 'foret'], ['ville', 'marais'], ['foret', 'collines'], ['foret', 'marais'],
-  ['collines', 'pics'], ['collines', 'ruines'], ['marais', 'ruines'], ['ruines', 'pics'],
+const LABEL: Record<string, Pt> = {
+  ville: [296, 482], foret: [556, 372], collines: [900, 300], marais: [690, 622], ruines: [1000, 592], pics: [1040, 158],
+  chenaie: [320, 246], valroy: [736, 152], port: [236, 712], brisemine: [1176, 322],
+};
+const NODE: Record<string, Pt> = {
+  ville: [296, 400], ville_e: [379, 392], ville_n: [328, 362], ville_s: [339, 436],
+  foret: [552, 368], foret_w: [432, 386], foret_e: [704, 349],
+  jv: [400, 285], j2: [656, 200], j3: [728, 339], h: [904, 406], j4: [1064, 400], jp: [392, 573],
+  chenaie: [330, 160], valroy: [735, 112], collines: [896, 300], brisemine: [1170, 262], pics: [1120, 140],
+  ruines: [1052, 486], marais: [690, 628], marais_w: [528, 659], marais_e: [832, 605], port: [300, 622],
+};
+/** Les routes de l'image : extrémités et points intermédiaires, relevés sur le dessin. */
+const ROADS: [string, string, Pt[]][] = [
+  ['ville', 'ville_e', []], ['ville', 'ville_n', []], ['ville', 'ville_s', []],
+  ['ville_e', 'foret_w', [[405, 388]]], ['foret_w', 'foret', []], ['foret', 'foret_e', []], ['foret_e', 'j3', [[716, 344]]],
+  ['ville_n', 'jv', [[344, 344], [371, 309]]], ['jv', 'chenaie', [[403, 264], [384, 205], [360, 180]]],
+  ['jv', 'j2', [[464, 264], [552, 237], [640, 216]]], ['j2', 'valroy', [[688, 160], [717, 131]]],
+  ['j2', 'j3', [[648, 240], [669, 280], [704, 312]]], ['j3', 'h', [[784, 376], [864, 400]]], ['h', 'collines', [[900, 350]]],
+  ['h', 'j4', [[960, 413], [1040, 408]]], ['j4', 'brisemine', [[1104, 344], [1144, 296]]], ['brisemine', 'pics', [[1150, 200]]],
+  ['j4', 'ruines', [[1104, 424], [1107, 456], [1080, 478]]], ['ruines', 'marais_e', [[960, 552], [912, 576], [856, 600]]], ['marais_e', 'marais', []],
+  ['ville_s', 'jp', [[328, 496], [368, 528], [400, 552]]], ['jp', 'port', [[344, 595]]], ['jp', 'marais_w', [[424, 600], [480, 648]]], ['marais_w', 'marais', []],
 ];
-const dist = (a: string, b: string) => Math.hypot(POS[a][0] - POS[b][0], POS[a][1] - POS[b][1]);
-/** Le plus court chemin de la Ville à chaque zone, par les chemins (Dijkstra sur six nœuds). */
-const ROUTE: Record<string, string[]> = (() => {
-  const best: Record<string, { d: number; path: string[] }> = { ville: { d: 0, path: ['ville'] } };
-  const todo = new Set(ZONE_IDS);
+const polyLen = (pts: Pt[]) => pts.slice(1).reduce((s, q, i) => s + Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]), 0);
+/** Le tracé d'une route, dans le sens a → b. */
+function roadPts(a: string, b: string): Pt[] {
+  const r = ROADS.find(([x, y]) => (x === a && y === b) || (x === b && y === a))!;
+  const pts: Pt[] = [NODE[r[0]], ...r[2], NODE[r[1]]];
+  return r[0] === a ? pts : pts.reverse();
+}
+/** Le plus court chemin par les routes, de la Ville à un lieu (Dijkstra sur les nœuds). */
+const PATHS: Record<string, Pt[]> = (() => {
+  const best: Record<string, { d: number; via: string[] }> = { ville: { d: 0, via: ['ville'] } };
+  const todo = new Set(Object.keys(NODE));
   while (todo.size) {
-    const cur = [...todo].filter((z) => best[z]).sort((a, b) => best[a].d - best[b].d)[0];
+    const cur = [...todo].filter((n) => best[n]).sort((x, y) => best[x].d - best[y].d)[0];
     if (!cur) break;
     todo.delete(cur);
-    for (const [a, b] of EDGES) {
-      const nb = a === cur ? b : b === cur ? a : null;
+    for (const [x, y] of ROADS) {
+      const nb = x === cur ? y : y === cur ? x : null;
       if (!nb || !todo.has(nb)) continue;
-      const d = best[cur].d + dist(cur, nb);
-      if (!best[nb] || d < best[nb].d) best[nb] = { d, path: [...best[cur].path, nb] };
+      const d = best[cur].d + polyLen(roadPts(cur, nb));
+      if (!best[nb] || d < best[nb].d) best[nb] = { d, via: [...best[cur].via, nb] };
     }
   }
-  return Object.fromEntries(Object.entries(best).map(([k, v]) => [k, v.path]));
+  const out: Record<string, Pt[]> = {};
+  for (const [id, { via }] of Object.entries(best)) {
+    const pts: Pt[] = [NODE.ville];
+    for (let i = 1; i < via.length; i++) pts.push(...roadPts(via[i - 1], via[i]).slice(1));
+    out[id] = pts;
+  }
+  return out;
 })();
-const bendOf = (a: string) => (a === 'ville' ? 0.06 : 0.12);
-/** Point de contrôle d'un chemin légèrement courbé, pour un tracé moins rigide. */
-function control(a: [number, number], b: [number, number], bend: number): [number, number] {
-  return [(a[0] + b[0]) / 2 - (b[1] - a[1]) * bend, (a[1] + b[1]) / 2 + (b[0] - a[0]) * bend];
-}
-function curve(a: [number, number], b: [number, number], bend = 0.12): string {
-  const c = control(a, b, bend);
-  return `M${a[0]} ${a[1]} Q${c[0]} ${c[1]} ${b[0]} ${b[1]}`;
-}
-/** Points le long du chemin de la zone a à la zone b, dans le sens du trajet. */
-function edgePoints(a: string, b: string): [number, number][] {
-  const e = EDGES.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
-  if (!e) return [POS[a], POS[b]];
-  const p0 = POS[e[0]], p1 = POS[e[1]], c = control(p0, p1, bendOf(e[0]));
-  const pts = Array.from({ length: 9 }, (_, i) => {
-    const t = i / 8;
-    return [(1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * c[0] + t * t * p1[0], (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * c[1] + t * t * p1[1]] as [number, number];
-  });
-  return e[0] === a ? pts : pts.reverse();
+/** Dernier tronçon de route qui mène à une ville voisine (celui qu'une coupure barre). */
+function lastLeg(id: string): Pt[] {
+  const r = ROADS.find(([x, y]) => x === id || y === id);
+  return r ? roadPts(r[0] === id ? r[1] : r[0], id) : [NODE[id]];
 }
 const TOWN_NAMES = { bourg: 'Le Bourg', ville: 'La Ville', cite: 'La Cité' } as const;
-
-/** Ta ville, dessinée : remparts, maisons (plus nombreuses quand elle grandit), et le siège de la guilde avec sa bannière. */
-function Town({ x, y, palier, ring }: { x: number; y: number; palier: keyof typeof TOWN_NAMES; ring: string }) {
-  const n = palier === 'bourg' ? 6 : palier === 'ville' ? 9 : 12;
-  const houses = Array.from({ length: n }, (_, i) => ({ hx: -29 + (i % 6) * 7 + (Math.floor(i / 6) % 2) * 3, hy: -6 + Math.floor(i / 6) * 10 - (i % 2) * 2 }));
-  return (
-    <g transform={`translate(${x},${y}) scale(1.15)`}>
-      <circle r={44} class="town-ring" style={{ fill: ring }} />
-      <path d="M-36 16 V-8 Q-36 -20 -24 -22 H24 Q36 -20 36 -8 V16 Q36 22 30 22 H-30 Q-36 22 -36 16 Z" class="town-wall" />
-      {[[-36, -10], [36, -10], [-33, 18], [33, 18]].map(([tx, ty]) => <circle cx={tx} cy={ty} r={4} class="town-tower" />)}
-      {houses.map((h) => <g><rect x={h.hx} y={h.hy} width={7} height={6} class="town-house" /><path d={`M${h.hx - 1} ${h.hy} L${h.hx + 3.5} ${h.hy - 4} L${h.hx + 8} ${h.hy}`} class="town-roof" /></g>)}
-      <rect x={18} y={-14} width={12} height={12} class="town-guild" />
-      <path d="M17 -14 L24 -21 L31 -14" class="town-roof" />
-      <line x1={24} y1={-21} x2={24} y2={-31} class="flag-pole" />
-      <path d="M24 -31 h9 l-2 3 l2 3 h-9 Z" class="town-banner" />
-      <rect x={-3} y={14} width={6} height={8} rx={3} class="city-door" />
-    </g>
-  );
-}
 
 const TIER_COLORS = ['var(--sage)', 'var(--blue)', 'var(--amber)', 'var(--seal)', 'var(--seal)'];
 /** Couleur des fanions des guildes rivales, selon leur profil. */
@@ -89,23 +91,15 @@ const CATEGORIES: Record<string, string> = {
   plante: 'plantes', os: 'os et écailles', peau: 'peaux et cuirs', viande: 'viandes', organe: 'organes', rare: 'raretés', objet: 'objets',
 };
 
-/** Chemin d'une quête : la Ville, la zone, puis la ville voisine pour une escorte lointaine. */
-function pathOf(run: QuestRun): [number, number][] {
-  const route = ROUTE[run.quest.zone] ?? ['ville', run.quest.zone];
-  const pts: [number, number][] = [POS.ville];
-  for (let i = 1; i < route.length; i++) pts.push(...edgePoints(route[i - 1], route[i]).slice(1));
-  if (run.quest.dest && POS[run.quest.dest]) pts.push(POS[run.quest.dest]);
-  return pts;
-}
-
 /** Point situé à la fraction p (0 à 1) d'une ligne brisée. */
-function along(pts: [number, number][], p: number): [number, number] {
-  const seg = pts.slice(1).map((b, i) => Math.hypot(b[0] - pts[i][0], b[1] - pts[i][1]));
-  let d = p * seg.reduce((a, b) => a + b, 0);
+function along(pts: Pt[], p: number): Pt {
+  if (pts.length < 2) return pts[0];
+  const seg = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
+  let d = p * seg.reduce((x, y) => x + y, 0);
   for (let i = 0; i < seg.length; i++) {
     if (d <= seg[i] || i === seg.length - 1) {
-      const t = seg[i] ? Math.min(1, d / seg[i]) : 0;
-      return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t];
+      const k = seg[i] ? Math.min(1, d / seg[i]) : 0;
+      return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k];
     }
     d -= seg[i];
   }
@@ -113,31 +107,23 @@ function along(pts: [number, number][], p: number): [number, number] {
 }
 
 /** Position d'une équipe sur sa route, selon l'étape de sa quête. */
-function runPosition(run: QuestRun): [number, number] {
+function runPosition(run: QuestRun, i: number): Pt {
+  const target = run.quest.dest ?? run.quest.zone;
+  const path = PATHS[target] ?? [NODE.ville];
+  if (path.length < 2) return [NODE.ville[0] + 92 + (i % 4) * 18, NODE.ville[1] + 46];   // aux égouts : devant la porte sud
   const trajet = Math.max(1, run.quest.dest ? CITIES[run.quest.dest].trajet : ZONES[run.quest.zone].trajet);
   let p = 0;
   if (run.stage === 'aller') p = 1 - Math.min(1, run.stageHours / trajet);
   else if (run.stage === 'objectif') p = 1;
   else if (run.stage === 'retour') p = Math.min(1, run.stageHours / trajet);
-  p = Math.max(0.15, Math.min(run.quest.dest ? 0.9 : 0.75, p));   // reste sur la route, sans masquer les noms
-  return along(pathOf(run), p);
+  p = Math.max(0.12, Math.min(0.92, p));   // reste sur la route, sans masquer les noms
+  return along(path, p);
 }
 
 function Spark({ values }: { values: number[] }) {
   if (values.length < 2) return null;
   const pts = values.map((v, i) => `${(i / (values.length - 1)) * 60},${18 - (v / 100) * 16}`).join(' ');
   return <svg viewBox="0 0 60 20" class="spark" aria-hidden="true"><polyline fill="none" stroke="currentColor" stroke-width={1.5} points={pts} /></svg>;
-}
-
-/** Petite ville fortifiée, avec le fanion de la guilde qui y siège. */
-function CityGlyph({ x, y, color, cut }: { x: number; y: number; color?: string; cut: boolean }) {
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <path d="M-20 9 V-3 L-14 -9 L-8 -3 V-7 L0 -16 L8 -7 V-3 L14 -9 L20 -3 V9 Z" class={`city-shape ${cut ? 'cut' : ''}`} />
-      <rect x={-3} y={1} width={6} height={8} rx={3} class="city-door" />
-      {color && <g><line x1={14} y1={-9} x2={14} y2={-24} class="flag-pole" /><path d="M14 -24 h12 l-3 4 l3 4 h-12 Z" style={{ fill: color }} /></g>}
-    </g>
-  );
 }
 
 /** Ce que rapporte la route commerciale d'une ville, en clair. */
@@ -261,60 +247,58 @@ export function Carte({ s }: { s: GameState }) {
       </div>
       <div class="split-map">
         <div class="panel map-panel">
-          <svg viewBox="0 0 760 490" class="map" role="img" aria-label="Carte de la région, des villes voisines et des équipes en quête">
-            {EDGES.map(([a, b]) => <path d={curve(POS[a], POS[b], bendOf(a))} class="road" />)}
-            {CITY_IDS.map((id) => {
-              const [x0, y0] = POS[CITIES[id].route];
-              const [x1, y1] = POS[id];
-              const cut = !routeOpen(s, id);
+          <svg viewBox="0 0 1280 832" class="map map-illustree" role="img" aria-label="Carte de la région, des villes voisines et des équipes en quête">
+            <image href={carteUrl} x={0} y={0} width={1280} height={832} class="map-bg" />
+            {CITY_IDS.filter((id) => !routeOpen(s, id)).map((id) => {
+              const leg = lastLeg(id);
+              const mid = along(leg, 0.5);
               return (
                 <g>
-                  <line x1={x0} y1={y0} x2={x1} y2={y1} class={`trade-road ${cut ? 'cut' : ''}`} />
-                  {cut && <text x={(x0 + x1) / 2} y={(y0 + y1) / 2 + 5} class="cut-mark"><title>Route coupée</title>✕</text>}
+                  <polyline points={leg.map((q) => q.join(',')).join(' ')} class="road-cut" />
+                  <text x={mid[0]} y={mid[1] + 9} class="cut-mark"><title>Route coupée</title>✕</text>
                 </g>
               );
             })}
             {ZONE_IDS.map((id) => {
               const d = zoneDanger(s, id);
-              const [x, y] = POS[id];
+              const [x, y] = ART[id];
+              const [lx, ly] = LABEL[id];
               const nq = s.board.filter((q) => q.zone === id && q.type !== 'aide' && !q.dest).length;
+              const tier = TIER_COLORS[dangerTier(d).idx];
+              const species = Object.keys(ZONES[id].especes).filter((sp) => sp !== 'dragon' || popOf(s, id, sp) > 0);
               return (
                 <g class={`zone ${!city && zone === id ? 'on' : ''}`} onClick={() => pickZone(id)} role="button" tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') pickZone(id); }}>
-                  {id === 'ville' ? (
-                    <>
-                      <Town x={x} y={y} palier={s.world.palier} ring={TIER_COLORS[dangerTier(d).idx]} />
-                      <text x={x} y={y + 38} class="zone-name town-name">{TOWN_NAMES[s.world.palier]}</text>
-                      <text x={x} y={y + 52} class="zone-sub">égouts : danger {d}</text>
-                    </>
-                  ) : (
-                    <>
-                      <circle cx={x} cy={y} r={38} style={{ fill: TIER_COLORS[dangerTier(d).idx] }} class="zone-disc" />
-                      <text x={x} y={y - 2} class="zone-name">{ZONES[id].court}</text>
-                      <text x={x} y={y + 14} class="zone-sub">danger {d}</text>
-                    </>
-                  )}
-                  {layers.quests && nq > 0 && <g><circle cx={x + 30} cy={y - 28} r={11} class="badge-disc" /><text x={x + 30} y={y - 24} class="badge-text">{nq}</text></g>}
-                  {layers.rivals && active.filter((r) => trips.some((t) => t.zone === id && t.rival === r.id)).map((r, i) => (
-                    <g><rect x={x - 40 + i * 14} y={y - 40} width={11} height={8} rx={1.5} style={{ fill: RIVAL_COLORS[r.profil] }} />
-                      <line x1={x - 40 + i * 14} y1={y - 40} x2={x - 40 + i * 14} y2={y - 26} class="flag-pole" />
-                      <title>{r.nom} : {trips.filter((t) => t.zone === id && t.rival === r.id).length} sortie(s) ces 3 derniers jours</title></g>
+                  <circle cx={x} cy={y} r={78} class="danger-halo" style={{ fill: tier }} />
+                  <circle cx={x} cy={y} r={84} class="zone-sel" />
+                  <text x={lx} y={ly} class="lbl">{id === 'ville' ? TOWN_NAMES[s.world.palier] : ZONES[id].court}</text>
+                  <g transform={`translate(${lx},${ly + 22})`}>
+                    <circle cx={-46} cy={-6} r={7} style={{ fill: tier }} class="tier-dot" />
+                    <text x={-34} y={0} class="lbl-sub" text-anchor="start">{id === 'ville' ? 'égouts · ' : ''}danger {d}</text>
+                  </g>
+                  {layers.quests && nq > 0 && <g><circle cx={x + 64} cy={y - 52} r={17} class="badge-disc" /><text x={x + 64} y={y - 45} class="badge-text">{nq}</text></g>}
+                  {layers.rivals && active.filter((r) => trips.some((tr) => tr.zone === id && tr.rival === r.id)).map((r, i) => (
+                    <g><rect x={x - 72 + i * 22} y={y - 72} width={17} height={12} rx={2} style={{ fill: RIVAL_COLORS[r.profil] }} />
+                      <line x1={x - 72 + i * 22} y1={y - 72} x2={x - 72 + i * 22} y2={y - 50} class="flag-pole" />
+                      <title>{r.nom} : {trips.filter((tr) => tr.zone === id && tr.rival === r.id).length} sortie(s) ces 3 derniers jours</title></g>
                   ))}
                   {layers.pops && Object.keys(ZONES[id].especes).some((sp) => huntClosed(s, id, sp)) && (
-                    <text x={x - (id === 'ville' ? 60 : 44)} y={y + 4} class="closed-mark"><title>Chasse fermée à une espèce devenue rare</title>⊘</text>
+                    <text x={lx - 74} y={ly} class="closed-mark"><title>Chasse fermée à une espèce devenue rare</title>⊘</text>
                   )}
-                  {layers.pops && Object.keys(ZONES[id].especes).filter((sp) => sp !== 'dragon' || popOf(s, id, sp) > 0).map((sp, i) => (
-                    <g><rect x={x - 34} y={y + (id === 'ville' ? 58 : 44) + i * 8} width={68} height={5} class="bar-bg" />
-                      <rect x={x - 34} y={y + (id === 'ville' ? 58 : 44) + i * 8} width={0.68 * popOf(s, id, sp)} height={5} class={popOf(s, id, sp) > 80 ? 'bar-hot' : 'bar'} /></g>
+                  {layers.pops && species.map((sp, i) => (
+                    <g><rect x={lx - 50} y={ly + 32 + i * 11} width={100} height={7} rx={3} class="bar-bg" />
+                      <rect x={lx - 50} y={ly + 32 + i * 11} width={popOf(s, id, sp)} height={7} rx={3} class={popOf(s, id, sp) > 80 ? 'bar-hot' : 'bar'} />
+                      <title>{SPECIES[sp].nom} : {Math.round(popOf(s, id, sp))}</title></g>
                   ))}
                   {layers.plants && Object.keys(ZONES[id].plantes).map((pl, i) => (
-                    <text x={x + 44} y={y - 10 + i * 11} class="plant">🌿 {Math.round(popOf(s, id, pl))}</text>
+                    <text x={lx + 62} y={ly - 16 + i * 18} class="plant">🌿 {Math.round(popOf(s, id, pl))}</text>
                   ))}
                 </g>
               );
             })}
             {CITY_IDS.map((id) => {
-              const [x, y] = POS[id];
+              const [x, y] = ART[id];
+              const [lx, ly] = LABEL[id];
               const guild = active.find((r) => rivalCity(r) === id);
               const st = cityState(s, id);
               const ne = s.board.filter((q) => q.dest === id).length;
@@ -322,29 +306,30 @@ export function Carte({ s }: { s: GameState }) {
                 <g class={`city ${city === id ? 'on' : ''}`} onClick={() => pickCity(id)} role="button" tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') pickCity(id); }}>
                   <title>{CITIES[id].nom}, {CITIES[id].titre}{guild ? ` · siège de ${guild.nom}` : ''} · commerce {commerceLabel(st.commerce).nom}</title>
-                  <rect x={x - 44} y={y - 30} width={88} height={72} rx={8} class="city-hit" />
-                  <CityGlyph x={x} y={y} color={layers.rivals && guild ? RIVAL_COLORS[guild.profil] : undefined} cut={st.coupeeDepuis !== null} />
-                  <text x={x} y={y + 25} class="city-name">{CITIES[id].court}</text>
-                  <rect x={x - 24} y={y + 31} width={48} height={4} rx={2} class="bar-bg" />
-                  <rect x={x - 24} y={y + 31} width={0.48 * st.commerce} height={4} rx={2} class="trade-bar" />
-                  {layers.quests && ne > 0 && <g><circle cx={x - 26} cy={y - 12} r={10} class="badge-disc" /><text x={x - 26} y={y - 8} class="badge-text">{ne}</text></g>}
+                  <circle cx={x} cy={y} r={70} class="city-hit" />
+                  <circle cx={x} cy={y} r={76} class="zone-sel" />
+                  <text x={lx} y={ly} class="lbl lbl-city">{CITIES[id].court}</text>
+                  <rect x={lx - 40} y={ly + 9} width={80} height={7} rx={3} class="bar-bg" />
+                  <rect x={lx - 40} y={ly + 9} width={0.8 * st.commerce} height={7} rx={3} class="trade-bar" />
+                  {layers.rivals && guild && <g><line x1={lx + 52} y1={ly + 4} x2={lx + 52} y2={ly - 24} class="flag-pole" /><path d={`M${lx + 52} ${ly - 24} h18 l-4 6 l4 6 h-18 Z`} style={{ fill: RIVAL_COLORS[guild.profil] }} /></g>}
+                  {layers.quests && ne > 0 && <g><circle cx={lx - CITIES[id].court.length * 6.5 - 24} cy={ly - 8} r={15} class="badge-disc" /><text x={lx - CITIES[id].court.length * 6.5 - 24} y={ly - 2} class="badge-text">{ne}</text></g>}
                 </g>
               );
             })}
-            {runs.map((r) => {
-              const [x, y] = runPosition(r);
+            {runs.map((r, i) => {
+              const [x, y] = runPosition(r, i);
               const lead = s.adventurers.find((a) => a.id === r.leader);
               return (
                 <g class={`team ${runId === r.id ? 'on' : ''}`} onClick={() => setRunId(r.id)} role="button" tabIndex={0}>
-                  <circle cx={x} cy={y} r={8} style={{ fill: lead ? classColor(lead.classe) : 'var(--gold)' }} />
-                  {r.quest.caravane && r.quest.caravane.length > 0 && <rect x={x + 5} y={y - 12} width={9} height={7} rx={1.5} class="caravan-mark" />}
+                  <circle cx={x} cy={y} r={12} style={{ fill: lead ? classColor(lead.classe) : 'var(--gold)' }} />
+                  {r.quest.caravane && r.quest.caravane.length > 0 && <rect x={x + 8} y={y - 18} width={14} height={10} rx={2} class="caravan-mark" />}
                   <title>{r.quest.title}</title>
                 </g>
               );
             })}
           </svg>
-          <p class="hint">Couleur des zones (et de l'anneau autour de la ville) : vert calme, bleu tendu, ambre menaçant, rouge critique. Les équipes suivent les chemins d'une zone à l'autre. ⊘ : chasse fermée à une espèce devenue rare (moins de 15).
-            Les villes voisines sont reliées par des routes commerciales ; la barre dorée sous chaque ville montre son commerce avec la tienne, ✕ une route coupée.
+          <p class="hint">La pastille et le halo de chaque lieu donnent son danger : vert calme, bleu tendu, ambre menaçant, rouge critique. Les équipes suivent les routes de la carte. ⊘ : chasse fermée à une espèce devenue rare (moins de 15).
+            La barre dorée sous chaque ville voisine montre son commerce avec la tienne, ✕ une route coupée.
             Les points sont les équipes en quête ; les fanions, les guildes rivales, dans leur ville et dans les zones où elles sont sorties ces 3 derniers jours
             ({active.map((r, i) => <><span class="rival-chip" style={{ background: RIVAL_COLORS[r.profil] }} /> {r.nom}{rivalCity(r) ? ` (${CITIES[rivalCity(r)!].court})` : ''}{i < active.length - 1 ? ', ' : ''}</>)}).</p>
         </div>

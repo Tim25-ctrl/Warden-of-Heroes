@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.5 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
+> **Statut du document :** v2.6 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -2437,6 +2437,8 @@ Elles se commandent depuis la **Charte** (nouvel onglet *Œuvres*) et paraissent
 
 > **Refonte graphique (v1.1, D-147) :** deux ambiances liées au thème de l'appareil. Le thème clair **« Enluminure »** : parchemin, encre brune, liserés d'or, titres en Cinzel. Le thème sombre **« Taverne à la chandelle »** : bois sombre, laiton, lumière chaude, titres en Alegreya SC. Texte en Alegreya Sans (polices embarquées, jouable hors ligne), taille de base 15 px. Les emojis sont remplacés par un jeu d'icônes cohérent (Tabler). La barre du haut montre des pastilles avec une icône et un mot clair (« Calme », « Ville »), le menu est rangé en trois groupes (la guilde, le monde, les livres). La **vue en coupe** est illustrée : toit de tuiles, poutres et planchers, lits, tables et bougies, âtre animé, mannequins dans la cour, fenêtres qui suivent le jour et la nuit ; les aventuriers sont des pions à la couleur de leur classe, une pensée s'affiche de temps en temps dans une bulle, et un clic sur un employé ouvre le Personnel. Nouveaux : l'encart **« Ce matin à la guilde »** (Siège et Résumé), la fiche aventurier en **onglets** (État, Insigne, Équipement, Relations, Pensées), des **« ? »** qui expliquent les indicateurs, un **glossaire** dans les Options, les courbes de renommée face aux rivales, du moral et des effectifs dans les Chroniques, un filtre par type au Tableau, et des icônes par catégorie au Journal.
 
+> **Ajouté en v1.1 : deux illustrations** (D-158). La carte régionale et la vue en coupe du siège reposent désormais sur deux images peintes (encre et aquarelle, générées par IA à partir de prompts décrivant la disposition du jeu, puis retouchées), rangées dans `src/assets/` (`carte.jpg`, 1280 × 832 ; `guilde.jpg`, 1440 × 736). Le jeu dessine par-dessus ce qui change : lits, tables, personnages, flammes de l'âtre, mannequins, cartouches, pastilles de danger, équipes. En thème sombre, la carte est assombrie par un filtre ; la vue en coupe s'assombrit le soir et la nuit, avec la lueur des chandelles.
+
 ### 7.3 Disposition de l'écran (ordinateur)
 
 ```
@@ -2552,6 +2554,7 @@ L'écran principal. Le bâtiment est montré **en coupe**, comme une maison de p
 - **Calques activables :** populations de monstres, plantes, quêtes en cours. *v1.1 :* calque **Guildes rivales** (fanions des sorties des 3 derniers jours) et liste de leurs sorties dans la fiche de chaque zone.
 - **Clic sur une zone :** espèces présentes et courbe de leur population, plantes, quêtes de la zone.
 - **Clic sur une équipe :** journal de sa quête (4.10).
+- *v1.1 (D-158) :* la carte est une **illustration** (7.2). Chaque lieu garde son dessin ; le jeu y écrit son nom, une pastille et un halo à la couleur de son danger, les barres de population, le nombre de quêtes et les fanions des rivales. Les équipes suivent les routes de l'image (Dijkstra sur leurs carrefours) ; une route coupée vers une ville voisine se barre de rouge. Ce qui suit (ville et chemins dessinés en D-157) est remplacé par l'image.
 - *v1.1 (D-157) :* ta ville est **dessinée** (remparts, maisons plus nombreuses au fil des paliers, siège de la guilde et sa bannière), avec un halo à la couleur du danger des égouts. Des **chemins** relient les zones voisines (Ville–Vertbois, Ville–Marais, Vertbois–Collines, Vertbois–Marais, Collines–Pics, Collines–Ruines, Marais–Ruines, Ruines–Pics), et les équipes les suivent : pour les Pics, elles passent par Vertbois et les Collines. Les durées de trajet ne changent pas.
 - *v1.1 :* les **quatre villes voisines** (5.8) au bord de la carte, reliées à leur zone par une route commerciale en pointillés dorés (rouge et ✕ quand elle est coupée), avec le fanion de la guilde qui y siège et une barre de commerce. Les équipes d'une escorte lointaine suivent la route jusqu'à la ville ; une caravane de la guilde porte un petit chariot. **Clic sur une ville :** guilde qui y siège et relation, route, état de la route, commerce et avantage, escortes au tableau, et panneau **Caravane de la guilde** (marchandises de l'Entrepôt, prix en ville et à destination, prix de l'escorte, gain estimé). Le rapport du matin signale une route coupée et une caravane arrivée.
 
@@ -3435,6 +3438,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-155 | 2026-10-30 | Quête convoitée : les groupes qui s'entendent partent ensemble, sinon une règle choisie au Tableau tranche. | 4.5 |
 | D-156 | 2026-10-30 | « Pourquoi veut-il partir ? » : envie de partir détaillée cause par cause, rancunes renommées, « ? » sur chaque jauge. | 3.12.2, 7.5.2 |
 | D-157 | 2026-10-30 | Carte : ta ville dessinée et des chemins entre les zones, que les équipes suivent. | 7.5.6 |
+| D-158 | 2026-10-30 | La carte régionale et la vue en coupe reposent sur deux illustrations peintes ; le jeu dessine par-dessus ce qui change. | 7.2, 7.5.1, 7.5.6 |
 
 ### Relecture de cohérence (v1.0)
 
