@@ -100,7 +100,7 @@ function StartScreen() {
           </div>
           <p class="hint" style={{ marginTop: 8 }}>{mode === 'chronique'
             ? "Le mode est choisi une fois pour toutes. Un intendant t'est offert : ses consignes font tourner la guilde pendant ton absence."
-            : `Version ${__APP_VERSION__}. La difficulté reste modifiable en cours de partie (Options).`}</p>
+            : `Version ${__APP_VERSION__} du ${__BUILD_DATE__}. La difficulté reste modifiable en cours de partie (Options).`}</p>
         </div>
         {saves === null && <p class="hint">Recherche des sauvegardes…</p>}
       </div>
@@ -188,6 +188,12 @@ export function App() {
   const [toasts, setToasts] = useState<LogEntry[]>([]);
   const lastSeen = useRef<number>(-1);
   const [later, setLater] = useState<number[]>([]);
+  const [update, setUpdate] = useState(false);
+  useEffect(() => {
+    const on = () => setUpdate(true);
+    window.addEventListener('guilde-nouvelle-version', on);
+    return () => window.removeEventListener('guilde-nouvelle-version', on);
+  }, []);
   const [phone, setPhone] = useState(() => window.matchMedia('(max-width: 640px)').matches);
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 640px)');
@@ -276,6 +282,13 @@ export function App() {
       {report && <ReportModal r={report} />}
       {!report && pending.length > 0 && !s.gameOver && <DecisionModal s={{ ...s, world: { ...s.world, decisions: pending } }} onLater={(id) => setLater([...later, id])} />}
       <GaspardCard s={s} go={setScreen} />
+      {update && (
+        <div class="update-banner" role="status">
+          Une nouvelle version du jeu est disponible.
+          <button class="btn small seal" onClick={async () => { await game.saveNow(); location.reload(); }}>Sauvegarder et mettre à jour</button>
+          <button class="btn ghost small" onClick={() => setUpdate(false)}>Plus tard</button>
+        </div>
+      )}
       {((s.gameOver && !s.legend?.defeatSeen) || (s.legend?.victoryTick != null && !s.legend.epilogueSeen)) && !report
         && <EpilogueModal s={s} onBook={() => { setScreen('guilde'); if (!s.gameOver) game.command({ type: 'ackEpilogue' }); }} />}
     </NavContext.Provider>

@@ -1,11 +1,13 @@
 // Service worker (GDD 8.7) : le jeu s'installe et se joue hors ligne.
-// Stratégie : la page d'accueil est mise en cache à l'installation ; les autres fichiers du jeu sont
-// servis depuis le cache s'ils y sont, puis rafraîchis en arrière-plan (« stale-while-revalidate »).
-const CACHE = 'siege-de-guilde-v1';
+// Stratégie (v1.1) :
+// - la page elle-même passe d'abord par le réseau, en revalidant le cache du navigateur, pour qu'une nouvelle
+//   version s'affiche dès l'ouverture suivante ; sans réseau, on sert la dernière copie enregistrée ;
+// - les fichiers du jeu (leur nom change à chaque version) sont servis depuis le cache, puis rafraîchis.
+const CACHE = 'warden-of-heroes-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -19,12 +21,22 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      caches.open(CACHE).then((cache) =>
+        fetch(req, { cache: 'no-cache' })
+          .then((res) => { if (res.ok) cache.put('./index.html', res.clone()); return res; })
+          .catch(async () => (await cache.match('./index.html')) ?? (await cache.match('./')) ?? Response.error()),
+      ),
+    );
+    return;
+  }
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
-      const cached = await cache.match(req, { ignoreSearch: req.mode === 'navigate' });
+      const cached = await cache.match(req);
       const network = fetch(req)
         .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
-        .catch(() => cached ?? (req.mode === 'navigate' ? cache.match('./index.html') : undefined));
+        .catch(() => cached ?? Response.error());
       return cached ?? network;
     }),
   );

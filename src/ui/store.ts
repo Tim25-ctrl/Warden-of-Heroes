@@ -65,6 +65,8 @@ export const game = {
   command: (cmd: Command) => { errorMsg = null; send({ type: 'command', cmd }); },
   setSpeed: (value: number) => send({ type: 'speed', value }),
   advance: (hours: number) => send({ type: 'advance', hours }),
+  /** Sauvegarde immédiate dans l'emplacement automatique (avant une mise à jour du jeu). */
+  saveNow: () => (state ? saveSlot(autoSlot(state), state) : Promise.resolve()),
   get state() { return state; },
   get speed() { return speed; },
 };
