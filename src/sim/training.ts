@@ -48,7 +48,11 @@ export function canHireProf(s: GameState, p: Professor): string | null {
   if (s.terrain.level === 0) return 'Il faut d\'abord construire le terrain.';
   if (!profUnlocked(s, p.type)) return 'Le terrain n\'est pas assez grand pour ce professeur.';
   if (p.ego > s.terrain.level) return `Exige un terrain de niveau ${p.ego}.`;
-  if (s.terrain.profs.length >= maxProfs(s)) return 'Plus de place pour un professeur.';
+  if (s.terrain.profs.length >= maxProfs(s)) {
+    return s.terrain.level >= TERRAIN_LEVELS.length
+      ? `Le terrain accueille ${maxProfs(s)} professeurs au plus.`
+      : `Le terrain de niveau ${s.terrain.level} n'accueille que ${maxProfs(s)} professeur${maxProfs(s) > 1 ? 's' : ''} : agrandis-le pour en engager un de plus.`;
+  }
   return null;
 }
 

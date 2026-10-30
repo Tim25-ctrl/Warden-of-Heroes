@@ -485,7 +485,8 @@ function TerrainPanel({ s }: { s: GameState }) {
         <>
           <div class="kpis">
             <Kpi k="Qualité" v={Math.round(terrainQuality(s))} title="Ce que les élèves pensent du terrain (30 + 8 par niveau). Elle rend les séances plus efficaces et plus chères." hint={qualityWord(terrainQuality(s))} />
-            <Kpi k="Professeurs" v={`${t.profs.length} / ${maxProfs(s)}`} />
+            <Kpi k="Professeurs" v={`${t.profs.length} / ${maxProfs(s)}`} title="Le terrain accueille un professeur par niveau (5 au niveau 5). Chacun peut donner cours le matin, l'après-midi et le soir."
+              hint={t.level < 5 ? `${t.level + 1} au niveau ${t.level + 1}` : 'au maximum'} />
             <Kpi k="Élèves aujourd'hui" v={st?.served ?? 0} />
             <Kpi k="Recette du jour" v={<Money v={st?.revenue ?? 0} />} />
             <Kpi k="Salaires des profs" v={`${money(t.profs.reduce((a, p) => a + profSalary(p), 0))}/j`} />
@@ -498,6 +499,7 @@ function TerrainPanel({ s }: { s: GameState }) {
       {tab === 'profs' && (
         <>
           {t.profs.length === 0 && <p class="empty">Aucun professeur. Les offres arrivent dans l'écran Personnel.</p>}
+          <p class="hint">Un professeur par niveau de terrain : {t.profs.length} sur {maxProfs(s)} aujourd'hui{t.level < 5 ? `, ${t.level + 1} une fois le terrain au niveau ${t.level + 1}` : ''}. Chacun a son poste dans la cour, avec son matériel, et ses élèves s'y entraînent autour de lui.</p>
           {t.profs.map((p) => (
             <div class="panel flat">
               <div class="row"><strong>{p.name}</strong><span class="tag blue">{PROFS[p.type].nom}</span><small>niveau {p.level} · pédagogie {p.pedagogie} · {p.eleves} élèves · {money(profSalary(p))}/j</small>

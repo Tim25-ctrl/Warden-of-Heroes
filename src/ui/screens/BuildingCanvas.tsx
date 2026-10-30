@@ -2,16 +2,18 @@
 // Les personnages se déplacent selon ce que la simulation décide ; le dessin ne fait que le montrer.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { pvMax } from '../../sim/adventurers';
-import { BEDS, CLASSES, PROFS, ROLES, ZONES } from '../../sim/data';
+import { BEDS, CLASSES, ROLES, ZONES } from '../../sim/data';
 import { bedsAvailable, bedsUsed, infBeds, kitchenRate, seats } from '../../sim/economy';
 import { hourOf } from '../../sim/format';
 import { hospitalized } from '../../sim/infirmary';
 import { type CleanRoom, propreteOf } from '../../sim/rooms';
-import type { Adventurer, BedType, GameState, QuestRun, StaffRole } from '../../sim/types';
+import type { Adventurer, BedType, GameState, ProfType, QuestRun, StaffRole } from '../../sim/types';
 import { ACTIVITY_LABELS, plain } from '../components';
 import guildeUrl from '../../assets/guilde.jpg';
 import litsUrl from '../../assets/lits.jpg';
-import { loadSheet } from '../sprites';
+import { loadSheet, type Sprite } from '../sprites';
+import { DORM_ITEMS, INF_ITEMS, KITCHEN_ITEMS, MESS_ITEMS, YARD_ITEMS } from '../furniture';
+import { hasModule } from '../../sim/economy';
 
 /** Décor illustré du siège (v1.1, D-158) : le bâtiment vide ; le jeu y dessine lits, tables et personnages. */
 const BG = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: guildeUrl }) : null;
@@ -39,6 +41,13 @@ const ROOMS: Record<RoomHit, Box> = {
   quete: { x: 866, y: 216, w: 128, h: 296 },
 };
 /** Planchers : la ligne où les personnages posent les pieds, à l'étage et au rez-de-chaussée. */
+/**
+ * Postes de la cour (v1.1, D-163) : chaque type de professeur a sa place, avec son matériel, et ses élèves s'entraînent
+ * autour de lui ; l'entraînement libre a la sienne. Abscisses depuis le bord gauche de la cour.
+ */
+const POSTES: Record<ProfType | 'libre', number> = { libre: 190, maitre_armes: 300, chasseur: 420, archimage: 530, stratege: 650, aumonier: 770 };
+/** Le mot écrit sous chaque professeur, à son poste. */
+const POSTE_LABEL: Record<ProfType, string> = { maitre_armes: 'Armes', chasseur: 'Chasse', archimage: 'Arcanes', stratege: 'Tactique', aumonier: 'Foi' };
 const FLOOR_UP = 214;
 const FLOOR_DOWN = 392;
 const DOOR = { x: 860, y: 470 };
@@ -75,7 +84,8 @@ const BED_RATIO: Record<BedType, number> = { paillasse: 1.05, commun: 0.82, indi
  * et plus haute, pour la profondeur. Quand ils ne tiennent plus, tout rétrécit.
  */
 function layoutBeds(s: GameState): Bed[] {
-  const x0 = ROOMS.dortoirs.x + 12, x1 = ROOMS.dortoirs.x + ROOMS.dortoirs.w - 12;
+  const x0 = ROOMS.dortoirs.x + (hasModule(s, 'coffres') ? 50 : 12);
+  const x1 = ROOMS.dortoirs.x + ROOMS.dortoirs.w - (hasModule(s, 'bains') || hasModule(s, 'cheminee') ? 92 : 12);   // coin du feu et des bains
   const order: BedType[] = ['suite', 'individuelle', 'commun', 'paillasse'];
   const ratio = (t: BedType) => { const sp = BED_SPRITES[t]; return sp ? sp.w / sp.h : BED_RATIO[t]; };
   let beds: Bed[] = [];
@@ -103,12 +113,12 @@ function layoutBeds(s: GameState): Bed[] {
   return beds;
 }
 
-function seatSlots(n: number): Slot[] {
+function seatSlots(n: number, stall = false): Slot[] {
   const box = ROOMS.refectoire;
   const slots: Slot[] = [];
   const tables = Math.ceil(n / 4);
   for (let t = 0; t < tables; t++) {
-    const tx = box.x + 14 + (t % 4) * 58;
+    const tx = box.x + (stall ? 58 : 14) + (t % 4) * 58;
     const ty = FLOOR_DOWN - 22 - Math.floor(t / 4) * 40;
     const pos = [[2, -12], [30, -12], [2, 24], [30, 24]];
     for (let k = 0; k < 4 && slots.length < n; k++) slots.push({ x: tx + pos[k][0], y: ty + pos[k][1] });
@@ -116,12 +126,23 @@ function seatSlots(n: number): Slot[] {
   return slots;
 }
 
+/** Lits de l'infirmerie, vus de face comme ceux du dortoir : cinq par rangée, les rangées du fond plus petites. */
 function infBedBoxes(n: number): Box[] {
-  return Array.from({ length: n }, (_, i) => ({
-    x: ROOMS.infirmerie.x + 10 + (i % 4) * 32,
-    y: FLOOR_UP - 6 - Math.floor(i / 4) * 18,
-    w: 26, h: 14,
-  }));
+  return Array.from({ length: n }, (_, i) => {
+    const r = Math.floor(i / 5);
+    const k = 1 - 0.14 * r;
+    const h = 28 * k, w = 21 * k;
+    return { x: ROOMS.infirmerie.x + 6 + (i % 5) * 23 + (r % 2) * 6, y: FLOOR_UP + 10 - r * 15 - h, w, h };
+  });
+}
+
+/** Dessine un meuble illustré, centré sur cx, posé sur la ligne base, à la hauteur h (largeur selon ses proportions). */
+function furn(ctx: CanvasRenderingContext2D, sp: Sprite | undefined, cx: number, base: number, h: number, shade: number): void {
+  if (!sp) return;
+  const w = h * (sp.w / sp.h);
+  if (shade < 1) ctx.filter = `brightness(${shade})`;
+  ctx.drawImage(sp.canvas, cx - w / 2, base - h, w, h);
+  ctx.filter = 'none';
 }
 
 /** Pictogramme au-dessus d'un personnage : ce qu'il fait ou ce qui ne va pas. */
@@ -131,7 +152,7 @@ function computeTargets(s: GameState): Map<number, Target> {
   const t = new Map<number, Target>();
   const beds = layoutBeds(s);
   const used = new Set<number>();
-  const seatsList = seatSlots(Math.max(seats(s), 1));
+  const seatsList = seatSlots(Math.max(seats(s), 1), hasModule(s, 'cassecroute'));
   let seatI = 0;
   const hall = Array.from({ length: 18 }, (_, i) => ({ x: ROOMS.comptoir.x + 24 + (i % 7) * 28, y: FLOOR_DOWN - Math.floor(i / 7) * 14 }));
   let hallI = 0;
@@ -139,8 +160,7 @@ function computeTargets(s: GameState): Map<number, Target> {
   let villeI = 0;
   const infSlots = infBedBoxes(20).map((b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 }));
   let infI = 0;
-  const terrainSlots = grid(ROOMS.terrain, 40, 17, 250, 44, 28, 22);
-  let terI = 0;
+  const atPoste: Record<string, number> = {};   // élèves déjà placés à chaque poste
   const waiting = Array.from({ length: 15 }, (_, i) => ({ x: ROOMS.refectoire.x + 262 + (i % 3) * 20, y: FLOOR_DOWN - Math.floor(i / 3) * 14 }));
   let waitI = 0;
 
@@ -154,7 +174,13 @@ function computeTargets(s: GameState): Map<number, Target> {
     } else if (k === 'manger' || k === 'boire') slot = seatsList[seatI++ % seatsList.length];
     else if (k === 'attendre') slot = waiting[waitI++ % waiting.length];
     else if (k === 'hospitalise' || k === 'consultation') slot = infSlots[infI++ % infSlots.length];
-    else if (k === 'entrainement') slot = terrainSlots[terI++ % terrainSlots.length];
+    else if (k === 'entrainement') {
+      // L'élève rejoint le poste de son professeur (ou celui de l'entraînement libre), en petites rangées devant lui.
+      const prof = s.terrain.profs.find((pr) => pr.id === a.activity.prof);
+      const poste = prof ? prof.type : 'libre';
+      const n = (atPoste[poste] = (atPoste[poste] ?? -1) + 1);
+      slot = { x: ROOMS.terrain.x + POSTES[poste] + ((n % 4) - 1.5) * 15, y: ROOMS.terrain.y + 70 + Math.floor(n / 4) % 2 * 15 };
+    }
     else if (['auberge', 'taverne', 'soin', 'vendre', 'aide', 'dehors', 'forge'].includes(k)) slot = villeSlots[villeI++ % villeSlots.length];
     else slot = hall[hallI++ % hall.length];
     // Seules les bulles utiles (v1.1) : mécontent ou sur le départ, blessé ou malade, en file d'attente.
@@ -417,9 +443,13 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
       const ter = st.terrain;
       const k = st.cuisine;
 
-      // Dortoirs : de vrais lits
-      // Les rangées du fond d'abord, pour que celles de devant passent devant. Le soir, les lits s'assombrissent avec la pièce.
+      // Dortoirs : de vrais lits et leurs aménagements (v1.1, D-162). Le soir, les meubles s'assombrissent avec la pièce.
       const shade = 1 - ((night ? 0.34 : dusk ? 0.14 : 0) + (p.dark ? 0.12 : 0));
+      if (hasModule(st, 'rideaux')) for (const wx of [100, 156, 225, 325, 425, 525]) furn(ctx, DORM_ITEMS.rideaux, wx, 168, 54, shade);
+      if (hasModule(st, 'cheminee')) furn(ctx, DORM_ITEMS.cheminee, 604, 196, 44, shade);
+      if (hasModule(st, 'coffres')) { furn(ctx, DORM_ITEMS.coffre, 97, 214, 18, shade); furn(ctx, DORM_ITEMS.coffre, 112, 226, 19, shade); }
+      if (hasModule(st, 'bains')) furn(ctx, DORM_ITEMS.bains, 606, 226, 34, shade);
+      // Les rangées du fond d'abord, pour que celles de devant passent devant.
       if (shade < 1) ctx.filter = `brightness(${shade})`;
       for (const b of [...layoutBeds(st)].sort((a, c) => a.y + a.h - (c.y + c.h))) {
         const sp = BED_SPRITES[b.type];
@@ -438,16 +468,17 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
 
       // Infirmerie
       if (inf.level > 0) {
-        for (const b of infBedBoxes(infBeds(st))) {
-          ctx.fillStyle = p.wood;
-          roundRect(ctx, { x: b.x - 1, y: b.y - 1, w: b.w + 2, h: b.h + 3 }, 3);
-          ctx.fill();
+        // Aménagements contre le mur du fond, puis les lits (de paille, puis à draps blancs dès le niveau 3).
+        if (hasModule(st, 'laboratoire')) furn(ctx, INF_ITEMS.laboratoire, 762, 186, 32, shade);
+        if (hasModule(st, 'quarantaine')) furn(ctx, INF_ITEMS.quarantaine, 812, 190, 34, shade);
+        const bedSp = inf.level >= 3 ? INF_ITEMS.litDraps : INF_ITEMS.litPaille;
+        for (const b of [...infBedBoxes(infBeds(st))].sort((a, c) => a.y + a.h - (c.y + c.h))) {
+          if (bedSp) { if (shade < 1) ctx.filter = `brightness(${shade})`; ctx.drawImage(bedSp.canvas, b.x, b.y, b.w, b.h); ctx.filter = 'none'; continue; }
           ctx.fillStyle = '#ece6d8';
           roundRect(ctx, b, 3);
           ctx.fill();
-          ctx.fillStyle = p.seal;
-          ctx.fillRect(b.x + b.w * 0.45, b.y + 2, 3, b.h - 4);
         }
+        if (hasModule(st, 'convalescence')) furn(ctx, INF_ITEMS.convalescence, 808, 226, 26, shade);
         cartouche(ctx, p, ROOMS.infirmerie, 'Infirmerie', `${hospitalized(st)}/${infBeds(st)} lits`);
       } else {
         cartouche(ctx, p, ROOMS.infirmerie, 'Infirmerie', inf.works ? '' : 'à construire');
@@ -475,25 +506,30 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
       cartouche(ctx, p, cb, 'Comptoir', st.doorCandidates.length ? `${st.doorCandidates.length} à la porte` : '');
 
       // Réfectoire : tables, bancs et bougies
-      const sl = seatSlots(Math.max(seats(st), 1));
-      for (let t = 0; t < sl.length; t += 4) {
-        const tx = sl[t].x - 6;
-        const ty = sl[t].y + 6;
+      // Les tables suivent le niveau de la salle : planches et tabourets au début, table de banquet au niveau 5.
+      const stall = hasModule(st, 'cassecroute');
+      if (stall) furn(ctx, MESS_ITEMS.cassecroute, ROOMS.refectoire.x + 26, FLOOR_DOWN + 10, 52, shade);
+      const tableSp = MESS_ITEMS[(`table${Math.min(5, Math.max(1, r.level))}`) as 'table1'];
+      const sl = seatSlots(Math.max(seats(st), 1), stall);
+      const tables: { tx: number; ty: number }[] = [];
+      for (let t = 0; t < sl.length; t += 4) tables.push({ tx: sl[t].x - 2, ty: sl[t].y + 12 });
+      for (const { tx, ty } of tables.sort((a, b) => a.ty - b.ty)) {
+        if (tableSp) { furn(ctx, tableSp, tx + 16, ty + 20, 30, shade); continue; }
         ctx.fillStyle = p.wood;
-        roundRect(ctx, { x: tx, y: ty, w: 42, h: 12 }, 3);
+        roundRect(ctx, { x: tx - 4, y: ty - 6, w: 42, h: 12 }, 3);
         ctx.fill();
-        ctx.fillStyle = p.floor;
-        ctx.fillRect(tx + 2, ty - 8, 38, 3);
-        ctx.fillRect(tx + 2, ty + 17, 38, 3);
-        ctx.fillStyle = p.amber;
-        const flick = 1 + 0.25 * Math.sin(now / 180 + t);
-        ctx.beginPath(); ctx.arc(tx + 21, ty + 2, 2.2 * flick, 0, Math.PI * 2); ctx.fill();
       }
       const mangent = st.adventurers.filter((a) => a.activity.kind === 'manger' || a.activity.kind === 'boire').length;
       cartouche(ctx, p, ROOMS.refectoire, 'Réfectoire', `${mangent}/${seats(st)} places`);
 
       // Cuisine : l'âtre et son feu
       const kb = ROOMS.cuisine;
+      // Équipement de la cuisine selon son niveau, puis ses aménagements.
+      if (k.level >= 2) furn(ctx, KITCHEN_ITEMS.etagere, 708, 296, 26, shade);
+      if (hasModule(st, 'saloir')) furn(ctx, KITCHEN_ITEMS.saloir, 744, 376, 38, shade);
+      if (k.level >= 3) furn(ctx, KITCHEN_ITEMS.plan, 712, 388, 26, shade);
+      if (hasModule(st, 'cave')) furn(ctx, KITCHEN_ITEMS.cave, 843, 404, 26, shade);
+      if (hasModule(st, 'glaciere')) furn(ctx, KITCHEN_ITEMS.glaciere, 760, 404, 20, shade);
       const hx = 779;
       const hy = 296;
       const fire = kitchenRate(st) > 0 ? 1 : 0.4;
@@ -518,22 +554,30 @@ export function BuildingCanvas({ s, selected, onSelect, onOpen, onStaff }: {
 
       // Cour : le terrain d'entraînement
       const tb = ROOMS.terrain;
+      // Le jardin d'herbes de l'infirmerie pousse dans un coin de la cour, au pied du bâtiment.
+      if (hasModule(st, 'jardin')) furn(ctx, INF_ITEMS.jardin, tb.x + 70, tb.y + 30, 20, shade);
       if (ter.level > 0) {
-        for (const dx of [200, 700]) {
-          ctx.strokeStyle = p.wood;
-          ctx.lineWidth = 5;
-          ctx.beginPath(); ctx.moveTo(tb.x + dx, tb.y + 70); ctx.lineTo(tb.x + dx, tb.y + 26); ctx.moveTo(tb.x + dx - 14, tb.y + 40); ctx.lineTo(tb.x + dx + 14, tb.y + 40); ctx.stroke();
-          ctx.fillStyle = '#c9ad6e';
-          ctx.beginPath(); ctx.arc(tb.x + dx, tb.y + 22, 7, 0, Math.PI * 2); ctx.fill();
-        }
-        ter.profs.forEach((pr, i) => {
-          const x = tb.x + 60 + i * 30;
+        // Les postes : l'entraînement libre a son mannequin ; chaque professeur engagé apporte son matériel,
+        // et les aménagements se placent au poste du professeur qu'ils servent, même avant son arrivée.
+        const has = (t: ProfType) => ter.profs.some((pr) => pr.type === t);
+        const X = (k: keyof typeof POSTES) => tb.x + POSTES[k];
+        furn(ctx, YARD_ITEMS.mannequin, X('libre'), tb.y + 52, 40, shade);
+        if (has('maitre_armes')) { furn(ctx, YARD_ITEMS.mannequin, X('maitre_armes') - 22, tb.y + 52, 40, shade); furn(ctx, YARD_ITEMS.mannequin, X('maitre_armes') + 18, tb.y + 52, 40, shade); }
+        if (hasModule(st, 'armurerie')) furn(ctx, YARD_ITEMS.armurerie, X('maitre_armes') + 58, tb.y + 50, 34, shade);
+        if (has('chasseur')) furn(ctx, YARD_ITEMS.cible, X('chasseur'), tb.y + 50, 36, shade);
+        if (has('archimage')) furn(ctx, YARD_ITEMS.cible, X('archimage') - 14, tb.y + 50, 36, shade);
+        if (hasModule(st, 'salle_etude')) furn(ctx, YARD_ITEMS.salle_etude, X('archimage') + 32, tb.y + 50, 24, shade);
+        if (hasModule(st, 'table_cartes')) furn(ctx, YARD_ITEMS.table_cartes, X('stratege'), tb.y + 50, 24, shade);
+        if (hasModule(st, 'bassins')) furn(ctx, YARD_ITEMS.bassins, X('aumonier'), tb.y + 50, 20, shade);
+        // Chaque professeur se tient à son poste, son initiale à ses pieds.
+        ter.profs.forEach((pr) => {
+          const x = X(pr.type) - 34;
           const y = tb.y + 56;
           pawn(ctx, p, x, y, p.gold, false, 1.15);
           ctx.fillStyle = p.ink;
-          ctx.font = `700 11px ${p.text}`;
+          ctx.font = `700 10px ${p.text}`;
           ctx.textAlign = 'center';
-          ctx.fillText(PROFS[pr.type].nom[0], x, y + 22);
+          ctx.fillText(POSTE_LABEL[pr.type], x, y + 22);
           ctx.textAlign = 'left';
         });
       }
