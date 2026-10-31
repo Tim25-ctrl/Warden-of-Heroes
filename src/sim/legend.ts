@@ -10,9 +10,10 @@ import { pick, rand } from './rng';
 import { addRel, rel, relStatus } from './social';
 import { offerPrivileges } from './charter';
 import type {
-  Adventurer, Difficulty, DifficultyId, GameState, GaspardState, GuildBook, LegendState, Loans, Money, Rang, RoomId,
+  Adventurer, Difficulty, DifficultyId, DifficultyValues, GameState, GaspardState, GuildBook, LegendState, Loans, Money, Rang, RoomId,
 } from './types';
 import { addRenown, news } from './world';
+import { scenarioAchievement } from './scenarios';
 
 export const PROG = progression;
 type SealDef = (typeof progression.sceaux)[number];
@@ -22,28 +23,69 @@ const H = 24;
 
 // ---------- Difficulté (6.5) ----------
 
-export function makeDifficulty(id: DifficultyId): Difficulty {
-  const d = progression.difficultes[id];
+/** Les trois niveaux prédéfinis ; la difficulté personnalisée part de l'un d'eux. */
+export type PresetId = Exclude<DifficultyId, 'personnalisee'>;
+export const PRESETS: PresetId[] = ['paisible', 'normal', 'impitoyable'];
+
+export function makeDifficulty(id: DifficultyId, values?: DifficultyValues): Difficulty {
+  const d = values ?? progression.difficultes[id === 'personnalisee' ? 'normal' : id];
   return { id, tresorerie: d.tresorerie, mort: d.mort, croissance: d.croissance, recompenses: d.recompenses,
     tolerance: d.tolerance, faillite: d.faillite, crises: d.crises, rumeurs: d.rumeurs, changed: false };
 }
 
-export const DIFFICULTY_NAMES: Record<DifficultyId, string> = { paisible: 'Paisible', normal: 'Normal', impitoyable: 'Impitoyable' };
+export const DIFFICULTY_NAMES: Record<DifficultyId, string> = { paisible: 'Paisible', normal: 'Normal', impitoyable: 'Impitoyable', personnalisee: 'Personnalisée' };
+
+/**
+ * Les huit réglages de la difficulté personnalisée (v1.1, D-164) : bornes, pas, et sens de la difficulté
+ * (hard = 1 si une valeur plus grande rend le jeu plus dur).
+ */
+export const DIFF_SETTINGS: { key: keyof DifficultyValues; label: string; min: number; max: number; step: number; hard: 1 | -1; fmt: (v: number) => string; help: string }[] = [
+  { key: 'tresorerie', label: 'Trésorerie de départ', min: 5000, max: 100000, step: 5000, hard: -1, fmt: (v) => `${v / 100} po`, help: "L'or dans les caisses le premier jour. Ne compte qu'au lancement." },
+  { key: 'mort', label: "Risque de mort d'un aventurier à terre", min: 0.25, max: 2, step: 0.05, hard: 1, fmt: (v) => `×${v.toFixed(2)}`, help: "Multiplie la chance qu'un aventurier tombé au combat ne se relève pas." },
+  { key: 'croissance', label: 'Croissance des monstres', min: 0.5, max: 1.6, step: 0.05, hard: 1, fmt: (v) => `×${v.toFixed(2)}`, help: 'Vitesse à laquelle les bêtes se reproduisent dans les zones.' },
+  { key: 'recompenses', label: 'Récompenses des quêtes', min: 0.6, max: 1.5, step: 0.05, hard: -1, fmt: (v) => `×${v.toFixed(2)}`, help: "Ce que la ville paie pour les quêtes : c'est l'or que les aventuriers dépensent chez toi." },
+  { key: 'tolerance', label: 'Tolérance de prix des aventuriers', min: -0.3, max: 0.4, step: 0.05, hard: -1, fmt: (v) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)} %`, help: "À quel point ils acceptent de payer plus cher que la référence avant d'aller ailleurs." },
+  { key: 'faillite', label: 'Délai avant faillite', min: 2, max: 30, step: 1, hard: -1, fmt: (v) => `${v} jours`, help: 'Jours dans le rouge avant que la Couronne saisisse le siège.' },
+  { key: 'crises', label: 'Fréquence des crises', min: 0, max: 2.5, step: 0.25, hard: 1, fmt: (v) => `×${v.toFixed(2)}`, help: 'Épidémies, guerres, assauts : combien par an.' },
+  { key: 'rumeurs', label: 'Fiabilité des rumeurs', min: 0.5, max: 1, step: 0.05, hard: -1, fmt: (v) => `${Math.round(v * 100)} %`, help: 'Part des rumeurs des Chroniques qui se réalisent.' },
+];
+
+/** Vrai si chaque réglage est au moins aussi dur que celui de la référence. */
+export function atLeastAsHard(d: DifficultyValues, ref: DifficultyValues): boolean {
+  return DIFF_SETTINGS.every(({ key, hard }) => hard * (d[key] - ref[key]) >= -1e-9);
+}
+
+/** Les hauts faits « Défis » comptent si la difficulté n'a pas été adoucie : niveau prédéfini gardé, ou tout au moins aussi dur qu'Impitoyable. */
+export function defisAllowed(s: GameState): boolean {
+  const d = diff(s);
+  if (atLeastAsHard(d, progression.difficultes.impitoyable)) return true;
+  return d.id !== 'personnalisee' && !d.changed;
+}
+
+/** Difficulté réglée curseur par curseur, au lancement ou en cours de partie (v1.1, D-164). */
+export function setDifficultyValues(s: GameState, values: DifficultyValues): void {
+  const v = { ...values };
+  for (const { key, min, max } of DIFF_SETTINGS) v[key] = clamp(Number(v[key]) || 0, min, max);
+  v.tresorerie = s.difficulty.tresorerie;   // l'or de départ ne compte qu'au lancement
+  s.difficulty = { ...makeDifficulty('personnalisee', v), changed: true };
+  log(s, 'guilde', 'important', defisAllowed(s)
+    ? 'Difficulté personnalisée. Tout reste au moins aussi dur qu\'Impitoyable : les hauts faits « Défis » restent possibles.'
+    : 'Difficulté personnalisée. Les hauts faits « Défis » sont désactivés pour cette partie.');
+}
 
 /** Valeur d'un réglage de difficulté, avec repli sur Normal pour les états sans difficulté. */
 export const diff = (s: GameState) => s.difficulty ?? makeDifficulty('normal');
 
 export function setDifficulty(s: GameState, id: DifficultyId): void {
-  if (s.difficulty.id === id) return;
-  const changed = true;
-  s.difficulty = { ...makeDifficulty(id), changed };
+  if (s.difficulty.id === id || id === 'personnalisee') return;
+  s.difficulty = { ...makeDifficulty(id), tresorerie: s.difficulty.tresorerie, changed: true };
   log(s, 'guilde', 'important', `Difficulté réglée sur ${DIFFICULTY_NAMES[id]}. Les hauts faits « Défis » sont désactivés pour cette partie.`);
 }
 
 // ---------- Initialisation ----------
 
-export function initLegend(s: GameState, difficulty: DifficultyId, pantheonNames: string[]): void {
-  s.difficulty = makeDifficulty(difficulty);
+export function initLegend(s: GameState, difficulty: DifficultyId, pantheonNames: string[], values?: DifficultyValues): void {
+  s.difficulty = makeDifficulty(difficulty, difficulty === 'personnalisee' ? values : undefined);
   s.legend = {
     heraldTick: null, victoryTick: null, defeatSeen: false, epilogueSeen: false,
     achievements: {}, counters: {}, week: {}, legends: [], pantheonPick: null,
@@ -118,11 +160,13 @@ function herald(s: GameState): void {
   chronicle(s, `Le héraut royal appose le ${seal.nom} sur la charte.`);
   unlock(s, ['', '', 'sceau_fer', 'sceau_argent', 'sceau_or', 'sceau_mithril'][s.rank]);
   if (s.rank === 2 && !C(s).taxed) unlock(s, 'sans_impot', true);
-  if (s.rank === 4 && s.difficulty.id === 'impitoyable') unlock(s, 'impitoyable', true);
+  if (s.rank === 4 && atLeastAsHard(diff(s), PROG.difficultes.impitoyable)) unlock(s, 'impitoyable', true);
   advise(s, 'promotion');
   offerPrivileges(s);
   if (s.rank >= SEALS.length && s.legend.victoryTick === null) {
     s.legend.victoryTick = s.tick;
+    const sc = scenarioAchievement(s);
+    if (sc) unlock(s, sc);
     log(s, 'guilde', 'critique', 'Victoire : la guilde a obtenu le plus haut des Sceaux royaux. La partie continue, sans fin.');
     chronicle(s, 'La guilde atteint le sommet : le Sceau de Mithril. Les bardes chanteront son nom.');
   }
@@ -161,7 +205,7 @@ export function onMemorial(s: GameState): void {
 
 export function unlock(s: GameState, id: string, defi = false): void {
   if (!id || !ACHIEVEMENTS[id] || s.legend.achievements[id] !== undefined) return;
-  if ((defi || ACHIEVEMENTS[id].defi) && s.difficulty.changed) return;
+  if ((defi || ACHIEVEMENTS[id].defi) && !defisAllowed(s)) return;
   s.legend.achievements[id] = s.tick;
   log(s, 'guilde', 'important', `Haut fait : « ${ACHIEVEMENTS[id].nom} ». ${ACHIEVEMENTS[id].texte}`);
 }
@@ -318,7 +362,7 @@ function loanInterest(s: GameState): void {
     log(s, 'economie', 'info', `Intérêts de la banque : ${money(i)} ajoutés à la dette.`);
   }
   if (weekdayOf(s.tick) === P.temps.jourDuRoi && s.loans.usurier) {
-    const i = Math.round(s.loans.usurier.principal * L.usurierTauxSemaine);
+    const i = Math.round(s.loans.usurier.principal * (s.loans.usurier.taux ?? L.usurierTauxSemaine));
     s.loans.usurier.principal += i;
     log(s, 'economie', 'info', `L'usurier ajoute ${money(i)} d'intérêts.`);
   }

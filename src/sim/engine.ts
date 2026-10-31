@@ -16,7 +16,7 @@ import {
 import { dailyPopulations, initPopulations, regionalDanger } from './populations';
 import { addBonus, createPrime, expireQuests, formTeams, generateQuests, relinkRuns, stepRuns } from './quests';
 import progression from './data/progression.json';
-import { borrow, diff, gaspardAck, hourlyLegend, initLegend, morningLegend, pickForPantheon, repay, setDifficulty, weeklyRenown } from './legend';
+import { borrow, diff, gaspardAck, hourlyLegend, initLegend, morningLegend, pickForPantheon, repay, setDifficulty, setDifficultyValues, weeklyRenown } from './legend';
 import { modMult } from './mods';
 import { range, seedStreams } from './rng';
 import { addRival, decide, hourlyWorld, initWorld, morningWorld, repairRoom } from './world';
@@ -29,11 +29,13 @@ import { rangForLevel } from './adventurers';
 import { buyWork } from './charter';
 import { giftRival, pactRival } from './diplomacy';
 import { sendCaravan } from './cities';
-import type { BedType, ClassId, Command, DifficultyId, DishId, GameState, LogEntry, RemedeId } from './types';
+import type { BedType, ClassId, Command, DifficultyId, DifficultyValues, DishId, GameState, LogEntry, RemedeId, ScenarioId } from './types';
+import { applyScenario, scenarioMorning, scenarioRoster, welcomeText } from './scenarios';
 
 export interface NewGameOptions {
   seed: number; mode?: 'classique' | 'chronique'; startHour?: number;
   difficulty?: DifficultyId; pantheonNames?: string[];
+  difficultyValues?: DifficultyValues; scenario?: ScenarioId;
 }
 
 const zeroRemedes = () => Object.fromEntries(Object.keys(REMEDES).map((k) => [k, 0])) as Record<RemedeId, number>;
@@ -78,6 +80,7 @@ export function migrateSave(s: GameState): GameState {
 export function createGame(o: NewGameOptions): GameState {
   // En mode Chronique, l'horloge du jeu suit l'heure locale du joueur (0.5).
   const startTick = o.mode === 'chronique' && o.startHour !== undefined ? o.startHour : P.temps.heureDepart;
+  const startGold = o.difficulty === 'personnalisee' && o.difficultyValues ? o.difficultyValues.tresorerie : progression.difficultes[o.difficulty === 'personnalisee' ? 'normal' : o.difficulty ?? 'normal'].tresorerie;
   const s: GameState = {
     version: SAVE_VERSION,
     seed: o.seed,
@@ -85,7 +88,7 @@ export function createGame(o: NewGameOptions): GameState {
     tick: startTick,
     nextId: 1,
     mode: o.mode ?? 'classique',
-    treasury: progression.difficultes[o.difficulty ?? 'normal'].tresorerie,
+    treasury: startGold,
     debtDays: 0,
     gameOver: null,
     prosperity: P.economie.prosperiteDepart,
@@ -170,7 +173,7 @@ export function createGame(o: NewGameOptions): GameState {
     pantheonNames: [],
     competitorFluct: 1,
     ledger: [],
-    today: newDay(dayOf(startTick), progression.difficultes[o.difficulty ?? 'normal'].tresorerie),
+    today: newDay(dayOf(startTick), startGold),
     weekRevenue: 0,
     journal: [],
     stats: {
@@ -179,7 +182,7 @@ export function createGame(o: NewGameOptions): GameState {
     },
   };
 
-  initLegend(s, o.difficulty ?? 'normal', o.pantheonNames ?? []);
+  initLegend(s, o.difficulty ?? 'normal', o.pantheonNames ?? [], o.difficultyValues);
   s.staff.push(createStaff(s, 'cuisinier', 30));
   s.staff.push(createStaff(s, 'valet', 25));
   if (s.mode === 'chronique') s.staff.push(createStaff(s, 'intendant', 30));
@@ -191,13 +194,7 @@ export function createGame(o: NewGameOptions): GameState {
     s.profCandidates.push(p);
   }
 
-  const roster: [ClassId, number, number][] = [
-    ['guerrier', 1, 4], ['guerrier', 1, 4], ['guerrier', 1, 4],
-    ['rodeur', 1, 3], ['rodeur', 1, 3],
-    ['voleur', 1, 3], ['voleur', 1, 3],
-    ['mage', 1, 2],
-    ['clerc', 1, 3], ['clerc', 1, 3],
-  ];
+  const roster: [ClassId, number, number][] = scenarioRoster(o.scenario ?? 'standard');
   for (const [classe, lo, hi] of roster) {
     const level = lo + Math.floor(range(s, 'aventuriers', 0, hi - lo + 1));
     s.adventurers.push(createAdventurer(s, { classe, level: Math.min(level, hi), goldMin: P.aventuriers.orDepartMin, goldMax: P.aventuriers.orDepartMax }));
@@ -210,12 +207,13 @@ export function createGame(o: NewGameOptions): GameState {
   initMarket(s);
   initPopulations(s);
   initWorld(s);
+  applyScenario(s, o.scenario ?? 'standard');
   s.danger = regionalDanger(s);
   defaultPrices(s);
   for (const p of s.profCandidates) p.prix = sessionRef(s, p);
   generateQuests(s, true);
   generateContractOffers(s);
-  log(s, 'guilde', 'important', 'Vous prenez la tête de la guilde. Dix aventuriers comptent sur vous pour les loger et les nourrir.');
+  log(s, 'guilde', 'important', welcomeText(s));
   return s;
 }
 
@@ -267,6 +265,7 @@ function morning(s: GameState): void {
   dailyPopulations(s);
   morningWorld(s);
   morningLegend(s);
+  scenarioMorning(s);
   s.resserre = ageLots(s, s.resserre);
   gardenHarvest(s);
   dailyContracts(s);
@@ -376,6 +375,7 @@ export function applyCommand(s: GameState, c: Command): string | null {
     case 'borrow': return borrow(s, c.lender, c.amount);
     case 'repay': return repay(s, c.lender, c.amount);
     case 'setDifficulty': setDifficulty(s, c.id); break;
+    case 'setDifficultyValues': setDifficultyValues(s, c.values); break;
     case 'setGaspard': s.gaspard.mode = c.mode; break;
     case 'organizeExam': return organizeExam(s, c.id, c.offered);
     case 'buyWork': return buyWork(s, c.id);

@@ -249,6 +249,9 @@ function Fiche({ s, a }: { s: GameState; a: Adventurer }) {
   );
 }
 
+/** Écran de téléphone : certaines sections partent repliées (v1.1). */
+const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches;
+
 export function Aventuriers({ s }: { s: GameState }) {
   const nav = useNav();
   const [sort, setSort] = useState<SortKey>('level');
@@ -266,12 +269,12 @@ export function Aventuriers({ s }: { s: GameState }) {
     <th class={num ? 'num' : ''}><button class="link" style={{ fontWeight: sort === k ? 700 : 400 }} onClick={() => setSort(k)}>{label}</button></th>
   );
   return (
-    <div>
+    <div class={`adv-screen ${selected || gone ? 'has-sel' : ''}`}>
       <div class="screen-head"><h2>Aventuriers</h2><span class="hint">{s.adventurers.length} membres · clique sur une ligne pour ouvrir la fiche · ! candidat à l'épreuve de rang, ⚔ épreuve prévue</span></div>
       <Candidates s={s} />
       {s.teams.length > 0 && (
-        <div class="panel">
-          <h3>Équipes</h3>
+        <details class="panel teams" open={!isPhone()}>
+          <summary><h3>Équipes <small>({s.teams.length})</small></h3></summary>
           <div class="grid3">{s.teams.map((t) => (
             <div class="panel flat" style={{ marginBottom: 0 }}>
               <strong>{t.name}</strong> <small>{t.questsOk} quête{t.questsOk > 1 ? 's' : ''} ensemble{t.fails ? `, ${t.fails} échec récent` : ''}</small>
@@ -281,10 +284,15 @@ export function Aventuriers({ s }: { s: GameState }) {
               })}</div>
             </div>
           ))}</div>
-        </div>
+        </details>
       )}
-      <div class="split-list">
-        <div class="panel">
+      <div class={`split-list ${selected || gone ? 'has-sel' : ''}`}>
+        <div class="panel adv-list">
+          <label class="field phone-only" style={{ marginBottom: 8 }}>Trier par
+            <select value={sort} onChange={(e) => setSort((e.target as HTMLSelectElement).value as SortKey)}>
+              {([['level', 'Niveau'], ['rang', 'Rang'], ['name', 'Nom'], ['gold', 'Or'], ['morale', 'Moral'], ['loyalty', 'Loyauté'], ['griefs', 'Envie de partir']] as [SortKey, string][]).map(([k, l]) => <option value={k}>{l}</option>)}
+            </select>
+          </label>
           <div class="table-wrap">
             <table class="data">
               <thead><tr>{th('name', 'Nom')}{th('rang', 'Rang')}{th('level', 'Niv', true)}<th>Activité</th>{th('gold', 'Or', true)}{th('morale', 'Moral')}{th('loyalty', 'Loyauté', true)}{th('griefs', 'Envie de partir', true)}</tr></thead>
@@ -312,6 +320,7 @@ export function Aventuriers({ s }: { s: GameState }) {
           ))}
         </div>
         <div>
+          {(selected || gone) && <button class="btn ghost small phone-only back-btn" onClick={nav.closeAdventurer}>← Tous les aventuriers</button>}
           {selected && <Fiche s={s} a={selected} />}
           {gone && <div class="panel"><h3>{gone.name}</h3><p>Ne fait plus partie de la guilde ({gone.reason === 'mort' ? 'mort' : gone.reason}, {stamp(gone.tick)}).</p></div>}
           {!selected && !gone && <div class="panel"><p class="empty">Sélectionne un aventurier pour voir sa fiche, ses jauges et ses pensées.</p></div>}

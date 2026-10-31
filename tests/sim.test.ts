@@ -503,3 +503,53 @@ describe('les environs des villes voisines (v1.1)', () => {
     expect(cityState(s, ZONES[q.zone].ville!).commerce).toBeGreaterThan(c0);
   });
 });
+
+describe('difficulté personnalisée et scénarios de départ (v1.1)', () => {
+  it('une difficulté personnalisée règle chaque curseur ; plus douce qu\'Impitoyable, elle coupe les Défis', async () => {
+    const { defisAllowed, PROG } = await import('../src/sim/legend');
+    const values = { ...PROG.difficultes.normal, tresorerie: 80000, mort: 0.3 };
+    const s = createGame({ seed: 7, difficulty: 'personnalisee', difficultyValues: values });
+    expect(s.treasury).toBe(80000);
+    expect(s.difficulty.mort).toBe(0.3);
+    expect(defisAllowed(s)).toBe(false);
+    const hard = createGame({ seed: 7, difficulty: 'personnalisee', difficultyValues: { ...PROG.difficultes.impitoyable, mort: 1.8 } });
+    expect(defisAllowed(hard)).toBe(true);
+    const n = createGame({ seed: 7 });
+    expect(defisAllowed(n)).toBe(true);
+    applyCommand(n, { type: 'setDifficultyValues', values: { ...PROG.difficultes.normal, crises: 0 } });
+    expect(n.difficulty.id).toBe('personnalisee');
+    expect(n.difficulty.crises).toBe(0);
+    expect(n.treasury).toBe(30000);
+    expect(defisAllowed(n)).toBe(false);
+  });
+
+  it('la Guilde endettée part avec 4 aventuriers, une dette chez l\'usurier et deux salles abîmées', () => {
+    const s = createGame({ seed: 11, scenario: 'endettee' });
+    expect(s.adventurers.length).toBe(4);
+    expect(s.loans.usurier?.principal).toBe(50000);
+    expect(s.world.damaged.dortoirs && s.world.damaged.refectoire).toBe(true);
+    expect(s.treasury).toBe(15000);
+    stepDays(s, 7);
+    expect(s.loans.usurier!.principal).toBeGreaterThan(50000);
+    expect(s.loans.usurier!.principal).toBeLessThan(52000);
+  });
+
+  it('la Ville assiégée subit un assaut vers le jour 10', () => {
+    const s = createGame({ seed: 12, scenario: 'assiegee' });
+    const std = createGame({ seed: 12 });
+    expect(s.prosperity).toBe(20);
+    expect(s.danger).toBeGreaterThan(std.danger + 15);
+    stepDays(s, 10);
+    expect(s.world.assault !== null || s.world.lastAssault > 0).toBe(true);
+  });
+
+  it('l\'Héritier commence au Sceau de Fer, salles agrandies, rivales hostiles', () => {
+    const s = createGame({ seed: 13, scenario: 'heritier' });
+    expect(s.rank).toBe(2);
+    expect(s.dortoirs.level).toBe(2);
+    expect(s.adventurers.length).toBe(12);
+    expect(s.renown).toBe(0);
+    expect(s.world.rivals.every((r) => relationOf(r) < -30)).toBe(true);
+    expect(s.adventurers.every((a) => a.loyalty <= 40)).toBe(true);
+  });
+});

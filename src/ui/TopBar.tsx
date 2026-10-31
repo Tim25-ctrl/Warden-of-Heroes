@@ -32,6 +32,7 @@ export function TopBar({ s, speed }: { s: GameState; speed: number }) {
   return (
     <header class="topbar">
       <span class="brand">Warden of Heroes</span>
+      <div class="pills">
       <button class={`pill money ${s.treasury < 0 ? 'bad' : ''}`} onClick={() => nav.go('livre')} title="Trésorerie de la guilde et variation depuis minuit. Ouvre le Livre de comptes.">
         <IconCoins {...ICON} class="pi gold" />
         <span class="v"><Money v={s.treasury} /></span>
@@ -58,6 +59,7 @@ export function TopBar({ s, speed }: { s: GameState; speed: number }) {
         <span class="v">{s.adventurers.length}</span>
         <small>{present} au siège · {away} en quête</small>
       </button>
+      </div>
       <div class="clock">
         {night ? <IconMoon {...ICON} class="pi blue" /> : <IconSun {...ICON} class="pi gold" />}
         <div class="date" title={phaseOf(s.tick)}><b>{clockLabel(s.tick)}</b><small>{phaseOf(s.tick)}</small></div>

@@ -3,15 +3,19 @@ import { useEffect, useState } from 'preact/hooks';
 import { dayOf } from '../../sim/format';
 import type { GameState } from '../../sim/types';
 import { autoSlot, compatible, exportFile, importFile, INCOMPATIBLE, listSaves, saveSlot, type SaveEntry, type Slot } from '../saves';
-import { DIFFICULTY_NAMES } from '../../sim/legend';
-import type { DifficultyId } from '../../sim/types';
+import { defisAllowed, DIFFICULTY_NAMES, PRESETS } from '../../sim/legend';
+import { scenarioName } from '../../sim/scenarios';
+import type { DifficultyId, DifficultyValues } from '../../sim/types';
+import { DifficultyEditor } from '../DifficultyEditor';
 import { askNotificationPermission, getPrefs, NOTIF_LABELS, setPrefs, type NotifCat } from '../prefs';
 import { game } from '../store';
 import { GLOSSARY } from '../glossary';
+import { enableNtfy, subscribeUrl, testNtfy } from '../ntfy';
 
 export function Options({ s }: { s: GameState }) {
   const [saves, setSaves] = useState<SaveEntry[]>([]);
   const [msg, setMsg] = useState('');
+  const [ntfyMsg, setNtfyMsg] = useState('');
   const [theme, setTheme] = useState(() => { try { return localStorage.getItem('theme') ?? 'auto'; } catch { return 'auto'; } });
   const refresh = () => listSaves().then(setSaves);
   useEffect(() => { refresh(); }, []);
@@ -27,6 +31,9 @@ export function Options({ s }: { s: GameState }) {
   const [prefs, setP] = useState(getPrefs());
   const upd = (p: Parameters<typeof setPrefs>[0]) => { setPrefs(p); setP(getPrefs()); };
   const [perm, setPerm] = useState<string>(() => ('Notification' in window ? Notification.permission : 'indisponible'));
+  const { id: _id, changed: _c, ...current } = s.difficulty;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<DifficultyValues>(current);
 
   return (
     <div>
@@ -77,6 +84,24 @@ export function Options({ s }: { s: GameState }) {
           {(Object.keys(NOTIF_LABELS) as NotifCat[]).map((c) => (
             <label class="row"><input type="checkbox" checked={prefs.notif[c]} onChange={() => upd({ notif: { ...prefs.notif, [c]: !prefs.notif[c] } })} />{NOTIF_LABELS[c]}</label>
           ))}
+          <h4 style={{ marginTop: 14 }}>Avec le jeu fermé (mode Chronique)</h4>
+          <p class="hint">À la fermeture, le jeu calcule les 48 heures suivantes et programme les alertes chez <b>ntfy</b>, un service gratuit.
+            Elles arrivent sur ton téléphone par l'appli ntfy (Android ou iPhone), sans compte. Si tu rouvres le jeu plus d'une minute, elles sont annulées puis recalculées.</p>
+          {s.mode !== 'chronique' && <p class="hint">Cette partie est en mode Classique : le temps s'arrête quand le jeu est fermé, il n'y a rien à annoncer.</p>}
+          <label class="row"><input type="checkbox" checked={prefs.ntfy} onChange={() => { enableNtfy(!prefs.ntfy); setP(getPrefs()); game.syncForecast(); }} />
+            Programmer les alertes chez ntfy</label>
+          {prefs.ntfy && prefs.ntfyTopic && (
+            <div class="ntfy-box">
+              <ol class="steps">
+                <li>Installe l'appli <b>ntfy</b> (Play Store, F-Droid ou App Store).</li>
+                <li>Dans l'appli, appuie sur <b>+</b> et abonne-toi au sujet : <code class="topic">{prefs.ntfyTopic}</code>
+                  <button class="btn ghost small" onClick={() => navigator.clipboard?.writeText(prefs.ntfyTopic).then(() => setNtfyMsg('Sujet copié.'))}>Copier</button></li>
+                <li>Envoie un essai pour vérifier : <button class="btn ghost small" onClick={() => { testNtfy(); setNtfyMsg('Essai envoyé : il doit arriver dans quelques secondes.'); }}>Envoyer un essai</button></li>
+              </ol>
+              {ntfyMsg && <p class="hint"><b>{ntfyMsg}</b></p>}
+              <p class="hint">Ce sujet sert de mot de passe : ne le partage pas. Sur ordinateur, tu peux aussi ouvrir <a class="link" href={subscribeUrl()} target="_blank" rel="noopener">la page du sujet</a>. <button class="link" onClick={() => { if (confirm('Changer de sujet ? Il faudra se réabonner dans l\'appli.')) { setPrefs({ ntfyTopic: '' }); enableNtfy(true); setP(getPrefs()); } }}>Changer de sujet</button></p>
+            </div>
+          )}
         </div>
         <div class="panel">
           <h3>Affichage</h3>
@@ -90,16 +115,27 @@ export function Options({ s }: { s: GameState }) {
             {[90, 100, 115, 130].map((v) => <button class={`btn ${prefs.textSize === v ? '' : 'ghost'} small`} onClick={() => upd({ textSize: v })}>{v} %</button>)}
           </div>
           <label class="row" style={{ marginTop: 12 }}><input type="checkbox" checked={prefs.consultation} onChange={() => upd({ consultation: !prefs.consultation })} />
-            Mode consultation : écrans essentiels et actions rapides seulement (activé d'office sur téléphone)</label>
+            Mode consultation : écrans essentiels et actions rapides seulement (sur téléphone, le jeu complet reste disponible sans cette option)</label>
           <h3 style={{ marginTop: 16 }}>Partie</h3>
-          <p>Graine du monde : <strong>{s.seed}</strong> · jour {dayOf(s.tick)} · mode {s.mode === 'chronique' ? 'Chronique' : 'Classique'}</p>
+          <p>Graine du monde : <strong>{s.seed}</strong> · jour {dayOf(s.tick)} · mode {s.mode === 'chronique' ? 'Chronique' : 'Classique'} · scénario {scenarioName(s)}</p>
           <label class="field">Difficulté
             <select value={s.difficulty.id} onChange={(e) => {
               const id = (e.target as HTMLSelectElement).value as DifficultyId;
+              if (id === 'personnalisee') { setEditing(true); return; }
               if (confirm('Changer la difficulté en cours de partie désactive les hauts faits « Défis » pour cette partie. Continuer ?')) game.command({ type: 'setDifficulty', id });
-            }}>{(Object.keys(DIFFICULTY_NAMES) as DifficultyId[]).map((id) => <option value={id}>{DIFFICULTY_NAMES[id]}</option>)}</select>
+            }}>{[...PRESETS, 'personnalisee' as const].map((id) => <option value={id}>{DIFFICULTY_NAMES[id]}</option>)}</select>
           </label>
-          {s.difficulty.changed && <p class="hint">Difficulté modifiée en cours de partie : les Défis sont désactivés.</p>}
+          {!editing && <button class="btn ghost small" style={{ marginTop: 6 }} onClick={() => setEditing(true)}>Régler chaque curseur</button>}
+          {editing && draft && (
+            <>
+              <DifficultyEditor values={draft} onChange={setDraft} startOnly={false} />
+              <div class="row">
+                <button class="btn small" onClick={() => { game.command({ type: 'setDifficultyValues', values: draft }); setEditing(false); }}>Appliquer</button>
+                <button class="btn ghost small" onClick={() => { setEditing(false); setDraft(current); }}>Annuler</button>
+              </div>
+            </>
+          )}
+          {!defisAllowed(s) && <p class="hint">Difficulté modifiée ou plus douce qu'Impitoyable : les hauts faits « Défis » sont désactivés pour cette partie.</p>}
           <label class="field" style={{ marginTop: 8 }}>Conseils du vieux Gaspard
             <select value={s.gaspard.mode} onChange={(e) => game.command({ type: 'setGaspard', mode: (e.target as HTMLSelectElement).value as 'frequent' | 'alertes' | 'off' })}>
               <option value="frequent">Conseils fréquents</option><option value="alertes">Seulement les alertes</option><option value="off">Désactivé</option>

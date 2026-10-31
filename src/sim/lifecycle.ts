@@ -9,6 +9,7 @@ import { chance, randInt, range } from './rng';
 import { onDeath, onLeave } from './social';
 import { hasPrivilege } from './charter';
 import type { Adventurer, GameState, Money } from './types';
+import { modMult } from './mods';
 import { referenceTaxRate } from './world';
 import { addRenown, onAdventurerDeath, poachedDeparture, recruitShareFactor } from './world';
 import { onMemorial } from './legend';
@@ -195,7 +196,7 @@ export function spawnCandidates(s: GameState): void {
   const fCot = clamp(1.5 - 0.5 * (cotisationPrice(s) / cotisationRef(s)), 0.2, 1.5);
   const fPrix = clamp(1.6 - 0.6 * weekPriceRatio(s), 0.3, 1.3);
   const fTax = s.taxRate > 0.3 ? 0.5 : s.taxRate <= 0.1 ? 1.2 : 1;
-  const expected = P.aventuriers.candidatsParJour * fCot * fPrix * fTax * recruitShareFactor(s) * (hasPrivilege(s, 'recrutement') ? 1.2 : 1);
+  const expected = P.aventuriers.candidatsParJour * fCot * fPrix * fTax * recruitShareFactor(s) * (hasPrivilege(s, 'recrutement') ? 1.2 : 1) * modMult(s, 'recrues');
   const n = Math.floor(expected) + (chance(s, 'aventuriers', expected % 1) ? 1 : 0);
   for (let i = 0; i < n; i++) {
     const a = createAdventurer(s, { level: randInt(s, 'aventuriers', 1, 4) + (hasPrivilege(s, 'ecuyers') ? 1 : 0), goldMin: P.aventuriers.orRecrueMin, goldMax: P.aventuriers.orRecrueMax });

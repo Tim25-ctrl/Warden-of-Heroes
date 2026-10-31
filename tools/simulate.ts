@@ -68,6 +68,7 @@ function answerDecisions(s: GameState): void {
   }
   for (const r of ROOM_IDS) {
     if (s.world.damaged[r] && s.treasury > 8000) applyCommand(s, { type: 'repairRoom', room: r });
+    if (s.loans.usurier && s.treasury > 30000) applyCommand(s, { type: 'repay', lender: 'usurier', amount: s.treasury - 25000 });   // dette d'un scénario
   }
 }
 
@@ -228,7 +229,7 @@ function netOver(s: GameState, from: number, to: number): number {
 
 function run(seed: number): Result {
   for (const k of Object.keys(FLOWS)) delete FLOWS[k];
-  const s = createGame({ seed });
+  const s = createGame({ seed, scenario: arg('scenario', 'standard') as never, difficulty: arg('difficulty', 'normal') as never });
   let firstRoom = 0, fourRooms = 0, firstLevel3 = 0, net30 = 0, outside = 0;
   const types: Record<string, number> = {};
   const seenRuns = new Set<number>();

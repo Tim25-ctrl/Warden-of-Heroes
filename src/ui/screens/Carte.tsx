@@ -278,7 +278,7 @@ export function Carte({ s }: { s: GameState }) {
       </div>
       <div class="split-map">
         <div class="panel map-panel">
-          <svg viewBox="0 0 1280 832" class="map map-illustree" role="img" aria-label="Carte de la région, des villes voisines et des équipes en quête">
+          <div class="map-scroll">          <svg viewBox="0 0 1280 832" class="map map-illustree" role="img" aria-label="Carte de la région, des villes voisines et des équipes en quête">
             <image href={carteUrl} x={0} y={0} width={1280} height={832} class="map-bg" />
             {CITY_IDS.filter((id) => !routeOpen(s, id)).map((id) => {
               const leg = lastLeg(id);
@@ -360,7 +360,7 @@ export function Carte({ s }: { s: GameState }) {
                 </g>
               );
             })}
-          </svg>
+          </svg></div>
           <p class="hint">La pastille de chaque lieu donne son danger : vert calme, bleu tendu, ambre menaçant, rouge critique. Les équipes suivent les routes de la carte. ⊘ : chasse fermée à une espèce devenue rare (moins de 15).
             La barre dorée sous chaque ville voisine montre son commerce avec la tienne, ✕ une route coupée.
             Les points sont les équipes en quête ; les fanions, les guildes rivales, dans leur ville et dans les zones où elles sont sorties ces 3 derniers jours

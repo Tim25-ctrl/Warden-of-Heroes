@@ -13,8 +13,9 @@ export interface Nav {
   go: (s: Screen) => void;
   advId: number | null;
   openAdventurer: (id: number) => void;
+  closeAdventurer: () => void;
 }
-export const NavContext = createContext<Nav>({ screen: 'siege', go: () => {}, advId: null, openAdventurer: () => {} });
+export const NavContext = createContext<Nav>({ screen: 'siege', go: () => {}, advId: null, openAdventurer: () => {}, closeAdventurer: () => {} });
 export const useNav = () => useContext(NavContext);
 
 /** Texte du journal : [[a:12|Brom]] devient un lien vers la fiche de l'aventurier. */

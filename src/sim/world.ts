@@ -1005,7 +1005,7 @@ function endAssault(s: GameState, defenders: number): void {
 }
 
 export function repairCost(s: GameState, room: RoomId): number {
-  return Math.round(0.2 * (roomLevelCost(room, Math.max(1, s[room].level)) ?? 10000));
+  return Math.max(2000, Math.round(0.2 * (roomLevelCost(room, Math.max(1, s[room].level)) ?? 10000)));   // au moins 20 po (v1.1)
 }
 
 export function repairRoom(s: GameState, room: RoomId): string | null {

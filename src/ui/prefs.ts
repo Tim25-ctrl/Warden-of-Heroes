@@ -5,12 +5,14 @@ export const NOTIF_LABELS: Record<NotifCat, string> = {
   depart: 'Aventurier sur le départ', sceau: 'Nouveau sceau',
 };
 
-export interface Prefs { textSize: number; notif: Record<NotifCat, boolean>; consultation: boolean }
+export interface Prefs { textSize: number; notif: Record<NotifCat, boolean>; consultation: boolean; ntfy: boolean; ntfyTopic: string }
 
 const DEFAULTS: Prefs = {
   textSize: 100,
   notif: { mort: true, faillite: true, crise: true, decision: true, depart: true, sceau: true },
   consultation: false,
+  ntfy: false,
+  ntfyTopic: '',
 };
 
 let prefs: Prefs = load();

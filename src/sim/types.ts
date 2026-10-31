@@ -378,6 +378,7 @@ export interface GameState {
   world: WorldState;
   chronicle: { anchorReal: number; anchorTick: number } | null;   // mode Chronique : horloge réelle
   difficulty: Difficulty;
+  scenario?: ScenarioId;                   // scénario de départ (absent : standard)
   legend: LegendState;
   gaspard: GaspardState;
   loans: Loans;
@@ -447,6 +448,7 @@ export type Command =
   | { type: 'borrow'; lender: 'banque' | 'usurier'; amount: Money }
   | { type: 'repay'; lender: 'banque' | 'usurier'; amount: Money }
   | { type: 'setDifficulty'; id: DifficultyId }
+  | { type: 'setDifficultyValues'; values: DifficultyValues }
   | { type: 'setGaspard'; mode: GaspardState['mode'] }
   | { type: 'gaspardAck'; id: number }
   | { type: 'organizeExam'; id: number; offered: boolean }
@@ -525,7 +527,11 @@ export interface WorldState {
 
 // ---------- La légende (GDD chapitre 6) ----------
 
-export type DifficultyId = 'paisible' | 'normal' | 'impitoyable';
+export type DifficultyId = 'paisible' | 'normal' | 'impitoyable' | 'personnalisee';
+/** Les huit réglages de la difficulté (6.5), sans son nom. */
+export type DifficultyValues = Omit<Difficulty, 'id' | 'changed'>;
+/** Scénarios de départ (6.8, v1.1). */
+export type ScenarioId = 'standard' | 'endettee' | 'assiegee' | 'heritier';
 export interface Difficulty {
   id: DifficultyId; tresorerie: Money; mort: number; croissance: number; recompenses: number;
   tolerance: number; faillite: number; crises: number; rumeurs: number;
@@ -549,7 +555,7 @@ export interface LegendState {
 export interface Advice { id: number; key: string; text: string; screen: string; tick: number; alert: boolean }
 export interface GaspardState { mode: 'frequent' | 'alertes' | 'off'; said: string[]; last: number; queue: Advice[]; cooldown: Record<string, number> }
 
-export interface Loan { principal: Money; since: number; due: number; late: boolean }
+export interface Loan { principal: Money; since: number; due: number; late: boolean; taux?: number }   // taux : intérêt hebdomadaire propre (dette d'un scénario)
 export interface Loans { banque: Loan | null; usurier: Loan | null; lastLoanTick: number; lastDebtTick: number }
 
 export interface WeeklyPoint { day: number; treasury: Money; renown: number; prosperity: number; danger: number; adventurers: number }

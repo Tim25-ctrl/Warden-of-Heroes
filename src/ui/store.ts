@@ -4,7 +4,8 @@ import type { Command, GameState } from '../sim/types';
 import type { FromWorker, ToWorker } from '../worker/sim.worker';
 import type { AbsenceReport } from '../sim/engine';
 import { autoSlot, loadMeta, saveSlot, syncMeta, type Meta } from './saves';
-import type { DifficultyId } from '../sim/types';
+import type { DifficultyId, DifficultyValues, ScenarioId } from '../sim/types';
+import { ntfyActive, setForecast } from './ntfy';
 
 const worker = new Worker(new URL('../worker/sim.worker.ts', import.meta.url), { type: 'module' });
 
@@ -35,10 +36,13 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
   } else if (m.type === 'report') {
     report = m.report;
     emit();
+  } else if (m.type === 'forecast') {
+    setForecast(m.items, state?.mode === 'chronique');
   }
 };
 
 const send = (m: ToWorker) => worker.postMessage(m);
+const syncForecast = () => send({ type: 'forecast', on: ntfyActive() });
 
 // Mode Chronique : on sauvegarde dès que la page passe en arrière-plan (8.5).
 document.addEventListener('visibilitychange', () => {
@@ -59,9 +63,12 @@ export function lastError(): string | null {
 }
 
 export const game = {
-  newGame: (seed: number, mode: 'classique' | 'chronique' = 'classique', difficulty: DifficultyId = 'normal') =>
-    send({ type: 'new', seed, mode, difficulty, pantheonNames: (meta?.pantheon ?? []).map((e) => e.name) }),
-  load: (s: GameState) => send({ type: 'load', state: s }),
+  newGame: (seed: number, mode: 'classique' | 'chronique' = 'classique', difficulty: DifficultyId = 'normal',
+    extra: { difficultyValues?: DifficultyValues; scenario?: ScenarioId } = {}) =>
+    { send({ type: 'new', seed, mode, difficulty, pantheonNames: (meta?.pantheon ?? []).map((e) => e.name), ...extra }); syncForecast(); },
+  load: (s: GameState) => { send({ type: 'load', state: s }); syncForecast(); },
+  /** Active ou coupe la pré-simulation des notifications avec le jeu fermé (mode Chronique). */
+  syncForecast: () => syncForecast(),
   command: (cmd: Command) => { errorMsg = null; send({ type: 'command', cmd }); },
   setSpeed: (value: number) => send({ type: 'speed', value }),
   advance: (hours: number) => send({ type: 'advance', hours }),

@@ -1,7 +1,7 @@
 // Structure de l'application (GDD 7.3) : barre du haut, navigation, écran, journal.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  IconBook, IconBuildingCastle, IconCertificate, IconChefHat, IconClipboardList, IconHome, IconMap2, IconNews, IconNotebook,
+  IconBook, IconBuildingCastle, IconCertificate, IconChefHat, IconClipboardList, IconDots, IconHome, IconMap2, IconNews, IconNotebook,
   IconReportMoney, IconScale, IconSettings, IconUsers,
 } from '@tabler/icons-preact';
 import { dayOf, money } from '../sim/format';
@@ -14,9 +14,12 @@ import { Carte } from './screens/Carte';
 import { Charte } from './screens/Charte';
 import { Consultation } from './screens/Consultation';
 import { LivreGuilde } from './screens/LivreGuilde';
-import { DIFFICULTY_NAMES, epilogue } from '../sim/legend';
-import type { DifficultyId } from '../sim/types';
+import { DIFFICULTY_NAMES, epilogue, PRESETS, type PresetId } from '../sim/legend';
+import { SCENARIO_IDS, SCENARIOS } from '../sim/scenarios';
+import type { DifficultyId, DifficultyValues, ScenarioId } from '../sim/types';
+import { DifficultyEditor, presetValues } from './DifficultyEditor';
 import { getPrefs, notifCategory, notify } from './prefs';
+import { ntfyActive } from './ntfy';
 import { Chroniques, DecisionCard } from './screens/Chroniques';
 import { Aventuriers } from './screens/Aventuriers';
 import { Comptoir } from './screens/Comptoir';
@@ -54,12 +57,42 @@ const NAV: [Screen, NavIcon, string, string?][] = [
   ['options', IconSettings, 'Options', '—'],
 ];
 
+/**
+ * Téléphone (v1.1, D-167) : tout le jeu, avec une barre d'onglets en bas (Résumé, La Guilde, Aventuriers, Tableau)
+ * et un menu « Plus » pour le reste, rangé dans les mêmes groupes que sur ordinateur.
+ */
+const PHONE_NAV: [Screen, NavIcon, string, string?][] = [
+  ['resume', IconHome, 'Résumé', 'Accueil'],
+  ...NAV.slice(0, 4),
+  ['tableau', IconClipboardList, 'Tableau', 'Le monde'],
+  ['chroniques', IconNews, 'Chroniques'],
+  ['carte', IconMap2, 'Carte'],
+  ['journal', IconNotebook, 'Journal'],
+  ...NAV.slice(7),
+];
+const PHONE_TABS: Screen[] = ['resume', 'siege', 'aventuriers', 'tableau'];
+const SHORT: Partial<Record<Screen, string>> = { siege: 'Guilde', aventuriers: 'Aventuriers' };
+
+/** Replie en cartes les tableaux de 5 colonnes et plus, ou qui débordent de leur cadre (téléphone). */
+function foldTables(): void {
+  const room = (document.querySelector('.main')?.clientWidth ?? 9999) - 30;
+  for (const t of document.querySelectorAll<HTMLTableElement>('.main table.data')) {
+    const heads = [...(t.tHead?.rows[0]?.cells ?? [])].map((c) => c.textContent?.replace(/\?$/, '').trim() ?? '');
+    if (heads.length < 5 && !t.classList.contains('fold') && t.getBoundingClientRect().width <= room) continue;
+    t.classList.add('fold');
+    for (const row of t.tBodies[0]?.rows ?? []) [...row.cells].forEach((c, i) => { if (c.dataset.label !== heads[i]) c.dataset.label = heads[i] ?? ''; });
+  }
+}
+
 function StartScreen() {
   const [saves, setSaves] = useState<SaveEntry[] | null>(null);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e6));
   const [mode, setMode] = useState<'classique' | 'chronique'>('classique');
   const [difficulty, setDifficulty] = useState<DifficultyId>('normal');
+  const [custom, setCustom] = useState<DifficultyValues>(() => presetValues('normal'));
+  const [scenario, setScenario] = useState<ScenarioId>('standard');
   useEffect(() => { listSaves().then(setSaves); }, []);
+  const pickPreset = (id: PresetId) => { setDifficulty(id); setCustom(presetValues(id)); };
   const sorted = (saves ?? []).sort((a, b) => b.savedAt - a.savedAt);
   return (
     <div class="overlay">
@@ -90,19 +123,29 @@ function StartScreen() {
             <label><input type="radio" name="mode" aria-label="Mode Chronique" checked={mode === 'chronique'} onChange={() => setMode('chronique')} />
               <span><strong>Chronique</strong> <small class="hint">temps réel : la guilde vit même quand le jeu est fermé (7 jours au plus)</small></span></label>
           </div>
-          <h4>Difficulté</h4>
-          <div class="mode-choice" role="radiogroup" aria-label="Difficulté">
-            {(Object.keys(DIFFICULTY_NAMES) as DifficultyId[]).map((id) => (
-              <label><input type="radio" name="difficulty" aria-label={`Difficulté ${DIFFICULTY_NAMES[id]}`} checked={difficulty === id} onChange={() => setDifficulty(id)} />
-                <span><strong>{DIFFICULTY_NAMES[id]}</strong> <small class="hint">{{ paisible: '450 po, monstres plus calmes, quêtes mieux payées, 14 jours avant la faillite', normal: "l'équilibre prévu", impitoyable: '200 po, monstres prolifiques, quêtes moins payées, 4 jours avant la faillite' }[id]}</small></span></label>
+          <h4>Scénario</h4>
+          <div class="mode-choice" role="radiogroup" aria-label="Scénario">
+            {SCENARIO_IDS.map((id) => (
+              <label><input type="radio" name="scenario" aria-label={`Scénario ${SCENARIOS[id].nom}`} checked={scenario === id} onChange={() => setScenario(id)} />
+                <span><strong>{SCENARIOS[id].nom}</strong> <small class="hint">{SCENARIOS[id].resume}</small></span></label>
             ))}
           </div>
+          <h4>Difficulté</h4>
+          <div class="mode-choice" role="radiogroup" aria-label="Difficulté">
+            {PRESETS.map((id) => (
+              <label><input type="radio" name="difficulty" aria-label={`Difficulté ${DIFFICULTY_NAMES[id]}`} checked={difficulty === id} onChange={() => pickPreset(id)} />
+                <span><strong>{DIFFICULTY_NAMES[id]}</strong> <small class="hint">{{ paisible: '450 po, monstres plus calmes, quêtes mieux payées, 14 jours avant la faillite', normal: "l'équilibre prévu", impitoyable: '200 po, monstres prolifiques, quêtes moins payées, 4 jours avant la faillite' }[id]}</small></span></label>
+            ))}
+            <label><input type="radio" name="difficulty" aria-label="Difficulté personnalisée" checked={difficulty === 'personnalisee'} onChange={() => setDifficulty('personnalisee')} />
+              <span><strong>Personnalisée</strong> <small class="hint">pars du niveau choisi et règle chaque curseur</small></span></label>
+          </div>
+          {difficulty === 'personnalisee' && <DifficultyEditor values={custom} onChange={setCustom} startOnly />}
           <div class="row">
             <label class="field">Graine du monde
               <NumField min={0} value={seed} label="Graine du monde" live onCommit={setSeed} />
             </label>
             <span class="spacer" />
-            <button class="btn seal" onClick={() => game.newGame(seed, mode, difficulty)}>Prendre la tête de la guilde</button>
+            <button class="btn seal" onClick={() => game.newGame(seed, mode, difficulty, { scenario, difficultyValues: difficulty === 'personnalisee' ? custom : undefined })}>Prendre la tête de la guilde</button>
           </div>
           <p class="hint" style={{ marginTop: 8 }}>{mode === 'chronique'
             ? "Le mode est choisi une fois pour toutes. Un intendant t'est offert : ses consignes font tourner la guilde pendant ton absence."
@@ -171,6 +214,56 @@ function EpilogueModal({ s, onBook }: { s: GameState; onBook: () => void }) {
   );
 }
 
+/** Barre d'onglets du téléphone et menu « Plus ». */
+function PhoneNav({ list, screen, badges, more, setMore, go }: {
+  list: [Screen, NavIcon, string, string?][]; screen: Screen; badges: Partial<Record<Screen, number>>;
+  more: boolean; setMore: (v: boolean) => void; go: (sc: Screen) => void;
+}) {
+  const tabs = list.filter(([id]) => PHONE_TABS.includes(id)).slice(0, 4);
+  const rest = list.filter(([id]) => !tabs.some(([t]) => t === id));
+  const restBadge = rest.reduce((n, [id]) => n + (badges[id] ?? 0), 0);
+  const inRest = rest.some(([id]) => id === screen);
+  // Chaque écran du menu « Plus » garde le groupe de l'ordinateur (Ta guilde, Le monde, Les registres).
+  let cur = '', shown = '';
+  const groupOf = new Map<Screen, string>();
+  for (const [id, , , g] of list) { if (g) cur = g; groupOf.set(id, cur); }
+  return (
+    <>
+      <nav class="tabbar" aria-label="Écrans">
+        {tabs.map(([id, Ico, label]) => (
+          <button class={screen === id && !more ? 'on' : ''} aria-current={screen === id ? 'page' : undefined} onClick={() => go(id)}>
+            <Ico size={22} stroke={1.75} aria-hidden="true" /><span>{SHORT[id] ?? label}</span>
+            {badges[id] ? <span class="badge">{badges[id]}</span> : null}
+          </button>
+        ))}
+        <button class={more || inRest ? 'on' : ''} aria-expanded={more} onClick={() => setMore(!more)}>
+          <IconDots size={22} stroke={1.75} aria-hidden="true" /><span>{inRest && !more ? list.find(([id]) => id === screen)![2] : 'Plus'}</span>
+          {restBadge ? <span class="badge">{restBadge}</span> : null}
+        </button>
+      </nav>
+      {more && (
+        <div class="sheet-backdrop" onClick={() => setMore(false)}>
+          <div class="sheet" role="menu" aria-label="Autres écrans" onClick={(e) => e.stopPropagation()}>
+            {rest.map(([id, Ico, label]) => {
+              const g = groupOf.get(id) ?? '';
+              const head = g !== shown ? (shown = g) : null;
+              return (
+                <>
+                  {head && (head === '—' ? <hr class="sheet-sep" /> : <h4 class="sheet-group">{head}</h4>)}
+                  <button role="menuitem" class={screen === id ? 'on' : ''} onClick={() => go(id)}>
+                    <Ico size={20} stroke={1.75} aria-hidden="true" /><span>{label}</span>
+                    {badges[id] ? <span class="badge">{badges[id]}</span> : null}
+                  </button>
+                </>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function GaspardCard({ s, go }: { s: GameState; go: (sc: Screen) => void }) {
   const a = s.gaspard?.queue[0];
   if (!a) return null;
@@ -207,17 +300,37 @@ export function App() {
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
   }, []);
-  const consultation = phone || getPrefs().consultation;
+  // Le mode consultation n'est plus imposé sur téléphone (v1.1) : c'est un choix des Options.
+  const consultation = getPrefs().consultation;
+  const navList = consultation ? NAV_CONSULTATION : phone ? PHONE_NAV : NAV;
+  const [more, setMore] = useState(false);
   useEffect(() => {
-    const list = consultation ? NAV_CONSULTATION : NAV;
-    if (!list.some(([id]) => id === screen)) setScreen(consultation ? 'resume' : 'siege');
-  }, [consultation]);
+    if (!navList.some(([id]) => id === screen)) setScreen(consultation || phone ? 'resume' : 'siege');
+  }, [consultation, phone]);
+  useEffect(() => { if (phone) setScreen('resume'); }, []);
+  const go = (sc: Screen) => { setScreen(sc); setMore(false); };
+  // Chaque écran s'ouvre en haut (et la fiche d'un aventurier aussi).
+  useEffect(() => { document.querySelector('.main')?.scrollTo(0, 0); }, [screen, advId]);
 
   const nav: Nav = {
     screen, advId,
-    go: (sc) => setScreen(sc),
-    openAdventurer: (id) => { setAdvId(id); setScreen('aventuriers'); },
+    go: (sc) => go(sc),
+    openAdventurer: (id) => { setAdvId(id); go('aventuriers'); },
+    closeAdventurer: () => { setAdvId(null); document.querySelector('.main')?.scrollTo(0, 0); },
   };
+
+  // Téléphone (v1.1) : les tableaux larges se replient en cartes ; chaque case reçoit le titre de sa colonne.
+  // On surveille l'écran entier, car un onglet qui change à l'intérieur d'une salle ne redessine pas l'application.
+  useEffect(() => {
+    if (!phone) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const run = () => { timer = null; foldTables(); };
+    const obs = new MutationObserver(() => { if (!timer) timer = setTimeout(run, 0); });
+    const main = document.querySelector('.main');
+    if (main) obs.observe(main, { childList: true, subtree: true });
+    run();
+    return () => { obs.disconnect(); if (timer) clearTimeout(timer); };
+  }, [phone, !!s]);
 
   // Messages éphémères pour les faits importants (7.7.1)
   useEffect(() => {
@@ -227,7 +340,8 @@ export function App() {
     if (s.journal.length) lastSeen.current = s.journal[s.journal.length - 1].id;
     if (!fresh.length) return;
     setToasts((t) => [...t, ...fresh].slice(-3));
-    for (const e of fresh) { const c = notifCategory(e.text, e.lvl); if (c) void notify(c, e.text); }
+    // En Chronique avec ntfy, les faits ont déjà été programmés à la fermeture : pas de doublon local.
+    if (!(s.mode === 'chronique' && ntfyActive())) for (const e of fresh) { const c = notifCategory(e.text, e.lvl); if (c) void notify(c, e.text); }
     if (fresh.some((e) => e.lvl === 'critique') && speed > 0) game.setSpeed(0);
     const ids = fresh.map((e) => e.id);
     setTimeout(() => setToasts((t) => t.filter((x) => !ids.includes(x.id))), 6000);
@@ -253,10 +367,10 @@ export function App() {
   const pending = s.world.decisions.filter((d) => !later.includes(d.id));
   return (
     <NavContext.Provider value={nav}>
-      <div class={`app ${journalOpen && !consultation ? '' : 'journal-closed'} ${consultation ? 'consult' : ''} ${s.gaspard?.queue.length ? 'has-gaspard' : ''}`}>
+      <div class={`app ${journalOpen && !consultation && !phone ? '' : 'journal-closed'} ${consultation ? 'consult' : ''} ${phone ? 'phone' : ''} ${s.gaspard?.queue.length ? 'has-gaspard' : ''}`}>
         <TopBar s={s} speed={speed} />
-        <nav class="nav" aria-label="Écrans">
-          {(consultation ? NAV_CONSULTATION : NAV).map(([id, Ico, label, group]) => (
+        {phone ? <PhoneNav list={navList} screen={screen} badges={badges} more={more} setMore={setMore} go={go} /> : <nav class="nav" aria-label="Écrans">
+          {navList.map(([id, Ico, label, group]) => (
             <>
               {group && (group === '—' ? <span class="nav-sep" aria-hidden="true" /> : <span class="nav-group">{group}</span>)}
               <button class={screen === id ? 'on' : ''} aria-current={screen === id ? 'page' : undefined} onClick={() => setScreen(id)} title={label}>
@@ -265,7 +379,7 @@ export function App() {
               </button>
             </>
           ))}
-        </nav>
+        </nav>}
         <main class="main">
           {screen === 'siege' && <Siege s={s} />}
           {screen === 'aventuriers' && <Aventuriers s={s} />}
@@ -281,7 +395,7 @@ export function App() {
           {screen === 'livre' && <GrandLivre s={s} />}
           {screen === 'options' && <Options s={s} />}
         </main>
-        {consultation ? null : journalOpen
+        {consultation || phone ? null : journalOpen
           ? <Journal s={s} onClose={() => setJournalOpen(false)} />
           : <button class="collapsed-journal journal" onClick={() => setJournalOpen(true)} title="Ouvrir le journal">Journal «</button>}
       </div>
@@ -290,7 +404,7 @@ export function App() {
       </div>
       {report && <ReportModal r={report} />}
       {!report && pending.length > 0 && !s.gameOver && <DecisionModal s={{ ...s, world: { ...s.world, decisions: pending } }} onLater={(id) => setLater([...later, id])} />}
-      <GaspardCard s={s} go={setScreen} />
+      <GaspardCard s={s} go={go} />
       {update && (
         <div class="update-banner" role="status">
           Une nouvelle version du jeu est disponible.

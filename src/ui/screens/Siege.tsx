@@ -536,6 +536,10 @@ function ComptoirCard({ s }: { s: GameState }) {
   );
 }
 
+const ROOM_CHIPS: [RoomHit, string][] = [
+  ['dortoirs', 'Dortoirs'], ['refectoire', 'Réfectoire'], ['cuisine', 'Cuisine'], ['infirmerie', 'Infirmerie'], ['terrain', 'Terrain'], ['comptoir', 'Comptoir'],
+];
+
 export function Siege({ s }: { s: GameState }) {
   const nav = useNav();
   const [room, setRoom] = useState<RoomHit>('dortoirs');
@@ -550,6 +554,13 @@ export function Siege({ s }: { s: GameState }) {
       <BuildingCanvas s={s} selected={shown}
         onSelect={(r) => { if (r === 'quete') nav.go('tableau'); else if (r === 'ville') nav.go('aventuriers'); else setRoom(r); }}
         onOpen={nav.openAdventurer} onStaff={() => nav.go('personnel')} />
+      {/* Téléphone (v1.1) : la vue en coupe défile, et les salles se choisissent aussi par ces boutons. */}
+      <p class="hint phone-only">Fais glisser la vue pour voir toute la guilde ; touche un aventurier pour ouvrir sa fiche.</p>
+      <div class="room-chips phone-only" role="tablist" aria-label="Salles">
+        {ROOM_CHIPS.map(([id, label]) => (
+          <button role="tab" aria-selected={shown === id} class={shown === id ? 'on' : ''} onClick={() => setRoom(id)}>{label}</button>
+        ))}
+      </div>
       {shown === 'dortoirs' && <DormPanel s={s} />}
       {shown === 'refectoire' && <MessPanel s={s} openKitchen={() => setRoom('cuisine')} />}
       {shown === 'cuisine' && <KitchenPanel s={s} />}

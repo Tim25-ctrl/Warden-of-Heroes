@@ -56,7 +56,21 @@
     "sceau_mithril":     { "nom": "Charte de mithril", "cat": "Les sceaux", "texte": "Obtenir le Sceau de Mithril." },
     "impitoyable":       { "nom": "Impitoyable", "cat": "Défis", "texte": "Sceau d'Or en difficulté Impitoyable, sans l'avoir changée.", "defi": true },
     "sans_impot":        { "nom": "Sans impôt", "cat": "Défis", "texte": "Sceau de Fer sans jamais taxer le butin.", "defi": true },
-    "chroniqueur":       { "nom": "Chroniqueur", "cat": "Défis", "texte": "100 jours en mode Chronique.", "defi": true }
+    "chroniqueur":       { "nom": "Chroniqueur", "cat": "Défis", "texte": "100 jours en mode Chronique.", "defi": true },
+    "phenix":            { "nom": "Phénix", "cat": "Scénarios", "texte": "Sceau de Mithril en partant de la Guilde endettée." },
+    "dernier_bastion":   { "nom": "Dernier bastion", "cat": "Scénarios", "texte": "Sceau de Mithril en partant de la Ville assiégée." },
+    "nom_lave":          { "nom": "Un nom lavé", "cat": "Scénarios", "texte": "Sceau de Mithril en héritant d'une guilde déchue." }
+  },
+  "scenarios": {
+    "standard":  { "nom": "Standard", "resume": "Dix aventuriers, un siège modeste, une ville calme.", "texte": "", "hautFait": null },
+    "endettee":  { "nom": "Guilde endettée", "resume": "500 po dus à l'usurier, dortoirs et réfectoire abîmés, 4 aventuriers, caisse à moitié vide.", "texte": "L'ancien gardien a laissé 500 po de dettes chez l'usurier du Port, payables d'ici deux ans (2 % d'intérêts par semaine). Les dortoirs et le réfectoire sont abîmés : réparez-les depuis La Guilde.", "hautFait": "phenix" },
+    "assiegee":  { "nom": "Ville assiégée", "resume": "Monstres partout, Prospérité 20, milice débordée, un assaut annoncé vers le jour 10.", "texte": "La ville se barricade : les bêtes pullulent, la milice ne suffit plus et la Prospérité s'effondre. Un assaut se prépare pour le jour 10. Les quêtes, elles, ne manquent pas.", "hautFait": "dernier_bastion" },
+    "heritier":  { "nom": "Héritier d'une guilde déchue", "resume": "Sceau de Fer et salles de niveau 2, mais renommée nulle, rivales hostiles, recrues méfiantes.", "texte": "Vous héritez d'une guilde au Sceau de Fer, aux salles déjà agrandies, mais au nom sali : renommée au plus bas, guildes rivales hostiles, recrues méfiantes pendant un an et aventuriers peu loyaux.", "hautFait": "nom_lave" }
+  },
+  "scenarioReglages": {
+    "endettee": { "tresorerie": 0.5, "dette": 50000, "tauxSemaine": 0.02, "echeanceJours": 112, "mobilier": 40, "proprete": 35, "renommee": 5 },
+    "assiegee": { "populations": 1.6, "prosperite": 20, "danger": 12, "miliceJours": 28, "assautJour": 10 },
+    "heritier": { "renommee": 0, "relationRivales": -45, "recrues": 0.6, "mefianceJours": 56, "loyaute": [15, 40] }
   },
   "gaspard": {
     "intro":        { "texte": "Ces dix-là sont ta guilde, maintenant. Nourris-les, couche-les, et ils te rapporteront de l'or. Le reste, ils le décideront eux-mêmes.", "ecran": "siege" },

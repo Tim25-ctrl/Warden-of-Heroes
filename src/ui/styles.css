@@ -203,6 +203,7 @@ small, .muted { color: var(--ink-faint); }
 .nav button:hover { background: rgba(255, 255, 255, 0.07); opacity: 1; }
 .nav button.on { background: var(--accent); color: #fff; opacity: 1; }
 .nav .ico { flex: none; }
+.tabbar .badge, .sheet .badge { background: var(--gold); color: #1b1408; border-radius: 9px; font-size: 0.7rem; font-weight: 700; padding: 0 6px; }
 .nav .badge { margin-left: auto; background: var(--gold); color: #1b1408; border-radius: 9px; font-size: 0.74rem; font-weight: 700; padding: 0 7px; }
 
 /* ---------- Journal (7.6) ---------- */
@@ -532,3 +533,102 @@ ul.plain li { padding: 2px 0; }
 
 /* Menu : séparateur avant les options (v1.1) */
 .nav-sep { display: block; height: 1px; margin: 10px 12px 6px; background: currentColor; opacity: 0.15; }
+
+/* Difficulté personnalisée (v1.1, D-164) */
+.diff-editor { display: grid; gap: 6px; margin: 8px 0 4px; }
+.diff-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(90px, 1fr) 76px; align-items: center; gap: 10px; }
+.diff-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+.diff-row.locked { opacity: 0.55; }
+.diff-val { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .diff-row { grid-template-columns: 1fr auto; } .diff-row input[type="range"] { grid-column: 1 / -1; grid-row: 2; min-height: 32px; } }
+
+/* Notifications avec le jeu fermé (v1.1, D-166) */
+.ntfy-box { border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 12px; margin-top: 8px; background: var(--bg-deep); }
+.ntfy-box .steps { margin: 4px 0 6px; padding-left: 20px; display: grid; gap: 6px; }
+.ntfy-box code.topic { font-size: 0.95rem; padding: 2px 6px; border-radius: 4px; background: var(--bg); border: 1px solid var(--line); user-select: all; word-break: break-all; }
+
+/* ---------- Téléphone complet (v1.1, D-167) : barre d'onglets en bas et menu « Plus » ---------- */
+.tabbar, .sheet-backdrop { display: none; }
+@media (max-width: 640px) {
+  .app.phone, .app.phone.journal-closed { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: 'top' 'main'; height: 100dvh; }
+  .app.phone .main { padding: 12px 14px calc(84px + env(safe-area-inset-bottom)); overscroll-behavior: contain; }
+  .tabbar {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: var(--panel); border-top: 2px solid var(--line); padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.18);
+  }
+  .tabbar button {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 54px; border: 0; border-radius: 10px; background: none; color: var(--ink-soft); font-size: 0.72rem; line-height: 1.1; padding: 4px 2px;
+  }
+  .tabbar button span:not(.badge) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabbar button.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 700; }
+  .tabbar .badge { position: absolute; top: 2px; right: calc(50% - 22px); }
+  .sheet-backdrop { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(0, 0, 0, 0.35); }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: calc(66px + env(safe-area-inset-bottom)); max-height: 70dvh; overflow: auto;
+    background: var(--panel); border-top: 2px solid var(--line); border-radius: 16px 16px 0 0; padding: 10px 12px 12px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; box-shadow: var(--shadow);
+  }
+  .sheet .sheet-group { grid-column: 1 / -1; margin: 6px 4px 0; font-size: 0.8rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .sheet .sheet-sep { grid-column: 1 / -1; width: 100%; border: 0; border-top: 1px solid var(--line-soft); margin: 4px 0; }
+  .sheet button {
+    position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px; text-align: left;
+    border: 1px solid var(--line-soft); border-radius: 10px; background: var(--bg); color: var(--ink);
+  }
+  .sheet button.on { border-color: var(--accent); color: var(--accent); }
+  .sheet .badge { margin-left: auto; }
+  .gaspard { bottom: calc(76px + env(safe-area-inset-bottom)); left: 10px; right: 10px; max-width: none; }
+  .toasts { bottom: calc(76px + env(safe-area-inset-bottom)); left: 10px; right: 10px; width: auto; transform: none; }
+}
+
+/* Barre du haut condensée sur téléphone (v1.1, D-167) : pastilles sur une ligne qui défile, puis l'horloge. */
+.topbar .pills { display: contents; }
+@media (max-width: 640px) {
+  .app.phone .topbar { flex-wrap: wrap; gap: 4px; padding: 6px 10px 4px; }
+  .app.phone .topbar .brand { display: none; }
+  .app.phone .topbar .pills { display: flex; gap: 6px; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .app.phone .topbar .pills::-webkit-scrollbar { display: none; }
+  .app.phone .pill { flex: none; padding: 3px 9px; min-height: 36px; gap: 5px; }
+  .app.phone .pill .v { font-size: 0.95rem; }
+  .app.phone .pill .pi { width: 17px; height: 17px; }
+  .app.phone .clock { width: 100%; margin: 0; }
+  .app.phone .speeds button { min-height: 36px; }
+}
+.phone-only { display: none; }
+@media (max-width: 640px) {
+  .app.phone .phone-only { display: block; }
+  .app.phone .building { overflow-x: auto; overscroll-behavior-x: contain; margin-bottom: 4px; }
+  .app.phone .building canvas { width: 860px; max-width: none; }
+  .app.phone .building .tooltip { display: none; }
+  .app.phone .room-chips { display: flex; gap: 6px; overflow-x: auto; margin: 6px 0 12px; scrollbar-width: none; }
+  .room-chips button { flex: none; min-height: 40px; padding: 4px 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft); }
+  .room-chips button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+}
+/* Téléphone : tableaux larges repliés en cartes, fiche d'aventurier en plein écran (v1.1, D-167) */
+@media (max-width: 640px) {
+  .app.phone table.data.fold, .app.phone table.data.fold tbody { display: block; width: 100%; }
+  .app.phone table.data.fold thead { display: none; }
+  .app.phone table.data.fold tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 14px; padding: 9px 4px; border-bottom: 1px solid var(--line-soft); }
+  .app.phone table.data.fold td { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; padding: 1px 0; white-space: normal; text-align: right; min-width: 0 !important; }
+  .app.phone table.data.fold td::before { content: attr(data-label); color: var(--ink-faint); font-size: 0.78rem; text-align: left; }
+  .app.phone table.data.fold td:first-child { grid-column: 1 / -1; justify-content: flex-start; text-align: left; font-weight: 700; font-size: 0.98rem; }
+  .app.phone table.data.fold td:first-child::before, .app.phone table.data.fold td[data-label=""]::before { display: none; }
+  .app.phone table.data.fold td[data-label=""] { grid-column: 1 / -1; justify-content: flex-end; }
+  .app.phone table.data.fold td[data-label=""]:empty { display: none; }
+  .app.phone table.data.fold td .gauge { flex: 1; max-width: 110px; }
+  .app.phone .split-list.has-sel > .adv-list { display: none; }
+  .app.phone .back-btn { display: inline-flex; margin-bottom: 8px; }
+}
+details.panel.teams > summary { cursor: pointer; list-style: none; }
+details.panel.teams > summary h3 { display: inline; }
+details.panel.teams > summary::before { content: '▸ '; color: var(--ink-faint); }
+details.panel.teams[open] > summary::before { content: '▾ '; }
+details.panel.teams[open] > summary { margin-bottom: 8px; }
+@media (max-width: 640px) { .app.phone .adv-screen.has-sel > :not(.split-list):not(.screen-head) { display: none; } }
+@media (max-width: 640px) {
+  .app.phone .map-scroll { overflow-x: auto; overscroll-behavior-x: contain; border-radius: 8px; }
+  .app.phone .map-scroll .map-illustree { width: 640px; max-width: none; }
+}
+@media (max-width: 640px) { .app.phone .split-map { grid-template-columns: minmax(0, 1fr); } .app.phone .split-map > * { min-width: 0; } }
+@media (max-width: 640px) { .app.phone .slider-row { grid-template-columns: minmax(0, 1fr) auto; } .app.phone .slider-row > input[type="range"] { grid-column: 1 / -1; grid-row: 2; } .app.phone .slider-row .price { min-width: 0; } }

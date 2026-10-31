@@ -3,8 +3,8 @@
 > **Titre :** *Warden of Heroes*, sous-titre français *Le gardien de la guilde* (D-115). « Siège de Guilde », le titre de travail, reste le nom du bâtiment dans le jeu.
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
-> **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1)
-> **Statut du document :** v2.8 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
+> **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1, **tout le jeu sur téléphone depuis la v1.1**)
+> **Statut du document :** v2.9 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -2345,6 +2345,22 @@ Trois niveaux prédéfinis, plus un mode **personnalisé** où chaque paramètre
 - La difficulté est **modifiable en cours de partie**. Dans ce cas, la sauvegarde est marquée et les hauts faits de la catégorie *Défis* sont désactivés pour cette partie.
 - **Précisé en tranche 4 :** le mode personnalisé n'est pas encore proposé dans l'interface. Les trois niveaux prédéfinis sont choisis au lancement et modifiables dans les Options.
 
+> **Ajouté en v1.1 : la difficulté personnalisée** (D-164). Au lancement, le choix « Personnalisée » part du niveau sélectionné et ouvre les **8 curseurs** du tableau, chacun avec sa bulle d'aide :
+>
+> | Réglage | Bornes | Pas |
+> |---------|--------|-----|
+> | Trésorerie de départ | 50 à 1 000 po | 50 po |
+> | Risque de mort | ×0,25 à ×2 | 0,05 |
+> | Croissance des monstres | ×0,5 à ×1,6 | 0,05 |
+> | Récompenses des quêtes | ×0,6 à ×1,5 | 0,05 |
+> | Tolérance de prix | −30 % à +40 % | 5 % |
+> | Délai avant faillite | 2 à 30 jours | 1 jour |
+> | Fréquence des crises | ×0 à ×2,5 | 0,25 |
+> | Fiabilité des rumeurs | 50 à 100 % | 5 % |
+>
+> - En cours de partie, les Options proposent « Régler chaque curseur » (la trésorerie de départ est alors grisée : elle ne compte qu'au lancement). Passer d'un niveau prédéfini à un autre garde aussi l'or de départ.
+> - **Hauts faits « Défis » :** ils restent possibles tant qu'on garde un niveau prédéfini sans le changer, ou si **chaque** réglage est au moins aussi dur qu'Impitoyable. Une difficulté personnalisée plus douce, ou un changement en cours de partie, les désactive (le jeu le dit sous les curseurs). Le haut fait *Impitoyable* (Sceau d'Or) est accordé à toute difficulté au moins aussi dure qu'Impitoyable.
+
 ### 6.6 Victoire, défaite et épilogue
 
 - **Victoire :** l'obtention du **Sceau de Mithril** déclenche un écran d'**épilogue** :
@@ -2374,8 +2390,19 @@ Le Panthéon conserve les aventuriers légendaires de **toutes tes parties**. Il
 | Scénario | Version | Situation de départ |
 |----------|---------|---------------------|
 | **Standard** | v1 | Voir 1.12 |
-| **Guilde en ruine** | Ajout futur | 500 po de dette chez l'usurier, salles endommagées, 4 aventuriers, renommée négative |
-| **Ville frontière** | Ajout futur | Danger 60, Prospérité 25, beaucoup de mercenaires parmi les recrues |
+| ~~Guilde en ruine~~ | Remplacé en v1.1 | Devenu la *Guilde endettée* |
+| ~~Ville frontière~~ | Remplacé en v1.1 | Devenu la *Ville assiégée* |
+
+> **Ajouté en v1.1 : trois scénarios de départ** (D-165), choisis sur l'écran de lancement, chacun avec son **haut fait** (catégorie *Scénarios*) quand la guilde obtient le Sceau de Mithril. Le nom du scénario s'affiche dans les Options. Réglages dans `progression.json` (`scenarios`, `scenarioReglages`).
+>
+> | Scénario | Situation de départ | Haut fait |
+> |----------|---------------------|-----------|
+> | **Guilde endettée** | 4 aventuriers seulement (guerrier, rôdeur, voleur, clerc). La moitié de l'or de départ. **500 po dus à l'usurier**, à 2 % d'intérêts par semaine, remboursables sous 112 jours (deux ans) ; passé ce délai, les règles de retard de l'usurier s'appliquent (1.1.3). Dortoirs et réfectoire **endommagés** (capacité −50 % jusqu'à réparation), mobilier abîmé, propreté 35. Renommée 5 | *Phénix* |
+> | **Ville assiégée** | Toutes les bêtes des zones de la région partent **60 % plus nombreuses** (sans dépasser 100 ; ni plantes, ni golems, ni dragon). Prospérité 20. **Milice débordée** : +12 de Danger pendant 28 jours. Un **assaut** est lancé au matin du jour 10 par l'espèce de rang E ou D la plus nombreuse. Les quêtes, elles, abondent | *Dernier bastion* |
+> | **Héritier d'une guilde déchue** | **Sceau de Fer** d'emblée. Dortoirs (12 paillasses, 10 lits communs), réfectoire et cuisine au **niveau 2**, infirmerie et terrain au niveau 1. 12 aventuriers de niveau 2 à 6, peu loyaux (15 à 40). Mais **renommée 0** (300 points à trouver pour l'Argent), guildes rivales **hostiles** (relation −45), **recrues méfiantes** : 40 % de candidats en moins pendant un an | *Un nom lavé* |
+>
+> - **Simulateur** (`--scenario`, 4 graines × 160 jours, robot qui rembourse la dette dès qu'il a plus de 300 po) : aucune faillite. Guilde endettée : revenu net d'environ 6 po par jour au jour 30 (18 en Standard), Sceau de Fer vers J50-67 (J23-37 en Standard), d'Argent vers J121-141. Ville assiégée : environ 14 po par jour au jour 30, 15 morts en 160 jours (11 en Standard), sceaux à peu près au rythme du Standard. Héritier : Sceau d'Argent vers J66-82 (J51-66 en Standard), 21 morts en 160 jours.
+> - Une réparation de salle coûte désormais **au moins 20 po** (les salles de niveau 1 gratuites à construire se réparaient gratuitement).
 
 ### 6.9 Le Livre de la guilde
 
@@ -2677,6 +2704,15 @@ Difficulté, conseils de Gaspard, thème, taille du texte, notifications (par ca
 
 > **Contrainte :** les notifications avec le jeu fermé nécessitent un **petit serveur** (un simple service d'envoi, sans données de jeu sensibles). Sur iPhone, il faut aussi que le jeu ait été ajouté à l'écran d'accueil. Détail technique en 8.7.
 
+> **Ajusté en v1.1 : sans serveur à nous, avec ntfy** (D-166). Le « petit service » est **ntfy.sh**, un service de notifications gratuit et sans compte. Le joueur installe l'appli **ntfy** (Android, iPhone) et s'abonne à un **sujet** que le jeu tire au hasard (`woh-` suivi de 12 caractères ; il sert de mot de passe, et peut être changé).
+> - **Options › Notifications › Avec le jeu fermé** : une case pour programmer les alertes, le sujet avec un bouton « Copier », un bouton « Envoyer un essai ».
+> - Pendant la partie Chronique, la tâche de fond **pré-simule les 48 heures à venir** sur une copie de la partie, 1,5 s après chaque changement (heure qui passe, ordre du joueur), et relève les faits importants et critiques avec leur heure réelle.
+> - **À la fermeture** (page passée en arrière-plan), le jeu programme chez ntfy **6 alertes au plus**, celles des catégories cochées, chacune à son heure (délai de 15 s minimum). Si rien n'a changé depuis la dernière programmation, il n'envoie rien.
+> - **À la réouverture**, si le jeu reste ouvert plus d'**une minute**, les alertes encore à venir sont **annulées** : le joueur voit tout par lui-même. Une sortie rapide de l'appli ne les annule pas.
+> - Quand ces alertes sont actives, les notifications locales du mode Chronique ne partent plus (pas de doublons).
+> - Les alertes portent le titre de leur catégorie (« Décision en attente », « Assaut ou crise »…) et ouvrent le jeu quand on les touche. Elles ne contiennent que le texte du journal.
+> - En mode Classique, le temps s'arrête avec le jeu : rien n'est programmé.
+
 ### 7.8 Graphiques
 
 | Graphique | Écran |
@@ -2706,6 +2742,16 @@ Difficulté, conseils de Gaspard, thème, taille du texte, notifications (par ca
   - En dessous de 640 px de large, ou si l'option est cochée, le jeu passe en **mode consultation**. La barre du haut est condensée.
   - L'écran **Résumé** regroupe les décisions, les alertes des 48 dernières heures, les candidats (accepter, refuser), les aventuriers sur le départ (prime ou exonération), les tarifs (+/−) et les quêtes sans preneur (+2 po de bonus).
   - Le journal, les Chroniques, les Aventuriers, le Tableau et les Options restent accessibles.
+
+> **Ajouté en v1.1 : tout le jeu sur téléphone** (D-167). Sous 640 px de large, le mode consultation n'est plus imposé : c'est une option.
+> - **Barre d'onglets en bas** : Résumé (écran d'accueil sur téléphone), La Guilde, Aventuriers, Tableau, et **Plus**, qui ouvre un panneau avec les autres écrans rangés comme sur ordinateur (Ta guilde, Le monde, Les registres, puis Options). L'onglet Plus prend le nom de l'écran ouvert, et ses pastilles additionnent celles des écrans qu'il cache.
+> - **Barre du haut sur deux lignes** : les pastilles (trésorerie, sceau, danger, palier, aventuriers) sur une ligne qui défile, puis l'horloge et les vitesses.
+> - **La Guilde** : la vue en coupe garde une taille lisible et **défile** sous le doigt ; des **boutons de salles** (Dortoirs, Réfectoire, Cuisine, Infirmerie, Terrain, Comptoir) évitent de viser une salle. Toucher un aventurier ouvre sa fiche.
+> - **Tableaux repliés en cartes** : dès 5 colonnes, ou dès qu'un tableau déborde, chaque ligne devient une carte où chaque valeur porte le nom de sa colonne. Un menu « Trier par » remplace les en-têtes de la liste des aventuriers.
+> - **Aventuriers** : les équipes partent repliées ; une fiche ouverte passe en plein écran avec un bouton « ← Tous les aventuriers ».
+> - **Carte** : plus grande, elle défile dans son cadre ; le tableau de la région permet aussi de choisir un lieu.
+> - Chaque écran s'ouvre en haut de page. Le conseil de Gaspard et les messages éphémères s'affichent au-dessus de la barre d'onglets.
+> - Vérifié à 375 px de large sur les 13 écrans et leurs onglets : aucune page ne déborde.
 
 ### 7.10 Accessibilité et langue
 
@@ -2836,7 +2882,7 @@ Les effets des événements sont décrits sous forme déclarative, par exemple `
 | Version | Contenu |
 |---------|---------|
 | **v1** | Jeu **installable** (manifeste et service worker), jouable **hors ligne**. Notifications locales quand le jeu est ouvert ou en arrière-plan |
-| **v1.1** | **Notifications avec le jeu fermé** (mode Chronique) : à la fermeture, le jeu pré-simule 48 h et envoie au petit service la liste des notifications avec leur heure. Le service les envoie, puis la liste est effacée à la réouverture. Le service ne stocke que l'abonnement aux notifications et cette liste |
+| **v1.1** | **Notifications avec le jeu fermé** (mode Chronique) : à la fermeture, le jeu pré-simule 48 h et envoie au petit service la liste des notifications avec leur heure. Le service les envoie, puis la liste est effacée à la réouverture. Le service ne stocke que l'abonnement aux notifications et cette liste. **Fait avec ntfy.sh** (D-166, détail en 7.7.2) : messages programmés envoyés par `sendBeacon` (publication JSON à la racine du service, champs `delay` et `sequence_id` de s0 à s5), annulés par `GET /<sujet>/<sN>/delete`. Code : `src/ui/ntfy.ts`, pré-simulation dans `src/worker/sim.worker.ts` |
 
 - Sur iPhone, les notifications exigent que le jeu soit ajouté à l'écran d'accueil (iOS 16.4 ou plus récent).
 - Le jeu exige une connexion HTTPS (fournie par l'hébergement).
@@ -2902,7 +2948,7 @@ Chaque tranche est **jouable et testée** avant de passer à la suivante.
 | **2** | *La guilde complète* | Infirmerie (états, remèdes, apothicairerie), Terrain et professeurs, inventaire et Forgeron, marché complet (bourse, 5 acheteurs, contrats, rachat, Resserre), fiscalité et fraude, équipes et relations, **primes du joueur**, 6 zones et 12 espèces, plantes, populations, consignes de l'intendant, tous les types de quêtes | 100 jours jouables. Cibles de rythme 1.13 respectées jusqu'au Sceau d'Argent |
 | **3** | *Le monde vivant* | Danger et Prospérité, saisons, paliers de ville, événements, chaînes et rumeurs, Chroniques, guildes rivales, assauts, épidémies, carte régionale, **mode Chronique** et rapport d'absence | Une année de jeu complète sans incohérence. Test de rattrapage réussi |
 | **4** | *La légende* | Renommée et sceaux, hauts faits, Gaspard, difficultés, épilogue, Panthéon, Livre de la guilde, **application installable**, mode consultation sur téléphone, notifications locales, thèmes, accessibilité, finitions | **Version 1.0** |
-| v1.1+ | *Après la sortie* | **Rééquilibrage du rythme et des revenus** (fait, 8.11.5), notifications avec le jeu fermé, scénarios *Guilde en ruine* et *Ville frontière*, **tout faire sur téléphone**, synchronisation PC/téléphone, son | — |
+| v1.1+ | *Après la sortie* | **Rééquilibrage du rythme et des revenus** (fait, 8.11.5), notifications avec le jeu fermé (fait, D-166), scénarios de départ (faits, D-165), difficulté personnalisée (faite, D-164), **tout faire sur téléphone** (fait, D-167), synchronisation PC/téléphone, son | — |
 
 #### 8.11.1 Bilan de la tranche 1 (2026-10-29)
 
@@ -3013,7 +3059,7 @@ Chaque tranche est **jouable et testée** avant de passer à la suivante.
   - Le Sceau d'Argent n'est pas atteint en un an avec le robot, au lieu de J50 à J70.
   - Le revenu net est d'environ 7 po par jour au jour 30.
   - Les cibles et l'équilibrage de la progression restent à reprendre, en même temps que les revenus, comme convenu avec le joueur.
-- **Textes de l'interface** pas encore externalisés pour la traduction (7.10). **Difficulté personnalisée** pas encore proposée (6.5).
+- **Textes de l'interface** pas encore externalisés pour la traduction (7.10). ~~Difficulté personnalisée pas encore proposée (6.5)~~ : faite en v1.1 (D-164).
 - **Sauvegardes :** le format passe en version 4 ; celles des tranches précédentes ne se chargent plus.
 
 **Résultats du simulateur** (robot prudent, 8 graines × 112 jours, 30 aventuriers au plus) :
@@ -3476,6 +3522,10 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-161 | 2026-10-30 | Golems et dragon ne comptent pas dans le danger d'une zone ; plus de halo coloré sur la carte, seulement la pastille. | 2.7, 7.5.6 |
 | D-162 | 2026-10-30 | Les meubles des salles viennent de planches illustrées détourées au chargement ; premier lot : les quatre lits du dortoir. | 7.2, 7.5.1 |
 | D-163 | 2026-10-30 | Postes de la cour : chaque professeur a sa place, son matériel et ses élèves autour de lui ; limite d'un professeur par niveau de terrain expliquée. | 1.7, 7.5.1 |
+| D-164 | 2026-10-31 | Difficulté personnalisée : 8 curseurs au lancement et en cours de partie ; Défis gardés si tout est au moins aussi dur qu'Impitoyable. | 6.5 |
+| D-165 | 2026-10-31 | Trois scénarios de départ (Guilde endettée, Ville assiégée, Héritier d'une guilde déchue), chacun avec son haut fait ; ils remplacent Guilde en ruine et Ville frontière. Réparation d'une salle : 20 po au moins. | 6.8 |
+| D-166 | 2026-10-31 | Notifications avec le jeu fermé (Chronique) par ntfy.sh, sans serveur à nous : pré-simulation de 48 h, 6 alertes programmées à la fermeture, annulées après une minute de jeu rouvert. | 7.7.2, 8.7 |
+| D-167 | 2026-10-31 | Tout le jeu sur téléphone : barre d'onglets et menu Plus, barre du haut condensée, vue en coupe et carte qui défilent, tableaux repliés en cartes ; le mode consultation devient une option. | 7.9 |
 
 ### Relecture de cohérence (v1.0)
 

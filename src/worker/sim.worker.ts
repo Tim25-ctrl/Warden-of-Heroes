@@ -3,20 +3,25 @@
 import { P } from '../sim/data';
 import { applyCommand, catchUp, createGame, migrateSave, MIN_SAVE_VERSION, SAVE_VERSION, step, type AbsenceReport } from '../sim/engine';
 import { relinkRuns } from '../sim/quests';
-import type { Command, DifficultyId, GameState } from '../sim/types';
+import type { Command, DifficultyId, DifficultyValues, GameState, ScenarioId } from '../sim/types';
 
 export type ToWorker =
-  | { type: 'new'; seed: number; mode: 'classique' | 'chronique'; difficulty: DifficultyId; pantheonNames: string[] }
+  | { type: 'new'; seed: number; mode: 'classique' | 'chronique'; difficulty: DifficultyId; pantheonNames: string[]; difficultyValues?: DifficultyValues; scenario?: ScenarioId }
   | { type: 'load'; state: GameState }
   | { type: 'command'; cmd: Command }
   | { type: 'speed'; value: number }
-  | { type: 'advance'; hours: number };
+  | { type: 'advance'; hours: number }
+  | { type: 'forecast'; on: boolean };
 
 export type FromWorker =
   | { type: 'state'; state: GameState; speed: number }
   | { type: 'autosave'; state: GameState }
   | { type: 'report'; report: AbsenceReport }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | { type: 'forecast'; items: ForecastItem[] };
+
+/** Un fait à venir de la pré-simulation (7.7.2) : son heure réelle prévue et son texte. */
+export interface ForecastItem { at: number; tick: number; lvl: string; text: string }
 
 const HOUR_MS = 3_600_000;
 const CHRONICLE_CHECK_MS = 5_000;
@@ -24,9 +29,42 @@ const CHRONICLE_CHECK_MS = 5_000;
 let s: GameState | null = null;
 let speed = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
+/** Pré-simulation des 48 h à venir (mode Chronique, notifications avec le jeu fermé), recalculée après chaque changement. */
+let forecastOn = false;
+let forecastTimer: ReturnType<typeof setTimeout> | null = null;
+let forecastMark = '';
+const FORECAST_HOURS = 48;
 
 const post = (m: FromWorker) => (self as unknown as Worker).postMessage(m);
-const publish = () => { if (s) post({ type: 'state', state: s, speed }); };
+const publish = () => { if (s) post({ type: 'state', state: s, speed }); planForecast(); };
+
+/** Recalcule la pré-simulation peu après le dernier changement (commande ou heure qui passe). */
+function planForecast(): void {
+  if (!forecastOn || !s || s.mode !== 'chronique' || !s.chronicle || s.gameOver) return;
+  const mark = `${s.tick}:${s.journal.length ? s.journal[s.journal.length - 1].id : 0}:${s.nextId}`;
+  if (mark === forecastMark) return;
+  forecastMark = mark;
+  if (forecastTimer) clearTimeout(forecastTimer);
+  forecastTimer = setTimeout(runForecast, 1500);
+}
+
+/**
+ * Le monde est déterministe tant que le joueur n'agit pas : on joue les 48 prochaines heures sur une copie
+ * et on relève les faits importants et critiques, avec leur heure réelle (8.7).
+ */
+function runForecast(): void {
+  forecastTimer = null;
+  if (!s || !s.chronicle) return;
+  const c = structuredClone(s);
+  relinkRuns(c);
+  const last = c.journal.length ? c.journal[c.journal.length - 1].id : 0;
+  for (let i = 0; i < FORECAST_HOURS && !c.gameOver; i++) step(c);
+  const ch = s.chronicle;
+  const items = c.journal
+    .filter((e) => e.id > last && (e.lvl === 'critique' || e.lvl === 'important'))
+    .map((e) => ({ at: ch.anchorReal + (e.tick - ch.anchorTick) * HOUR_MS, tick: e.tick, lvl: e.lvl, text: e.text }));
+  post({ type: 'forecast', items });
+}
 
 /** Tick visé par l'horloge réelle en mode Chronique. */
 function chronicleTarget(st: GameState): number {
@@ -89,7 +127,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
   switch (m.type) {
     case 'new': {
       const now = new Date();
-      s = createGame({ seed: m.seed, mode: m.mode, startHour: now.getHours(), difficulty: m.difficulty, pantheonNames: m.pantheonNames });
+      s = createGame({ seed: m.seed, mode: m.mode, startHour: now.getHours(), difficulty: m.difficulty, pantheonNames: m.pantheonNames, difficultyValues: m.difficultyValues, scenario: m.scenario });
       if (m.mode === 'chronique') {
         // L'heure en cours a commencé il y a quelques minutes : le prochain tick tombera à l'heure pile.
         const sinceHour = (now.getMinutes() * 60 + now.getSeconds()) * 1000 + now.getMilliseconds();
@@ -113,6 +151,10 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     }
     case 'speed':
       if (s?.mode !== 'chronique') speed = m.value;   // pas de pause en mode Chronique
+      break;
+    case 'forecast':
+      forecastOn = m.on;
+      forecastMark = '';
       break;
     case 'advance':
       if (s?.mode === 'chronique') break;
