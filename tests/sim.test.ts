@@ -553,3 +553,18 @@ describe('difficulté personnalisée et scénarios de départ (v1.1)', () => {
     expect(s.adventurers.every((a) => a.loyalty <= 40)).toBe(true);
   });
 });
+
+describe('pause faute d\'alertes (v1.1, D-169)', () => {
+  it('le rattrapage s\'arrête à la pause et compte le reste comme du sommeil', () => {
+    const s = createGame({ seed: 21, mode: 'chronique', startHour: 8 });
+    const t0 = s.tick;
+    const r = catchUp(s, 50, 10);
+    expect(s.tick).toBe(t0 + 10);
+    expect(r.hours).toBe(10);
+    expect(r.slept).toBe(40);
+    expect(r.paused).toBe(true);
+    const r2 = catchUp(s, 20);
+    expect(r2.paused).toBe(false);
+    expect(r2.slept).toBe(0);
+  });
+});

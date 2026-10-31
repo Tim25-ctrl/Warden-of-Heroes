@@ -12,7 +12,15 @@ export type Slot = 'auto' | 'auto-chronique' | '1' | '2' | '3';
 export const autoSlot = (state: GameState): Slot => (state.mode === 'chronique' ? 'auto-chronique' : 'auto');
 export const slotLabel = (e: SaveEntry) => (e.slot === 'auto' ? 'Sauvegarde automatique' : e.slot === 'auto-chronique' ? 'Partie Chronique (en direct)' : `Emplacement ${e.slot}`)
   + (e.slot.startsWith('auto') || !e.state?.mode ? '' : e.state.mode === 'chronique' ? ' · Chronique' : '');
-export interface SaveEntry { slot: Slot; savedAt: number; day: number; state: GameState }
+export interface SaveEntry {
+  slot: Slot; savedAt: number; day: number; state: GameState;
+  syncedAt?: number;   // compte (D-173) : date de la version en ligne dont celle-ci descend
+}
+export const SLOTS: Slot[] = ['auto', 'auto-chronique', '1', '2', '3'];
+
+/** Prévenu après chaque sauvegarde locale (la synchronisation en ligne s'y abonne). */
+let saveListener: ((e: SaveEntry) => void) | null = null;
+export function onSaved(fn: (e: SaveEntry) => void): void { saveListener = fn; }
 
 const DB = 'siege-de-guilde';
 const STORE = 'saves';
@@ -31,19 +39,47 @@ function open(): Promise<IDBDatabase> {
   });
 }
 
-export async function saveSlot(slot: Slot, state: GameState): Promise<void> {
+export async function saveSlot(slot: Slot, state: GameState, from?: { savedAt: number; syncedAt: number }): Promise<void> {
   try {
     const db = await open();
+    // La date de synchronisation suit la sauvegarde locale tant qu'une version en ligne ne la remplace pas.
+    const prev = from ? undefined : await getSlot(slot);
+    const entry: SaveEntry = {
+      slot, savedAt: from?.savedAt ?? Date.now(), day: Math.floor(state.tick / 24) + 1, state,
+      syncedAt: from?.syncedAt ?? prev?.syncedAt,
+    };
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE, 'readwrite');
-      const entry: SaveEntry = { slot, savedAt: Date.now(), day: Math.floor(state.tick / 24) + 1, state };
       tx.objectStore(STORE).put(entry);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
+    if (!from) saveListener?.(entry);
   } catch (err) {
     console.warn('Sauvegarde impossible', err);
   }
+}
+
+export async function getSlot(slot: Slot): Promise<SaveEntry | undefined> {
+  try {
+    const db = await open();
+    return await new Promise((resolve) => {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(slot);
+      req.onsuccess = () => resolve(req.result as SaveEntry | undefined);
+      req.onerror = () => resolve(undefined);
+    });
+  } catch { return undefined; }
+}
+
+/** Note que la sauvegarde locale de cet emplacement est identique à la version en ligne. */
+export async function markSynced(slot: Slot, savedAt: number): Promise<void> {
+  const e = await getSlot(slot);
+  if (!e || e.savedAt !== savedAt) return;
+  e.syncedAt = savedAt;
+  try {
+    const db = await open();
+    db.transaction(STORE, 'readwrite').objectStore(STORE).put(e);
+  } catch { /* stockage indisponible */ }
 }
 
 export async function listSaves(): Promise<SaveEntry[]> {

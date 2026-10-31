@@ -5,7 +5,7 @@ import type { FromWorker, ToWorker } from '../worker/sim.worker';
 import type { AbsenceReport } from '../sim/engine';
 import { autoSlot, loadMeta, saveSlot, syncMeta, type Meta } from './saves';
 import type { DifficultyId, DifficultyValues, ScenarioId } from '../sim/types';
-import { ntfyActive, setForecast } from './ntfy';
+import { alertsActive, away, back, forecastHours, setForecast } from './alerts';
 
 const worker = new Worker(new URL('../worker/sim.worker.ts', import.meta.url), { type: 'module' });
 
@@ -37,17 +37,32 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
     report = m.report;
     emit();
   } else if (m.type === 'forecast') {
-    setForecast(m.items, state?.mode === 'chronique');
+    setForecast(m.base, m.baseAt, m.hours, m.items);
   }
 };
 
 const send = (m: ToWorker) => worker.postMessage(m);
-const syncForecast = () => send({ type: 'forecast', on: ntfyActive() });
+const syncForecast = () => send({ type: 'forecast', hours: forecastHours() });
 
 // Mode Chronique : on sauvegarde dès que la page passe en arrière-plan (8.5).
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && state && state.mode === 'chronique') void saveSlot(autoSlot(state), state);
-});
+// Avec les alertes du jeu fermé, on programme les alertes et on note l'heure où la guilde se mettra en pause (D-169).
+let isAway = false;
+function onAway(): void {
+  if (isAway || !state || state.mode !== 'chronique') return;
+  isAway = true;
+  const pauseTick = alertsActive() ? away() : null;
+  send({ type: 'away', pauseTick });
+  const saved = state.chronicle ? { ...state, chronicle: { ...state.chronicle, pauseTick: pauseTick ?? undefined } } : state;
+  void saveSlot(autoSlot(saved), saved);
+}
+function onBack(): void {
+  if (!isAway) return;
+  isAway = false;
+  back();
+  send({ type: 'back' });
+}
+document.addEventListener('visibilitychange', () => (document.visibilityState === 'hidden' ? onAway() : onBack()));
+window.addEventListener('pagehide', onAway);
 
 /** Méta-progression (hauts faits de toutes les parties, Panthéon). */
 export function getMeta(): Meta | null { return meta; }

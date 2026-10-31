@@ -19,7 +19,11 @@ import { SCENARIO_IDS, SCENARIOS } from '../sim/scenarios';
 import type { DifficultyId, DifficultyValues, ScenarioId } from '../sim/types';
 import { DifficultyEditor, presetValues } from './DifficultyEditor';
 import { getPrefs, notifCategory, notify } from './prefs';
-import { ntfyActive } from './ntfy';
+import { alertsActive, firstLaunchAlerts } from './alerts';
+import { AlertWarning } from './AlertWarning';
+import { AccountPanel, ConflictList } from './AccountPanel';
+import { getConflicts, onCloudChange, reconcile, session } from './cloud';
+import { autoSlot, getSlot } from './saves';
 import { Chroniques, DecisionCard } from './screens/Chroniques';
 import { Aventuriers } from './screens/Aventuriers';
 import { Comptoir } from './screens/Comptoir';
@@ -91,7 +95,9 @@ function StartScreen() {
   const [difficulty, setDifficulty] = useState<DifficultyId>('normal');
   const [custom, setCustom] = useState<DifficultyValues>(() => presetValues('normal'));
   const [scenario, setScenario] = useState<ScenarioId>('standard');
-  useEffect(() => { listSaves().then(setSaves); }, []);
+  // Connecté : on remet d'accord cet appareil et le compte avant d'afficher les parties (D-173).
+  const relist = () => listSaves().then(setSaves);
+  useEffect(() => { void (session() ? reconcile() : Promise.resolve()).then(relist); }, []);
   const pickPreset = (id: PresetId) => { setDifficulty(id); setCustom(presetValues(id)); };
   const sorted = (saves ?? []).sort((a, b) => b.savedAt - a.savedAt);
   return (
@@ -101,6 +107,7 @@ function StartScreen() {
         <p class="subtitle">Le gardien de la guilde</p>
         <p class="soft">Tu ne diriges pas les héros. Tu diriges l'endroit où ils vivent.</p>
         <p>Dix aventuriers comptent sur toi pour les loger et les nourrir. Fixe tes prix, recrute ton personnel, agrandis le siège : eux décideront du reste.</p>
+        <AccountPanel onSynced={relist} onResolved={relist} />
         {sorted.length > 0 && (
           <div class="panel flat">
             <h3>Reprendre une partie</h3>
@@ -109,7 +116,7 @@ function StartScreen() {
                 <span>{slotLabel(e)} — jour {e.day}</span>
                 <span class="spacer" />
                 <small>{new Date(e.savedAt).toLocaleString('fr-FR')}</small>
-                {compatible(e.state) ? <button class="btn small" onClick={() => game.load(e.state)}>Reprendre</button> : <small class="hint" title={INCOMPATIBLE}>ancienne version</small>}
+                {compatible(e.state) ? <button class="btn small" onClick={() => { firstLaunchAlerts(game.syncForecast); game.load(e.state); }}>Reprendre</button> : <small class="hint" title={INCOMPATIBLE}>ancienne version</small>}
               </div>
             ))}
           </div>
@@ -123,6 +130,7 @@ function StartScreen() {
             <label><input type="radio" name="mode" aria-label="Mode Chronique" checked={mode === 'chronique'} onChange={() => setMode('chronique')} />
               <span><strong>Chronique</strong> <small class="hint">temps réel : la guilde vit même quand le jeu est fermé (7 jours au plus)</small></span></label>
           </div>
+          {mode === 'chronique' && <AlertWarning />}
           <h4>Scénario</h4>
           <div class="mode-choice" role="radiogroup" aria-label="Scénario">
             {SCENARIO_IDS.map((id) => (
@@ -145,7 +153,7 @@ function StartScreen() {
               <NumField min={0} value={seed} label="Graine du monde" live onCommit={setSeed} />
             </label>
             <span class="spacer" />
-            <button class="btn seal" onClick={() => game.newGame(seed, mode, difficulty, { scenario, difficultyValues: difficulty === 'personnalisee' ? custom : undefined })}>Prendre la tête de la guilde</button>
+            <button class="btn seal" onClick={() => { firstLaunchAlerts(game.syncForecast); game.newGame(seed, mode, difficulty, { scenario, difficultyValues: difficulty === 'personnalisee' ? custom : undefined }); }}>Prendre la tête de la guilde</button>
           </div>
           <p class="hint" style={{ marginTop: 8 }}>{mode === 'chronique'
             ? "Le mode est choisi une fois pour toutes. Un intendant t'est offert : ses consignes font tourner la guilde pendant ton absence."
@@ -163,7 +171,13 @@ function DecisionModal({ s, onLater }: { s: GameState; onLater: (id: number) => 
     <div class="overlay">
       <div class="modal">
         <DecisionCard s={s} d={d} />
-        <div class="row"><span class="spacer" /><button class="btn ghost small" onClick={() => onLater(d.id)}>Décider plus tard (Chroniques)</button></div>
+        {/* « Plus tard » ferme seulement la fenêtre : la question attend dans l'écran Chroniques, dans les deux modes (v1.1). */}
+        <div class="row">
+          <small class="hint" style={{ flex: 1 }}>{s.mode === 'classique'
+            ? "Pas pressé ? La question t'attend dans l'écran Chroniques, et le temps reste en pause tant que tu ne le relances pas."
+            : "Pas pressé ? La question t'attend dans l'écran Chroniques jusqu'à son échéance."}</small>
+          <button class="btn ghost small" onClick={() => onLater(d.id)}>Répondre plus tard</button>
+        </div>
       </div>
     </div>
   );
@@ -177,7 +191,9 @@ function ReportModal({ r }: { r: AbsenceReport }) {
       <div class="modal">
         <h2>Pendant ton absence</h2>
         <p>{days > 0 ? `${days} jour${days > 1 ? 's' : ''} et ` : ''}{r.hours % 24} heure{r.hours % 24 > 1 ? 's' : ''} se sont écoulés à la guilde.</p>
-        {r.slept > 0 && <p class="alert">Au-delà de 7 jours, la guilde s'est mise en sommeil : {Math.round(r.slept / 24)} jour(s) n'ont pas été joués.</p>}
+        {r.slept > 0 && (r.paused
+          ? <p class="alert">Il n'y avait plus d'alerte à t'envoyer : la guilde s'est mise en pause en t'attendant. {r.slept >= 24 ? `${Math.round(r.slept / 24)} jour(s)` : `${r.slept} heure(s)`} n'ont pas été joués.</p>
+          : <p class="alert">Au-delà de 7 jours, la guilde s'est mise en sommeil : {Math.round(r.slept / 24)} jour(s) n'ont pas été joués.</p>)}
         <p>Trésorerie : {money(r.treasuryBefore)} → <strong>{money(r.treasuryAfter)}</strong> ({delta >= 0 ? '+' : ''}{money(delta)}).
           Recrues : {r.recruits} · départs : {r.departures} · morts : {r.deaths}.</p>
         <div class="report-list">
@@ -288,6 +304,10 @@ export function App() {
   const lastSeen = useRef<number>(-1);
   const [later, setLater] = useState<number[]>([]);
   const [update, setUpdate] = useState(false);
+  // Partie jouée ailleurs pendant qu'elle est ouverte ici (D-173).
+  const [, redrawCloud] = useState(0);
+  useEffect(() => onCloudChange(() => redrawCloud((x) => x + 1)), []);
+  const inGameConflict = getConflicts().length > 0;
   useEffect(() => {
     const on = () => setUpdate(true);
     window.addEventListener('guilde-nouvelle-version', on);
@@ -340,8 +360,8 @@ export function App() {
     if (s.journal.length) lastSeen.current = s.journal[s.journal.length - 1].id;
     if (!fresh.length) return;
     setToasts((t) => [...t, ...fresh].slice(-3));
-    // En Chronique avec ntfy, les faits ont déjà été programmés à la fermeture : pas de doublon local.
-    if (!(s.mode === 'chronique' && ntfyActive())) for (const e of fresh) { const c = notifCategory(e.text, e.lvl); if (c) void notify(c, e.text); }
+    // En Chronique avec les alertes du jeu fermé, les faits ont déjà été programmés à la fermeture : pas de doublon local.
+    if (!(s.mode === 'chronique' && alertsActive())) for (const e of fresh) { const c = notifCategory(e.text, e.lvl); if (c) void notify(c, e.text); }
     if (fresh.some((e) => e.lvl === 'critique') && speed > 0) game.setSpeed(0);
     const ids = fresh.map((e) => e.id);
     setTimeout(() => setToasts((t) => t.filter((x) => !ids.includes(x.id))), 6000);
@@ -405,6 +425,14 @@ export function App() {
       {report && <ReportModal r={report} />}
       {!report && pending.length > 0 && !s.gameOver && <DecisionModal s={{ ...s, world: { ...s.world, decisions: pending } }} onLater={(id) => setLater([...later, id])} />}
       <GaspardCard s={s} go={go} />
+      {inGameConflict && (
+        <div class="update-banner conflict-banner" role="alert">
+          <ConflictList onResolved={async (slot, keep) => {
+            // On garde la version en ligne de la partie en cours : on la recharge.
+            if (keep === 'cloud' && slot === autoSlot(s)) { const e = await getSlot(slot); if (e) game.load(e.state); }
+          }} />
+        </div>
+      )}
       {update && (
         <div class="update-banner" role="status">
           Une nouvelle version du jeu est disponible.

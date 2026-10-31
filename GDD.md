@@ -4,7 +4,7 @@
 
 > **Genre :** Simulation de gestion indirecte / écosystème autonome
 > **Plateforme :** Navigateur, ordinateur en priorité, installable comme application (téléphone en mode consultation en v1, **tout le jeu sur téléphone depuis la v1.1**)
-> **Statut du document :** v2.9 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
+> **Statut du document :** v3.0 — GDD complet (chapitres 0 à 8). Les 4 tranches sont développées : **version 1.0 du jeu**, rééquilibrée en v1.1 (rythme, revenus et fin de partie). Ajustements d'équilibrage et écarts restants reportés en 8.11.1 à 8.11.7
 > **Convention :** toutes les valeurs chiffrées sont des **valeurs initiales d'équilibrage**. Elles sont centralisées dans la table des paramètres (8.12) et seront ajustées avec le simulateur d'équilibrage (8.10.1).
 
 ---
@@ -1990,6 +1990,7 @@ Chaque événement est une **donnée**, pas du code spécifique (voir ch. 8) :
 > - **Recrue exceptionnelle :** niveau 8 à 12. **Gourmet :** la compétence du chef sert de qualité du meilleur plat.
 > - **Guerre régionale :** chaque lundi, 1 ou 2 aventuriers de niveau 3 ou plus sont appelés. Après la paix, la moitié des conscrits reviennent frapper à la porte.
 > - **Bête légendaire :** chasse noble de 2 rangs au-dessus de l'espèce, récompense Base × 1,5, 3 aventuriers au moins.
+> - **Précisé en v1.1 (D-170) :** le bouton de la fenêtre de décision s'appelle « Répondre plus tard » et dit où la question attend (l'écran Chroniques) ; en Classique, il rappelle que le temps reste en pause tant que le joueur ne le relance pas. Ce n'est pas une fonction du seul mode Chronique.
 > - **Décisions :** en Classique, une décision met le jeu en pause. Si le joueur relance le temps sans répondre, le délai de 12 h du mode Chronique s'applique aussi, puis l'option par défaut.
 
 #### 5.4.3 Catalogue de départ (25 événements)
@@ -2706,12 +2707,30 @@ Difficulté, conseils de Gaspard, thème, taille du texte, notifications (par ca
 
 > **Ajusté en v1.1 : sans serveur à nous, avec ntfy** (D-166). Le « petit service » est **ntfy.sh**, un service de notifications gratuit et sans compte. Le joueur installe l'appli **ntfy** (Android, iPhone) et s'abonne à un **sujet** que le jeu tire au hasard (`woh-` suivi de 12 caractères ; il sert de mot de passe, et peut être changé).
 > - **Options › Notifications › Avec le jeu fermé** : une case pour programmer les alertes, le sujet avec un bouton « Copier », un bouton « Envoyer un essai ».
-> - Pendant la partie Chronique, la tâche de fond **pré-simule les 48 heures à venir** sur une copie de la partie, 1,5 s après chaque changement (heure qui passe, ordre du joueur), et relève les faits importants et critiques avec leur heure réelle.
+> - Pendant la partie Chronique, la tâche de fond **pré-simule les jours à venir** (3 avec ntfy, 7 avec les notifications du jeu, D-168) sur une copie de la partie, 1,5 s après chaque changement (heure qui passe, ordre du joueur), et relève les faits importants et critiques avec leur heure réelle.
 > - **À la fermeture** (page passée en arrière-plan), le jeu programme chez ntfy **6 alertes au plus**, celles des catégories cochées, chacune à son heure (délai de 15 s minimum). Si rien n'a changé depuis la dernière programmation, il n'envoie rien.
 > - **À la réouverture**, si le jeu reste ouvert plus d'**une minute**, les alertes encore à venir sont **annulées** : le joueur voit tout par lui-même. Une sortie rapide de l'appli ne les annule pas.
 > - Quand ces alertes sont actives, les notifications locales du mode Chronique ne partent plus (pas de doublons).
 > - Les alertes portent le titre de leur catégorie (« Décision en attente », « Assaut ou crise »…) et ouvrent le jeu quand on les touche. Elles ne contiennent que le texte du journal.
 > - En mode Classique, le temps s'arrête avec le jeu : rien n'est programmé.
+
+> **Ajouté en v1.1 : les notifications du jeu, sans autre appli** (D-168). Le joueur voulait se passer de ntfy. Le jeu a donc son propre petit service, sur **Cloudflare Workers** (offre gratuite, sans carte) : de vraies notifications Web Push, au nom de Warden of Heroes.
+> - **Options › Notifications › Avec le jeu fermé** propose trois choix : *Notifications du jeu* (Reco), *Appli ntfy* (secours), *Aucune alerte*. Choisir les notifications du jeu demande la permission du navigateur et abonne l'appareil ; un bouton « Envoyer un essai » vérifie que tout marche.
+> - **Android** : dans Chrome, et mieux avec le jeu installé. **iPhone** : le jeu doit être ajouté à l'écran d'accueil et ouvert depuis là (iOS 16.4 ou plus récent).
+> - À la fermeture, le jeu envoie au service, en une seule requête, la liste des alertes avec leur heure, l'abonnement de l'appareil et un identifiant tiré au hasard. Le service garde cette liste et se réveille à l'heure de chaque alerte (un « Durable Object » par joueur, avec un réveil). Il efface tout une fois les alertes envoyées, quand le joueur revient plus d'une minute, ou si l'abonnement a expiré.
+> - **Limites par moyen** : notifications du jeu, **7 jours** de pré-simulation et **10 alertes** au plus ; ntfy, 3 jours (sa limite) et 6 alertes.
+> - Code : `server/` (service, `server/README.md` pour la mise en ligne), `src/ui/alerts.ts` (choix du moyen, programmation), `public/sw.js` (affichage des notifications).
+> - **Activées d'office (D-171)** : au premier lancement, le premier bouton touché sur l'écran d'accueil (« Prendre la tête de la guilde » ou « Reprendre ») ouvre la demande d'autorisation du navigateur, une seule fois ; si le joueur accepte, les notifications du jeu sont activées sans passer par les Options. La demande attend ce geste parce que les navigateurs, Safari surtout, refusent une demande qui n'en vient pas. Si l'autorisation était déjà donnée, l'abonnement se fait sans rien demander ; si elle a été refusée, le jeu ne redemande pas (les Options expliquent comment l'autoriser).
+> - **Service en ligne** : `https://warden-push.warden-push.workers.dev` (compte Cloudflare du joueur, offre gratuite).
+
+> **Ajouté en v1.1 : mode Chronique sans alertes, le jeu le dit** (D-172). Tant qu'aucune alerte n'est active, un encadré « Notifications désactivées » explique que la guilde vit jusqu'à 7 jours sans prévenir, et ce qui peut arriver : un aventurier qui meurt ou s'en va, un assaut ou une épidémie, une décision prise à la place du joueur au bout de 12 h, la trésorerie dans le rouge jusqu'à la saisie. Il rappelle qu'avec les notifications, la guilde se met en pause quand il n'y a plus d'alerte possible, et propose « Activer les notifications » (et les autres choix des Options). Il paraît sur l'écran de lancement dès qu'on choisit Chronique, en tête du Résumé, en version courte en tête de La Guilde ; la barre du haut porte une étiquette « sans alertes » à côté de « en direct », qui ouvre les Options.
+
+> **Ajouté en v1.1 : la guilde se met en pause quand il n'y a plus d'alerte possible** (D-169). Avec les alertes du jeu fermé, rien de grave ne doit arriver sans que le joueur soit prévenu :
+> - si les faits à annoncer dépassent le nombre maximal d'alertes, la guilde **s'arrête juste après la dernière alerte**, dont le texte se termine par « La guilde se met en pause jusqu'à ton retour » ;
+> - sinon, elle s'arrête **au bout de la pré-simulation** (7 jours avec les notifications du jeu, 3 avec ntfy), et une dernière alerte le dit : « 3 jours sans toi : la guilde s'arrête là et t'attend » ;
+> - au retour, le rattrapage s'arrête à ce moment-là ; le temps d'après n'est pas joué (comme le sommeil au-delà de 7 jours, 8.6), et le rapport d'absence l'explique. L'heure de pause est enregistrée avec la partie (`chronicle.pauseTick`) ;
+> - si l'onglet reste ouvert en arrière-plan, l'horloge s'arrête aussi à la pause ;
+> - sans alertes (« Aucune alerte »), rien ne change : la guilde vit jusqu'à 7 jours seule.
 
 ### 7.8 Graphiques
 
@@ -2865,6 +2884,15 @@ Les effets des événements sont décrits sous forme déclarative, par exemple `
 | Export / import | Fichier `.guilde`, pour une copie de secours ou un changement d'appareil |
 | Taille visée | Moins de 2 Mo par sauvegarde |
 
+> **Ajouté en v1.1 : compte joueur et sauvegardes en ligne** (D-173). Une partie commencée sur le téléphone se retrouve sur l'ordinateur, et inversement.
+> - **Compte facultatif**, par e-mail et mot de passe (choix du joueur), dans un encart « Compte » de l'écran d'accueil et des Options : *Se connecter*, *Créer un compte*, *Mot de passe oublié*. Sans compte, rien ne change.
+> - **Le mot de passe ne quitte jamais l'appareil** : le jeu en dérive une clé (PBKDF2-SHA-256, 310 000 tours, sel propre au compte) ; le service n'en garde que l'empreinte. 5 essais ratés bloquent le compte 15 minutes. Une adresse inconnue reçoit un sel factice, pour ne pas révéler qui a un compte.
+> - **Mot de passe oublié** : un code à 6 chiffres envoyé par e-mail (service **Brevo**, gratuit, 300 e-mails par jour), valable 30 minutes, 5 essais ; 1 demande par minute et 5 par jour au plus. Brevo plutôt que Resend : Resend exige un nom de domaine à soi pour écrire à n'importe qui.
+> - **Synchronisation automatique** : connecté, chaque sauvegarde locale (les 5 emplacements) part en ligne 5 secondes plus tard, compressée (40 à 90 Ko). À l'ouverture, pour chaque emplacement, la version la plus récente gagne. Si la partie a avancé **des deux côtés** depuis la dernière synchronisation, le joueur choisit laquelle garder (« Celle de cet appareil » ou « Celle en ligne », avec le jour et l'heure de chacune) ; en cours de partie, un bandeau pose la question et recharge la partie si l'on garde la version en ligne.
+> - En mode Chronique, la partie reprise sur l'autre appareil rattrape le temps écoulé depuis la dernière sauvegarde, comme d'habitude.
+> - **Pas encore synchronisés** : les hauts faits et le Panthéon (méta-progression), qui restent propres à chaque navigateur.
+> - Côté service (même Cloudflare Workers que les notifications) : un « Durable Object » par compte, jeton de session signé valable un an, invalidé au changement de mot de passe. Code : `server/src/accounts.ts`, `src/ui/cloud.ts`, `src/ui/AccountPanel.tsx`. Vérifié de bout en bout sur un serveur local (création, connexion, envoi, récupération sur un « autre appareil », conflit).
+
 ### 8.6 Le mode Chronique
 
 1. **À l'ouverture :** `heures écoulées = heure réelle − heure de la dernière sauvegarde`, plafonnées à 168 (7 jours).
@@ -2882,6 +2910,7 @@ Les effets des événements sont décrits sous forme déclarative, par exemple `
 | Version | Contenu |
 |---------|---------|
 | **v1** | Jeu **installable** (manifeste et service worker), jouable **hors ligne**. Notifications locales quand le jeu est ouvert ou en arrière-plan |
+| **v1.1 (D-168)** | **Notre propre service** sur Cloudflare Workers, sans bibliothèque : chiffrement aes128gcm (RFC 8291) et signature VAPID ES256 (RFC 8292) avec la seule WebCrypto (`server/src/webpush.ts`, testé). Requêtes simples (`sendBeacon`, texte JSON) pour éviter les vérifications préalables ; origines autorisées : le site GitHub Pages et localhost. Mise en ligne par `npm run push:setup`, qui écrit l'adresse et la clé publique dans `src/push.json` |
 | **v1.1** | **Notifications avec le jeu fermé** (mode Chronique) : à la fermeture, le jeu pré-simule 48 h et envoie au petit service la liste des notifications avec leur heure. Le service les envoie, puis la liste est effacée à la réouverture. Le service ne stocke que l'abonnement aux notifications et cette liste. **Fait avec ntfy.sh** (D-166, détail en 7.7.2) : messages programmés envoyés par `sendBeacon` (publication JSON à la racine du service, champs `delay` et `sequence_id` de s0 à s5), annulés par `GET /<sujet>/<sN>/delete`. Code : `src/ui/ntfy.ts`, pré-simulation dans `src/worker/sim.worker.ts` |
 
 - Sur iPhone, les notifications exigent que le jeu soit ajouté à l'écran d'accueil (iOS 16.4 ou plus récent).
@@ -2948,7 +2977,7 @@ Chaque tranche est **jouable et testée** avant de passer à la suivante.
 | **2** | *La guilde complète* | Infirmerie (états, remèdes, apothicairerie), Terrain et professeurs, inventaire et Forgeron, marché complet (bourse, 5 acheteurs, contrats, rachat, Resserre), fiscalité et fraude, équipes et relations, **primes du joueur**, 6 zones et 12 espèces, plantes, populations, consignes de l'intendant, tous les types de quêtes | 100 jours jouables. Cibles de rythme 1.13 respectées jusqu'au Sceau d'Argent |
 | **3** | *Le monde vivant* | Danger et Prospérité, saisons, paliers de ville, événements, chaînes et rumeurs, Chroniques, guildes rivales, assauts, épidémies, carte régionale, **mode Chronique** et rapport d'absence | Une année de jeu complète sans incohérence. Test de rattrapage réussi |
 | **4** | *La légende* | Renommée et sceaux, hauts faits, Gaspard, difficultés, épilogue, Panthéon, Livre de la guilde, **application installable**, mode consultation sur téléphone, notifications locales, thèmes, accessibilité, finitions | **Version 1.0** |
-| v1.1+ | *Après la sortie* | **Rééquilibrage du rythme et des revenus** (fait, 8.11.5), notifications avec le jeu fermé (fait, D-166), scénarios de départ (faits, D-165), difficulté personnalisée (faite, D-164), **tout faire sur téléphone** (fait, D-167), synchronisation PC/téléphone, son | — |
+| v1.1+ | *Après la sortie* | **Rééquilibrage du rythme et des revenus** (fait, 8.11.5), notifications avec le jeu fermé (fait, D-166), scénarios de départ (faits, D-165), difficulté personnalisée (faite, D-164), **tout faire sur téléphone** (fait, D-167), synchronisation PC/téléphone (faite, D-173), son | — |
 
 #### 8.11.1 Bilan de la tranche 1 (2026-10-29)
 
@@ -3526,6 +3555,12 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-165 | 2026-10-31 | Trois scénarios de départ (Guilde endettée, Ville assiégée, Héritier d'une guilde déchue), chacun avec son haut fait ; ils remplacent Guilde en ruine et Ville frontière. Réparation d'une salle : 20 po au moins. | 6.8 |
 | D-166 | 2026-10-31 | Notifications avec le jeu fermé (Chronique) par ntfy.sh, sans serveur à nous : pré-simulation de 48 h, 6 alertes programmées à la fermeture, annulées après une minute de jeu rouvert. | 7.7.2, 8.7 |
 | D-167 | 2026-10-31 | Tout le jeu sur téléphone : barre d'onglets et menu Plus, barre du haut condensée, vue en coupe et carte qui défilent, tableaux repliés en cartes ; le mode consultation devient une option. | 7.9 |
+| D-168 | 2026-10-31 | Notifications du jeu avec le jeu fermé, sans autre appli : petit service Web Push sur Cloudflare Workers (gratuit), 7 jours et 10 alertes au plus ; ntfy reste en secours. | 7.7.2, 8.7 |
+| D-169 | 2026-10-31 | Avec les alertes du jeu fermé, la guilde se met en pause après la dernière alerte possible ou au bout de la pré-simulation. | 7.7.2, 8.6 |
+| D-170 | 2026-10-31 | Fenêtre de décision : « Répondre plus tard » expliqué (la question attend dans les Chroniques ; en Classique, le temps reste en pause). | 7.7.1 |
+| D-171 | 2026-10-31 | Notifications du jeu activées d'office : demande d'autorisation au premier bouton de l'écran d'accueil, une seule fois. | 7.7.2 |
+| D-172 | 2026-10-31 | Mode Chronique sans alertes : encadré « Notifications désactivées » (risques, bouton pour activer) au lancement, au Résumé et à La Guilde, étiquette « sans alertes » dans la barre du haut. | 7.7.2 |
+| D-173 | 2026-10-31 | Compte joueur facultatif (e-mail, mot de passe jamais envoyé) et sauvegardes en ligne synchronisées automatiquement ; conflit tranché par le joueur ; mot de passe oublié par code e-mail (Brevo). | 8.5 |
 
 ### Relecture de cohérence (v1.0)
 

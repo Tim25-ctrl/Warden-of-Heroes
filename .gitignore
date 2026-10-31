@@ -4,3 +4,8 @@ dist/
 
 # Réglages locaux de Claude Code
 .claude/settings.local.json
+
+# Service de notifications : clés privées et fichiers temporaires
+server/.vapid.json
+server/.secrets.tmp.json
+server/.wrangler/

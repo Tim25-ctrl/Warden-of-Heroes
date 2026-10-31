@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { dayOf } from '../../sim/format';
 import type { GameState } from '../../sim/types';
-import { autoSlot, compatible, exportFile, importFile, INCOMPATIBLE, listSaves, saveSlot, type SaveEntry, type Slot } from '../saves';
+import { autoSlot, compatible, exportFile, getSlot, importFile, INCOMPATIBLE, listSaves, saveSlot, type SaveEntry, type Slot } from '../saves';
+import { AccountPanel } from '../AccountPanel';
 import { defisAllowed, DIFFICULTY_NAMES, PRESETS } from '../../sim/legend';
 import { scenarioName } from '../../sim/scenarios';
 import type { DifficultyId, DifficultyValues } from '../../sim/types';
@@ -10,12 +11,11 @@ import { DifficultyEditor } from '../DifficultyEditor';
 import { askNotificationPermission, getPrefs, NOTIF_LABELS, setPrefs, type NotifCat } from '../prefs';
 import { game } from '../store';
 import { GLOSSARY } from '../glossary';
-import { enableNtfy, subscribeUrl, testNtfy } from '../ntfy';
+import { ALERT_LIMITS, disableAlerts, enableNtfy, enablePush, ntfyUrl, pushReady, pushSupported, testAlert, type AlertMode } from '../alerts';
 
 export function Options({ s }: { s: GameState }) {
   const [saves, setSaves] = useState<SaveEntry[]>([]);
   const [msg, setMsg] = useState('');
-  const [ntfyMsg, setNtfyMsg] = useState('');
   const [theme, setTheme] = useState(() => { try { return localStorage.getItem('theme') ?? 'auto'; } catch { return 'auto'; } });
   const refresh = () => listSaves().then(setSaves);
   useEffect(() => { refresh(); }, []);
@@ -38,6 +38,10 @@ export function Options({ s }: { s: GameState }) {
   return (
     <div>
       <div class="screen-head"><h2>Options</h2></div>
+      <AccountPanel onSynced={refresh} onResolved={async (slot, keep) => {
+        refresh();
+        if (keep === 'cloud' && slot === autoSlot(s)) { const e = await getSlot(slot); if (e) game.load(e.state); }
+      }} />
       <div class="grid2">
         <div class="panel">
           <h3>Sauvegardes</h3>
@@ -84,24 +88,7 @@ export function Options({ s }: { s: GameState }) {
           {(Object.keys(NOTIF_LABELS) as NotifCat[]).map((c) => (
             <label class="row"><input type="checkbox" checked={prefs.notif[c]} onChange={() => upd({ notif: { ...prefs.notif, [c]: !prefs.notif[c] } })} />{NOTIF_LABELS[c]}</label>
           ))}
-          <h4 style={{ marginTop: 14 }}>Avec le jeu fermé (mode Chronique)</h4>
-          <p class="hint">À la fermeture, le jeu calcule les 48 heures suivantes et programme les alertes chez <b>ntfy</b>, un service gratuit.
-            Elles arrivent sur ton téléphone par l'appli ntfy (Android ou iPhone), sans compte. Si tu rouvres le jeu plus d'une minute, elles sont annulées puis recalculées.</p>
-          {s.mode !== 'chronique' && <p class="hint">Cette partie est en mode Classique : le temps s'arrête quand le jeu est fermé, il n'y a rien à annoncer.</p>}
-          <label class="row"><input type="checkbox" checked={prefs.ntfy} onChange={() => { enableNtfy(!prefs.ntfy); setP(getPrefs()); game.syncForecast(); }} />
-            Programmer les alertes chez ntfy</label>
-          {prefs.ntfy && prefs.ntfyTopic && (
-            <div class="ntfy-box">
-              <ol class="steps">
-                <li>Installe l'appli <b>ntfy</b> (Play Store, F-Droid ou App Store).</li>
-                <li>Dans l'appli, appuie sur <b>+</b> et abonne-toi au sujet : <code class="topic">{prefs.ntfyTopic}</code>
-                  <button class="btn ghost small" onClick={() => navigator.clipboard?.writeText(prefs.ntfyTopic).then(() => setNtfyMsg('Sujet copié.'))}>Copier</button></li>
-                <li>Envoie un essai pour vérifier : <button class="btn ghost small" onClick={() => { testNtfy(); setNtfyMsg('Essai envoyé : il doit arriver dans quelques secondes.'); }}>Envoyer un essai</button></li>
-              </ol>
-              {ntfyMsg && <p class="hint"><b>{ntfyMsg}</b></p>}
-              <p class="hint">Ce sujet sert de mot de passe : ne le partage pas. Sur ordinateur, tu peux aussi ouvrir <a class="link" href={subscribeUrl()} target="_blank" rel="noopener">la page du sujet</a>. <button class="link" onClick={() => { if (confirm('Changer de sujet ? Il faudra se réabonner dans l\'appli.')) { setPrefs({ ntfyTopic: '' }); enableNtfy(true); setP(getPrefs()); } }}>Changer de sujet</button></p>
-            </div>
-          )}
+          <ClosedAlerts s={s} />
         </div>
         <div class="panel">
           <h3>Affichage</h3>
@@ -159,5 +146,55 @@ export function Options({ s }: { s: GameState }) {
         <dl class="glossary">{GLOSSARY.map(([w, d]) => <><dt>{w}</dt><dd>{d}</dd></>)}</dl>
       </div>
     </div>
+  );
+}
+
+/** Alertes avec le jeu fermé (7.7.2) : vraies notifications du jeu (Reco) ou appli ntfy. */
+function ClosedAlerts({ s }: { s: GameState }) {
+  const [prefs, setP] = useState(getPrefs());
+  const [msg, setMsg] = useState('');
+  const refresh = () => { setP(getPrefs()); game.syncForecast(); };
+  const choose = async (m: AlertMode) => {
+    setMsg('');
+    if (m === 'off') disableAlerts();
+    else if (m === 'ntfy') enableNtfy();
+    else { const err = await enablePush(); if (err) { setMsg(err); return; } }
+    refresh();
+  };
+  const days = (m: 'push' | 'ntfy') => Math.round(ALERT_LIMITS[m].hours / 24);
+  return (
+    <>
+      <h4 style={{ marginTop: 14 }}>Avec le jeu fermé (mode Chronique)</h4>
+      <p class="hint">À la fermeture, le jeu calcule les jours à venir et programme une alerte pour chaque fait important.
+        Quand il n'a plus d'alerte à t'offrir, <b>la guilde se met en pause</b> jusqu'à ton retour : rien de grave n'arrive sans que tu sois prévenu.
+        Si tu rouvres le jeu plus d'une minute, les alertes sont annulées puis recalculées.</p>
+      {s.mode !== 'chronique' && <p class="hint">Cette partie est en mode Classique : le temps s'arrête quand le jeu est fermé, il n'y a rien à annoncer.</p>}
+      <div class="mode-choice" role="radiogroup" aria-label="Alertes avec le jeu fermé">
+        <label><input type="radio" name="alerts" checked={prefs.alerts === 'push'} disabled={!pushReady()} onChange={() => void choose('push')} />
+          <span><strong>Notifications du jeu</strong> <small class="hint">{pushReady()
+            ? `comme une appli, sans rien installer ; ${ALERT_LIMITS.push.max} alertes et ${days('push')} jours au plus${pushSupported() ? '' : " (sur iPhone : ajoute d'abord le jeu à l'écran d'accueil)"}`
+            : 'le service de notifications n\'est pas encore en ligne'}</small></span></label>
+        <label><input type="radio" name="alerts" checked={prefs.alerts === 'ntfy'} onChange={() => void choose('ntfy')} />
+          <span><strong>Appli ntfy</strong> <small class="hint">gratuite, à installer ; {ALERT_LIMITS.ntfy.max} alertes et {days('ntfy')} jours au plus</small></span></label>
+        <label><input type="radio" name="alerts" checked={prefs.alerts === 'off'} onChange={() => void choose('off')} />
+          <span><strong>Aucune alerte</strong> <small class="hint">la guilde vit jusqu'à 7 jours sans toi, sans te prévenir</small></span></label>
+      </div>
+      {prefs.alerts === 'push' && prefs.pushSub && (
+        <p class="row" style={{ marginTop: 6 }}>Notifications activées sur cet appareil.
+          <button class="btn ghost small" onClick={async () => setMsg(await testAlert())}>Envoyer un essai</button></p>
+      )}
+      {prefs.alerts === 'ntfy' && prefs.ntfyTopic && (
+        <div class="ntfy-box">
+          <ol class="steps">
+            <li>Installe l'appli <b>ntfy</b> (Play Store, F-Droid ou App Store).</li>
+            <li>Dans l'appli, appuie sur <b>+</b> et abonne-toi au sujet : <code class="topic">{prefs.ntfyTopic}</code>
+              <button class="btn ghost small" onClick={() => navigator.clipboard?.writeText(prefs.ntfyTopic).then(() => setMsg('Sujet copié.'))}>Copier</button></li>
+            <li>Envoie un essai pour vérifier : <button class="btn ghost small" onClick={async () => setMsg(await testAlert())}>Envoyer un essai</button></li>
+          </ol>
+          <p class="hint">Ce sujet sert de mot de passe : ne le partage pas. Sur ordinateur, tu peux aussi ouvrir <a class="link" href={ntfyUrl()} target="_blank" rel="noopener">la page du sujet</a>.</p>
+        </div>
+      )}
+      {msg && <p class="hint"><b>{msg}</b></p>}
+    </>
   );
 }

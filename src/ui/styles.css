@@ -632,3 +632,22 @@ details.panel.teams[open] > summary { margin-bottom: 8px; }
 }
 @media (max-width: 640px) { .app.phone .split-map { grid-template-columns: minmax(0, 1fr); } .app.phone .split-map > * { min-width: 0; } }
 @media (max-width: 640px) { .app.phone .slider-row { grid-template-columns: minmax(0, 1fr) auto; } .app.phone .slider-row > input[type="range"] { grid-column: 1 / -1; grid-row: 2; } .app.phone .slider-row .price { min-width: 0; } }
+
+/* Mode Chronique sans alertes (v1.1, D-172) */
+.alert-warning { border-color: var(--seal); background: color-mix(in srgb, var(--seal) 7%, var(--panel)); }
+.alert-warning h3 { display: flex; align-items: center; gap: 8px; color: var(--seal); }
+.alert-warning ul { margin: 0 0 8px; padding-left: 20px; }
+.alert-warning li { margin: 2px 0; }
+.alert-warning.compact p { margin-bottom: 6px; }
+.modal .alert-warning { margin: 8px 0 12px; }
+.alert-tag { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border: 0; font: inherit; }
+
+/* Compte joueur et sauvegardes en ligne (v1.1, D-173) */
+.account h3 { display: flex; align-items: center; gap: 8px; }
+.account-form { display: grid; gap: 8px; max-width: 420px; }
+.account-form input { width: 100%; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.hint.bad { color: var(--seal); }
+.conflicts { display: grid; gap: 8px; margin: 8px 0; }
+.conflict { border: 1px solid var(--amber); border-radius: 8px; padding: 8px 10px; background: color-mix(in srgb, var(--amber) 8%, var(--panel)); }
+.conflict .row { flex-wrap: wrap; }
+.conflict-banner { max-width: min(640px, calc(100vw - 24px)); }

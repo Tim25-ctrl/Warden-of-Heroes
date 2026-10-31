@@ -1,4 +1,5 @@
 // Mode consultation (GDD 7.9) : l'essentiel sur téléphone, avec les actions rapides.
+import { AlertWarning } from '../AlertWarning';
 import { BEDS, CLASSES, DISHES, DORM_LEVELS } from '../../sim/data';
 import { bedPrice, bedRef, dishPrice, dishRef, dishUnlocked, innPrice, tavernPrice } from '../../sim/economy';
 import { dayOf, money } from '../../sim/format';
@@ -18,6 +19,7 @@ export function Consultation({ s }: { s: GameState }) {
   return (
     <div class="consultation">
       <div class="screen-head"><h2>Résumé</h2><span class="hint">Jour {dayOf(s.tick)} · {s.adventurers.length} aventuriers · {money(s.treasury)}</span></div>
+      {s.mode === 'chronique' && <AlertWarning />}
       <MorningReport s={s} />
 
       {s.world.decisions.length > 0 && (

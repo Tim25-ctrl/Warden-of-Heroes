@@ -52,3 +52,12 @@ self.addEventListener('notificationclick', (event) => {
     }),
   );
 });
+
+// Alertes envoyées par le service de notifications quand le jeu est fermé (mode Chronique, v1.1, D-168).
+self.addEventListener('push', (event) => {
+  let data = { title: 'Warden of Heroes', body: '' };
+  try { data = { ...data, ...event.data.json() }; } catch { /* message vide ou illisible */ }
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body, icon: './icons/icon-192.png', badge: './icons/icon-192.png', data: { url: './' },
+  }));
+});

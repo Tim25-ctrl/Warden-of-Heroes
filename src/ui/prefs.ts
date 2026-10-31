@@ -5,14 +5,21 @@ export const NOTIF_LABELS: Record<NotifCat, string> = {
   depart: 'Aventurier sur le départ', sceau: 'Nouveau sceau',
 };
 
-export interface Prefs { textSize: number; notif: Record<NotifCat, boolean>; consultation: boolean; ntfy: boolean; ntfyTopic: string }
+export interface Prefs {
+  textSize: number; notif: Record<NotifCat, boolean>; consultation: boolean;
+  /** Alertes avec le jeu fermé (Chronique) : vraies notifications du jeu, appli ntfy, ou rien (D-166, D-168). */
+  alerts: 'off' | 'push' | 'ntfy'; ntfyTopic: string; pushId: string; pushSub: string;
+  ntfy?: boolean;   // ancienne case (v1.1 avant D-168)
+}
 
 const DEFAULTS: Prefs = {
   textSize: 100,
   notif: { mort: true, faillite: true, crise: true, decision: true, depart: true, sceau: true },
   consultation: false,
-  ntfy: false,
+  alerts: 'off',
   ntfyTopic: '',
+  pushId: '',
+  pushSub: '',
 };
 
 let prefs: Prefs = load();
@@ -20,7 +27,11 @@ let prefs: Prefs = load();
 function load(): Prefs {
   try {
     const raw = localStorage.getItem('prefs');
-    if (raw) { const p = JSON.parse(raw) as Partial<Prefs>; return { ...DEFAULTS, ...p, notif: { ...DEFAULTS.notif, ...(p.notif ?? {}) } }; }
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<Prefs>;
+      if (p.ntfy && !p.alerts) p.alerts = 'ntfy';   // ancienne case « ntfy »
+      return { ...DEFAULTS, ...p, notif: { ...DEFAULTS.notif, ...(p.notif ?? {}) } };
+    }
   } catch { /* stockage indisponible */ }
   return { ...DEFAULTS, notif: { ...DEFAULTS.notif } };
 }

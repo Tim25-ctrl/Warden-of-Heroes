@@ -407,6 +407,7 @@ export function stateHash(s: GameState): string {
 export interface AbsenceReport {
   hours: number;              // heures rattrapées
   slept: number;              // heures perdues au-delà du plafond (guilde en sommeil)
+  paused?: boolean;           // la guilde s'est mise en pause, faute d'alertes possibles (D-169)
   treasuryBefore: number;
   treasuryAfter: number;
   recruits: number;
@@ -419,14 +420,16 @@ export interface AbsenceReport {
  * Rattrape `hours` heures de jeu en accéléré, sans affichage, plafonnées à 7 jours.
  * Au-delà, la guilde est restée « en sommeil » : le temps excédentaire est perdu.
  */
-export function catchUp(s: GameState, hours: number): AbsenceReport {
-  const max = 168;
+export function catchUp(s: GameState, hours: number, pauseCap?: number): AbsenceReport {
+  // Au plus 7 jours ; moins si la guilde s'est mise en pause faute d'alertes possibles (D-169).
+  const max = pauseCap !== undefined ? Math.min(168, pauseCap) : 168;
   const run = Math.max(0, Math.min(hours, max));
   const before = { treasury: s.treasury, recruits: s.stats.recruits, departures: s.stats.departures, deaths: s.stats.deaths, tick: s.tick };
   for (let i = 0; i < run && !s.gameOver; i++) step(s);
   return {
     hours: run,
     slept: Math.max(0, hours - max),
+    paused: pauseCap !== undefined && pauseCap < 168 && hours > max,
     treasuryBefore: before.treasury,
     treasuryAfter: s.treasury,
     recruits: s.stats.recruits - before.recruits,

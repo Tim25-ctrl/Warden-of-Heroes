@@ -1,0 +1,25 @@
+# Service de notifications de Warden of Heroes (Cloudflare Workers, offre gratuite). Voir server/README.md.
+name = "warden-push"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+[vars]
+ORIGINS = "https://tim25-ctrl.github.io"
+VAPID_SUBJECT = "https://github.com/Tim25-ctrl/Warden-of-Heroes"
+
+[[durable_objects.bindings]]
+name = "ALERTS"
+class_name = "Alerts"
+
+[[durable_objects.bindings]]
+name = "ACCOUNTS"
+class_name = "Account"
+
+# Stockage SQLite : c'est celui de l'offre gratuite.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Alerts"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Account"]

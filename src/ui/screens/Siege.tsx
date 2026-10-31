@@ -1,4 +1,5 @@
 // Écran du Siège : vue en coupe et panneaux des salles (GDD 7.5.1).
+import { AlertWarning } from '../AlertWarning';
 import { useState } from 'preact/hooks';
 import {
   BEDS, DENREES, DISHES, DORM_LEVELS, ETATS, INF_LEVELS, KITCHEN_LEVELS, MESS_LEVELS, MODULES, P, PROFS, RECIPES, REMEDES, RESOURCES, SLOTS,
@@ -550,6 +551,7 @@ export function Siege({ s }: { s: GameState }) {
         <h2>La Guilde</h2>
         <span class="hint">Clique sur une salle pour la gérer, ou sur un aventurier pour ouvrir sa fiche.</span>
       </div>
+      {s.mode === 'chronique' && <AlertWarning compact />}
       <MorningReport s={s} />
       <BuildingCanvas s={s} selected={shown}
         onSelect={(r) => { if (r === 'quete') nav.go('tableau'); else if (r === 'ville') nav.go('aventuriers'); else setRoom(r); }}

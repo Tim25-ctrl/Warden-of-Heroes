@@ -1,8 +1,9 @@
 // Barre du haut, toujours visible (GDD 7.4, refonte v1.1) : des pastilles avec une icône et un mot clair.
 import {
   IconAlertTriangle, IconBuildingCommunity, IconCoins, IconMoon, IconPlayerPause, IconPlayerPlay, IconRosette, IconShieldCheck,
-  IconSun, IconUsers,
+  IconBellOff, IconSun, IconUsers,
 } from '@tabler/icons-preact';
+import { alertsActive } from './alerts';
 import { P } from '../sim/data';
 import { clockLabel, hourOf, phaseOf } from '../sim/format';
 import type { GameState } from '../sim/types';
@@ -64,7 +65,12 @@ export function TopBar({ s, speed }: { s: GameState; speed: number }) {
         {night ? <IconMoon {...ICON} class="pi blue" /> : <IconSun {...ICON} class="pi gold" />}
         <div class="date" title={phaseOf(s.tick)}><b>{clockLabel(s.tick)}</b><small>{phaseOf(s.tick)}</small></div>
         {s.mode === 'chronique'
-          ? <span class="tag sage" title="Mode Chronique : 1 heure de jeu = 1 heure réelle. Le temps continue quand le jeu est fermé (7 jours au plus).">● en direct</span>
+          ? <>
+              <span class="tag sage" title="Mode Chronique : 1 heure de jeu = 1 heure réelle. Le temps continue quand le jeu est fermé (7 jours au plus).">● en direct</span>
+              {!alertsActive() && <button class="tag seal alert-tag" onClick={() => nav.go('options')}
+                title="Notifications désactivées : la guilde vit jusqu'à 7 jours sans toi, sans te prévenir. Ouvre les Options.">
+                <IconBellOff size={14} aria-hidden="true" /> sans alertes</button>}
+            </>
           : <div class="speeds" role="group" aria-label="Vitesse du temps">
               {SPEEDS.map(([v, label, title]) => (
                 <button class={speed === v ? 'on' : ''} title={title} aria-label={title} aria-pressed={speed === v} onClick={() => game.setSpeed(v)} disabled={!!s.gameOver}>

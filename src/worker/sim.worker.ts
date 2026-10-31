@@ -11,14 +11,16 @@ export type ToWorker =
   | { type: 'command'; cmd: Command }
   | { type: 'speed'; value: number }
   | { type: 'advance'; hours: number }
-  | { type: 'forecast'; on: boolean };
+  | { type: 'forecast'; hours: number }
+  | { type: 'away'; pauseTick: number | null }
+  | { type: 'back' };
 
 export type FromWorker =
   | { type: 'state'; state: GameState; speed: number }
   | { type: 'autosave'; state: GameState }
   | { type: 'report'; report: AbsenceReport }
   | { type: 'error'; message: string }
-  | { type: 'forecast'; items: ForecastItem[] };
+  | { type: 'forecast'; items: ForecastItem[]; base: number; baseAt: number; hours: number };
 
 /** Un fait à venir de la pré-simulation (7.7.2) : son heure réelle prévue et son texte. */
 export interface ForecastItem { at: number; tick: number; lvl: string; text: string }
@@ -30,17 +32,16 @@ let s: GameState | null = null;
 let speed = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
 /** Pré-simulation des 48 h à venir (mode Chronique, notifications avec le jeu fermé), recalculée après chaque changement. */
-let forecastOn = false;
+let forecastHours = 0;        // 0 : pas d'alertes avec le jeu fermé, pas de pré-simulation
 let forecastTimer: ReturnType<typeof setTimeout> | null = null;
 let forecastMark = '';
-const FORECAST_HOURS = 48;
 
 const post = (m: FromWorker) => (self as unknown as Worker).postMessage(m);
 const publish = () => { if (s) post({ type: 'state', state: s, speed }); planForecast(); };
 
 /** Recalcule la pré-simulation peu après le dernier changement (commande ou heure qui passe). */
 function planForecast(): void {
-  if (!forecastOn || !s || s.mode !== 'chronique' || !s.chronicle || s.gameOver) return;
+  if (!forecastHours || !s || s.mode !== 'chronique' || !s.chronicle || s.gameOver) return;
   const mark = `${s.tick}:${s.journal.length ? s.journal[s.journal.length - 1].id : 0}:${s.nextId}`;
   if (mark === forecastMark) return;
   forecastMark = mark;
@@ -58,18 +59,25 @@ function runForecast(): void {
   const c = structuredClone(s);
   relinkRuns(c);
   const last = c.journal.length ? c.journal[c.journal.length - 1].id : 0;
-  for (let i = 0; i < FORECAST_HOURS && !c.gameOver; i++) step(c);
+  for (let i = 0; i < forecastHours && !c.gameOver; i++) step(c);
   const ch = s.chronicle;
   const items = c.journal
     .filter((e) => e.id > last && (e.lvl === 'critique' || e.lvl === 'important'))
     .map((e) => ({ at: ch.anchorReal + (e.tick - ch.anchorTick) * HOUR_MS, tick: e.tick, lvl: e.lvl, text: e.text }));
-  post({ type: 'forecast', items });
+  post({ type: 'forecast', items, base: s.tick, baseAt: ch.anchorReal + (s.tick - ch.anchorTick) * HOUR_MS, hours: forecastHours });
 }
 
 /** Tick visé par l'horloge réelle en mode Chronique. */
 function chronicleTarget(st: GameState): number {
   const c = st.chronicle!;
   return c.anchorTick + Math.floor((Date.now() - c.anchorReal) / HOUR_MS);
+}
+
+/** Tick visé, sans dépasser la pause programmée quand le joueur est parti (D-169). */
+function chronicleLimit(st: GameState): number {
+  const t = chronicleTarget(st);
+  const p = st.chronicle?.pauseTick;
+  return p !== undefined ? Math.min(t, Math.max(p, st.tick)) : t;
 }
 
 function schedule(): void {
@@ -99,7 +107,7 @@ function tick(): void {
 
 function chronicleTick(): void {
   if (s && s.chronicle) {
-    const target = chronicleTarget(s);
+    const target = chronicleLimit(s);
     let moved = false;
     while (s.tick < target && !s.gameOver) { advanceOne(); moved = true; }
     if (moved) publish();
@@ -108,18 +116,23 @@ function chronicleTick(): void {
 }
 
 /** À l'ouverture d'une partie Chronique : rattrapage du temps écoulé, puis rapport d'absence (8.6). */
-function resumeChronicle(st: GameState): void {
+function resumeChronicle(st: GameState, quiet = false): void {
   if (!st.chronicle) {
     st.chronicle = { anchorReal: Date.now(), anchorTick: st.tick };
     return;
   }
   const hours = chronicleTarget(st) - st.tick;
+  // Pause programmée à la fermeture (plus d'alerte possible) : on ne joue pas au-delà (D-169).
+  const pause = st.chronicle.pauseTick;
+  st.chronicle.pauseTick = undefined;
+  const cap = pause !== undefined ? Math.max(0, pause - st.tick) : undefined;
   if (hours <= 0) return;
-  const report = catchUp(st, hours);
-  // Au-delà de 7 jours, la guilde est restée en sommeil : on recale l'horloge pour ne pas rattraper ce temps perdu.
+  const report = catchUp(st, hours, cap);
+  // Au-delà de 7 jours, ou après la pause, la guilde est restée en sommeil : on recale l'horloge pour ne pas rattraper ce temps perdu.
   if (report.slept > 0) st.chronicle.anchorReal += report.slept * HOUR_MS;
   post({ type: 'autosave', state: st });
-  post({ type: 'report', report });
+  // Retour dans un onglet resté ouvert : on ne montre le rapport que si la guilde s'est arrêtée.
+  if (quiet ? report.slept > 0 : report.hours > 0 || report.slept > 0) post({ type: 'report', report });
 }
 
 self.onmessage = (e: MessageEvent<ToWorker>) => {
@@ -153,8 +166,15 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       if (s?.mode !== 'chronique') speed = m.value;   // pas de pause en mode Chronique
       break;
     case 'forecast':
-      forecastOn = m.on;
+      forecastHours = m.hours;
       forecastMark = '';
+      break;
+    case 'away':
+      // Le joueur s'en va : la guilde s'arrêtera à l'heure de la dernière alerte possible (D-169).
+      if (s?.chronicle) { s.chronicle.pauseTick = m.pauseTick ?? undefined; post({ type: 'autosave', state: s }); }
+      break;
+    case 'back':
+      if (s?.chronicle && s.chronicle.pauseTick !== undefined) resumeChronicle(s, true);
       break;
     case 'advance':
       if (s?.mode === 'chronique') break;

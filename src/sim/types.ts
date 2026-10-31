@@ -376,7 +376,7 @@ export interface GameState {
   fraud: { detected: number; fines: Money; reductionUntil: number; reduction: number };
   renown: number;                          // Renommée en points (6.1)
   world: WorldState;
-  chronicle: { anchorReal: number; anchorTick: number } | null;   // mode Chronique : horloge réelle
+  chronicle: { anchorReal: number; anchorTick: number; pauseTick?: number } | null;   // mode Chronique : horloge réelle ; pause si le joueur part (D-169)
   difficulty: Difficulty;
   scenario?: ScenarioId;                   // scénario de départ (absent : standard)
   legend: LegendState;
