@@ -2383,6 +2383,7 @@ Le Panthéon conserve les aventuriers légendaires de **toutes tes parties**. Il
 - **Clin d'œil :** une recrue a une petite chance d'être présentée comme **descendante** d'un héros du Panthéon. C'est purement narratif.
 - **Précisé en tranche 4 :**
   - Le Panthéon est gardé dans le navigateur, avec les hauts faits.
+  - **Ajusté en v1.1 (D-174) :** avec un compte joueur, hauts faits et Panthéon suivent le joueur sur tous ses appareils, fusionnés (8.5).
   - Une recrue a 3 % de chances d'être descendante d'un héros.
   - Quand le Panthéon est plein, les nouveaux héros n'y entrent plus tant que le joueur n'a pas retiré quelqu'un (bouton « Retirer » de la Charte).
 
@@ -2890,7 +2891,8 @@ Les effets des événements sont décrits sous forme déclarative, par exemple `
 > - **Mot de passe oublié** : un code à 6 chiffres envoyé par e-mail (service **Brevo**, gratuit, 300 e-mails par jour), valable 30 minutes, 5 essais ; 1 demande par minute et 5 par jour au plus. Brevo plutôt que Resend : Resend exige un nom de domaine à soi pour écrire à n'importe qui.
 > - **Synchronisation automatique** : connecté, chaque sauvegarde locale (les 5 emplacements) part en ligne 5 secondes plus tard, compressée (40 à 90 Ko). À l'ouverture, pour chaque emplacement, la version la plus récente gagne. Si la partie a avancé **des deux côtés** depuis la dernière synchronisation, le joueur choisit laquelle garder (« Celle de cet appareil » ou « Celle en ligne », avec le jour et l'heure de chacune) ; en cours de partie, un bandeau pose la question et recharge la partie si l'on garde la version en ligne.
 > - En mode Chronique, la partie reprise sur l'autre appareil rattrape le temps écoulé depuis la dernière sauvegarde, comme d'habitude.
-> - **Pas encore synchronisés** : les hauts faits et le Panthéon (méta-progression), qui restent propres à chaque navigateur.
+> - **Hauts faits et Panthéon** (ajusté en v1.1, D-174) : synchronisés eux aussi, mais **fusionnés** plutôt que choisis. Les hauts faits obtenus sur chaque appareil s'additionnent (on garde la date la plus ancienne), les héros aussi (on garde la fiche la plus avancée). Un héros retiré du Panthéon sur un appareil est retiré partout, et la partie en cours ne l'y remet pas. Envoi 3 secondes après chaque changement, et à chaque ouverture. Si deux appareils écrivent en même temps, le second refusionne avec la version du premier.
+> - **Supprimer mon compte** (ajouté en v1.1, D-174) : sous « Se déconnecter », avec le mot de passe. Efface le compte et tout ce qu'il garde en ligne ; les parties de l'appareil restent.
 > - Côté service (même Cloudflare Workers que les notifications) : un « Durable Object » par compte, jeton de session signé valable un an, invalidé au changement de mot de passe. Code : `server/src/accounts.ts`, `src/ui/cloud.ts`, `src/ui/AccountPanel.tsx`. Vérifié de bout en bout sur un serveur local (création, connexion, envoi, récupération sur un « autre appareil », conflit).
 
 ### 8.6 Le mode Chronique
@@ -2977,7 +2979,7 @@ Chaque tranche est **jouable et testée** avant de passer à la suivante.
 | **2** | *La guilde complète* | Infirmerie (états, remèdes, apothicairerie), Terrain et professeurs, inventaire et Forgeron, marché complet (bourse, 5 acheteurs, contrats, rachat, Resserre), fiscalité et fraude, équipes et relations, **primes du joueur**, 6 zones et 12 espèces, plantes, populations, consignes de l'intendant, tous les types de quêtes | 100 jours jouables. Cibles de rythme 1.13 respectées jusqu'au Sceau d'Argent |
 | **3** | *Le monde vivant* | Danger et Prospérité, saisons, paliers de ville, événements, chaînes et rumeurs, Chroniques, guildes rivales, assauts, épidémies, carte régionale, **mode Chronique** et rapport d'absence | Une année de jeu complète sans incohérence. Test de rattrapage réussi |
 | **4** | *La légende* | Renommée et sceaux, hauts faits, Gaspard, difficultés, épilogue, Panthéon, Livre de la guilde, **application installable**, mode consultation sur téléphone, notifications locales, thèmes, accessibilité, finitions | **Version 1.0** |
-| v1.1+ | *Après la sortie* | **Rééquilibrage du rythme et des revenus** (fait, 8.11.5), notifications avec le jeu fermé (fait, D-166), scénarios de départ (faits, D-165), difficulté personnalisée (faite, D-164), **tout faire sur téléphone** (fait, D-167), synchronisation PC/téléphone (faite, D-173), son | — |
+| v1.1+ | *Après la sortie* | **Rééquilibrage du rythme et des revenus** (fait, 8.11.5), notifications avec le jeu fermé (fait, D-166), scénarios de départ (faits, D-165), difficulté personnalisée (faite, D-164), **tout faire sur téléphone** (fait, D-167), synchronisation PC/téléphone (faite, D-173, hauts faits et Panthéon compris D-174), son | — |
 
 #### 8.11.1 Bilan de la tranche 1 (2026-10-29)
 
@@ -3561,6 +3563,7 @@ Toutes les valeurs ci-dessous sont des **valeurs initiales**. Elles vivent dans 
 | D-171 | 2026-10-31 | Notifications du jeu activées d'office : demande d'autorisation au premier bouton de l'écran d'accueil, une seule fois. | 7.7.2 |
 | D-172 | 2026-10-31 | Mode Chronique sans alertes : encadré « Notifications désactivées » (risques, bouton pour activer) au lancement, au Résumé et à La Guilde, étiquette « sans alertes » dans la barre du haut. | 7.7.2 |
 | D-173 | 2026-10-31 | Compte joueur facultatif (e-mail, mot de passe jamais envoyé) et sauvegardes en ligne synchronisées automatiquement ; conflit tranché par le joueur ; mot de passe oublié par code e-mail (Brevo). | 8.5 |
+| D-174 | 2026-10-31 | Hauts faits et Panthéon synchronisés par fusion (rien ne se perd, un retrait vaut partout) ; suppression du compte par le joueur. | 6.3, 6.7, 8.5 |
 
 ### Relecture de cohérence (v1.0)
 

@@ -1,10 +1,11 @@
 // Compte joueur et sauvegardes en ligne (v1.1, D-173) : une partie commencée sur le téléphone se retrouve sur le PC.
 // Le compte est facultatif. Connecté, chaque sauvegarde locale part en ligne peu après ; à l'ouverture, l'appareil
 // reprend la version la plus récente de chaque emplacement. Si une partie a avancé des deux côtés depuis la dernière
-// synchronisation, le joueur choisit laquelle garder.
+// synchronisation, le joueur choisit laquelle garder. Les hauts faits et le Panthéon, eux, se fusionnent (D-174).
 import serviceConfig from '../push.json';
 import type { GameState } from '../sim/types';
-import { compatible, getSlot, listSaves, markSynced, onSaved, saveSlot, SLOTS, slotLabel, type SaveEntry, type Slot } from './saves';
+import { mergeMeta, sameMeta, type Meta } from './progress';
+import { compatible, getSlot, listSaves, loadMeta, markSynced, onMetaSaved, onSaved, saveMeta, saveSlot, SLOTS, slotLabel, type SaveEntry, type Slot } from './saves';
 
 export interface Session { email: string; token: string }
 export interface CloudMeta { slot: Slot; savedAt: number; day: number; mode: string; label: string; size: number }
@@ -92,6 +93,15 @@ export async function confirmReset(email: string, code: string, password: string
   await reconcile();
 }
 
+/** Supprime le compte et tout ce qu'il garde en ligne ; les parties de cet appareil restent (D-174). */
+export async function deleteAccount(password: string): Promise<void> {
+  const s = session();
+  if (!s) return;
+  const { salt } = await api<{ salt: string }>('/account/salt', { email: s.email });
+  await api('/account/delete', { token: s.token, authKey: await deriveKey(password, salt) });
+  logout();
+}
+
 export function logout(): void {
   setSession(null);
   conflicts = [];
@@ -100,13 +110,13 @@ export function logout(): void {
 
 // ---------- Sauvegardes compressées ----------
 
-async function pack(state: GameState): Promise<string> {
-  const stream = new Blob([JSON.stringify(state)]).stream().pipeThrough(new CompressionStream('gzip'));
+async function pack(value: GameState | Meta): Promise<string> {
+  const stream = new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream('gzip'));
   return b64u(await new Response(stream).arrayBuffer());
 }
-async function unpack(data: string): Promise<GameState> {
+async function unpack<T = GameState>(data: string): Promise<T> {
   const stream = new Blob([fromB64u(data)]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return JSON.parse(await new Response(stream).text()) as GameState;
+  return JSON.parse(await new Response(stream).text()) as T;
 }
 
 function labelOf(e: SaveEntry): string {
@@ -170,10 +180,43 @@ export async function reconcile(): Promise<void> {
       else { await upload(L); moved++; }
     }
     conflicts = found;
+    await syncProgress();
     setStatus(found.length ? 'Une partie a avancé sur deux appareils : choisis laquelle garder.' : moved ? 'Parties synchronisées.' : 'Parties à jour.', found.length > 0);
   } catch (e) {
     setStatus((e as Error).message, true);
   }
+}
+
+/**
+ * Hauts faits et Panthéon (D-174) : on réunit la version de cet appareil et celle du compte, puis chacun reçoit
+ * la réunion. Si un autre appareil a écrit entre-temps, on recommence avec sa version.
+ */
+let progressBusy: Promise<void> | null = null;
+let progressAgain = false;
+export function syncProgress(): Promise<void> {
+  // Une synchronisation déjà en route : on en refera une après, pour ne pas oublier ce qui vient de changer.
+  if (progressBusy) { progressAgain = true; return progressBusy; }
+  progressBusy = (async () => {
+    const s = session();
+    if (!s || !cloudReady()) return;
+    let r = await api<{ data: string | null; rev: number }>('/saves/progress/get', { token: s.token });
+    for (let i = 0; i < 4; i++) {
+      const local = await loadMeta();
+      const remote = r.data ? await unpack<Meta>(r.data) : null;
+      const merged = remote ? mergeMeta(local, remote) : mergeMeta(local, local);
+      if (!sameMeta(merged, local)) await saveMeta(merged, true);
+      if (remote && sameMeta(merged, remote)) return;
+      const w = await api<{ ok?: boolean; conflict?: boolean; data: string | null; rev: number }>('/saves/progress/put', {
+        token: s.token, base: r.rev, data: await pack(merged),
+      }, document.visibilityState === 'hidden');
+      if (!w.conflict) return;
+      r = { data: w.data, rev: w.rev };
+    }
+  })().finally(() => {
+    progressBusy = null;
+    if (progressAgain) { progressAgain = false; syncProgress().catch((err: Error) => setStatus(err.message, true)); }
+  });
+  return progressBusy;
 }
 
 /** Le joueur tranche un conflit. */
@@ -193,6 +236,15 @@ export async function resolveConflict(slot: Slot, keep: 'local' | 'cloud'): Prom
     setStatus((e as Error).message, true);
   }
 }
+
+// Un haut fait obtenu, un héros entré au Panthéon ou retiré : envoyé en ligne quelques secondes plus tard.
+let progressTimer: ReturnType<typeof setTimeout> | undefined;
+onMetaSaved((_m, fromCloud) => {
+  if (fromCloud || !session() || !cloudReady()) return;
+  clearTimeout(progressTimer);
+  progressTimer = setTimeout(() => { syncProgress().catch((err: Error) => setStatus(err.message, true)); },
+    document.visibilityState === 'hidden' ? 0 : 3000);
+});
 
 // Chaque sauvegarde locale part en ligne quelques secondes plus tard (les sauvegardes rapprochées n'en font qu'une).
 onSaved((e) => {

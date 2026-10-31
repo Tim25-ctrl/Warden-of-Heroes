@@ -37,7 +37,7 @@ export default {
     if (req.method === 'GET' && url.pathname === '/') return reply(200, 'Warden of Heroes : service de notifications et de comptes.');
     if (req.method !== 'POST') return reply(405);
     if (!allowed) return reply(403);
-    const big = url.pathname === '/saves/put';
+    const big = url.pathname === '/saves/put' || url.pathname === '/saves/progress/put';
     if ((Number(req.headers.get('Content-Length')) || 0) > (big ? 2_000_000 : 16_000)) return reply(413);
     if (url.pathname.startsWith('/account/') || url.pathname.startsWith('/saves/')) {
       let body: Record<string, unknown>;

@@ -1,6 +1,8 @@
 // Sauvegardes dans le navigateur (IndexedDB) et export / import de fichier (GDD 8.5).
 import { MIN_SAVE_VERSION, SAVE_VERSION } from '../sim/engine';
 import type { GameState } from '../sim/types';
+import { emptyMeta, PANTHEON_MAX, type Meta } from './progress';
+export { PANTHEON_MAX, type Meta, type PantheonEntry } from './progress';
 
 /** Une sauvegarde d'une version précédente du jeu ne peut pas être reprise. */
 export const compatible = (state: GameState | undefined) => !!state && state.version >= MIN_SAVE_VERSION && state.version <= SAVE_VERSION;
@@ -114,13 +116,9 @@ export async function importFile(file: File): Promise<GameState> {
 
 // ---------- Méta-progression : hauts faits et Panthéon, conservés d'une partie à l'autre (6.3, 6.7) ----------
 
-export interface PantheonEntry {
-  key: string; name: string; classe: string; level: number; reason: string; guild: string; date: number; chosen?: boolean;
-}
-export interface Meta { key: 'meta'; achievements: Record<string, { date: number; game: string }>; pantheon: PantheonEntry[] }
-export const PANTHEON_MAX = 50;
-
-const emptyMeta = (): Meta => ({ key: 'meta', achievements: {}, pantheon: [] });
+/** Prévenus quand la méta change ; fromCloud : version venue du compte (D-174). */
+const metaListeners = new Set<(m: Meta, fromCloud: boolean) => void>();
+export function onMetaSaved(fn: (m: Meta, fromCloud: boolean) => void): () => void { metaListeners.add(fn); return () => { metaListeners.delete(fn); }; }
 
 export async function loadMeta(): Promise<Meta> {
   try {
@@ -135,7 +133,7 @@ export async function loadMeta(): Promise<Meta> {
   }
 }
 
-export async function saveMeta(meta: Meta): Promise<void> {
+export async function saveMeta(meta: Meta, fromCloud = false): Promise<void> {
   try {
     const db = await open();
     await new Promise<void>((resolve, reject) => {
@@ -146,19 +144,23 @@ export async function saveMeta(meta: Meta): Promise<void> {
     });
   } catch (err) {
     console.warn('Méta-progression impossible à enregistrer', err);
+    return;
   }
+  metaListeners.forEach((l) => l(meta, fromCloud));
 }
 
 /** Reporte dans la méta les hauts faits et les héros gagnés dans la partie en cours. */
 export async function syncMeta(state: GameState): Promise<Meta> {
   const meta = await loadMeta();
   const game = `Graine ${state.seed}`;
+  const gone = new Set(meta.removed ?? []);
   let changed = false;
   for (const id of Object.keys(state.legend?.achievements ?? {})) {
     if (!meta.achievements[id]) { meta.achievements[id] = { date: Date.now(), game }; changed = true; }
   }
   for (const l of state.legend?.legends ?? []) {
     const key = `${state.seed}:${l.id}`;
+    if (gone.has(key)) continue;                             // retiré par le joueur, peut-être sur un autre appareil
     const existing = meta.pantheon.find((e) => e.key === key);
     if (existing) {
       if (existing.level !== l.level || existing.reason !== l.reason) { existing.level = l.level; existing.reason = l.reason; changed = true; }
@@ -175,6 +177,7 @@ export async function syncMeta(state: GameState): Promise<Meta> {
 export async function removeFromPantheon(key: string): Promise<Meta> {
   const meta = await loadMeta();
   meta.pantheon = meta.pantheon.filter((e) => e.key !== key);
+  meta.removed = [...new Set([...(meta.removed ?? []), key])];
   await saveMeta(meta);
   return meta;
 }

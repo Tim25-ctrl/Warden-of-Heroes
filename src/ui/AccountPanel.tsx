@@ -3,12 +3,12 @@
 import { IconCloud, IconCloudOff } from '@tabler/icons-preact';
 import { useEffect, useState } from 'preact/hooks';
 import {
-  cloudReady, confirmReset, getConflicts, login, logout, onCloudChange, passwordProblem, register, requestReset, session,
+  cloudReady, confirmReset, deleteAccount, getConflicts, login, logout, onCloudChange, passwordProblem, register, requestReset, session,
   syncStatus, resolveConflict,
 } from './cloud';
 import type { Slot } from './saves';
 
-type Mode = 'login' | 'register' | 'forgot' | 'code';
+type Mode = 'login' | 'register' | 'forgot' | 'code' | 'delete';
 
 function useCloud(): void {
   const [, redraw] = useState(0);
@@ -84,7 +84,26 @@ export function AccountPanel({ onSynced, onResolved }: { onSynced?: () => void; 
         <p>Connecté : <b>{s.email}</b>. Tes parties te suivent sur tous tes appareils.</p>
         {st.text && <p class={`hint ${st.error ? 'bad' : ''}`}>{st.text}</p>}
         <ConflictList onResolved={onResolved} />
-        <button class="btn ghost small" onClick={logout}>Se déconnecter</button>
+        {mode !== 'delete' ? (
+          <div class="row">
+            <button class="btn ghost small" onClick={logout}>Se déconnecter</button>
+            <span class="spacer" />
+            <button class="link" onClick={() => { setMode('delete'); setMsg(''); setPw(''); }}>Supprimer mon compte</button>
+          </div>
+        ) : (
+          <form class="account-form" onSubmit={(e) => { e.preventDefault(); void run(() => deleteAccount(pw)); }}>
+            <h4>Supprimer mon compte</h4>
+            <p class="hint">Le compte et tout ce qu'il garde en ligne (parties, hauts faits, Panthéon) seront effacés pour de bon. Les parties de cet appareil restent.</p>
+            <label class="field">Mot de passe
+              <input type="password" autocomplete="current-password" required value={pw} onInput={(e) => setPw((e.target as HTMLInputElement).value)} />
+            </label>
+            <div class="row">
+              <button class="btn seal small" type="submit" disabled={busy}>{busy ? 'Un instant…' : 'Supprimer le compte'}</button>
+              <button class="btn ghost small" type="button" onClick={() => { setMode(null); setMsg(''); }}>Annuler</button>
+            </div>
+            {msg && <p class="hint"><b>{msg}</b></p>}
+          </form>
+        )}
       </div>
     );
   }
@@ -103,7 +122,7 @@ export function AccountPanel({ onSynced, onResolved }: { onSynced?: () => void; 
       )}
       {mode && (
         <form class="account-form" onSubmit={submit}>
-          <h4>{{ login: 'Se connecter', register: 'Créer un compte', forgot: 'Mot de passe oublié', code: 'Nouveau mot de passe' }[mode]}</h4>
+          <h4>{{ login: 'Se connecter', register: 'Créer un compte', forgot: 'Mot de passe oublié', code: 'Nouveau mot de passe', delete: '' }[mode]}</h4>
           <label class="field">E-mail
             <input type="email" autocomplete="email" required value={email} disabled={mode === 'code'} onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
           </label>
@@ -125,7 +144,7 @@ export function AccountPanel({ onSynced, onResolved }: { onSynced?: () => void; 
           )}
           {mode === 'register' && <p class="hint">8 caractères au moins. Il ne quitte jamais ton appareil : le service n'en reçoit qu'une empreinte.</p>}
           <div class="row">
-            <button class="btn seal small" type="submit" disabled={busy}>{busy ? 'Un instant…' : { login: 'Se connecter', register: 'Créer le compte', forgot: 'Recevoir un code', code: 'Changer le mot de passe' }[mode]}</button>
+            <button class="btn seal small" type="submit" disabled={busy}>{busy ? 'Un instant…' : { login: 'Se connecter', register: 'Créer le compte', forgot: 'Recevoir un code', code: 'Changer le mot de passe', delete: '' }[mode]}</button>
             <button class="btn ghost small" type="button" onClick={() => { setMode(null); setMsg(''); }}>Annuler</button>
             <span class="spacer" />
             {mode === 'login' && <button class="link" type="button" onClick={() => { setMode('forgot'); setMsg(''); }}>Mot de passe oublié ?</button>}

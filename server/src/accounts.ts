@@ -22,6 +22,7 @@ export interface SaveMeta { slot: string; savedAt: number; day: number; mode: st
 
 const SLOTS = ['auto', 'auto-chronique', '1', '2', '3'];
 const MAX_SAVE = 1_500_000;          // octets de sauvegarde compressée (en base64)
+const MAX_PROGRESS = 300_000;        // hauts faits et Panthéon, compressés (D-174)
 const TOKEN_DAYS = 365;
 
 const enc = new TextEncoder();
@@ -64,7 +65,7 @@ const fail = (message: string, status = 400) => json({ error: message }, status)
 /** Routes /account/* et /saves/* : vérifie l'entrée, puis confie la demande à l'objet du compte. */
 export async function handleAccount(env: AccountEnv, path: string, data: Record<string, unknown>): Promise<Response> {
   let email = normEmail(data.email);
-  if (path.startsWith('/saves/')) {
+  if (path.startsWith('/saves/') || path === '/account/delete') {
     const t = await readToken(env, data.token);
     if (!t) return fail('Session expirée : reconnecte-toi.', 401);
     email = t.e;
@@ -145,6 +146,12 @@ export class Account {
 
     // ---------- Sauvegardes (jeton déjà vérifié) ----------
     if (!a || a.v !== d.tokenV) return fail('Session expirée : reconnecte-toi.', 401);
+    // Suppression du compte (D-174) : jeton et mot de passe, puis tout est effacé.
+    if (path === '/account/delete') {
+      if (!validKey(d.authKey) || !same(await sha256(d.authKey), a.authHash)) return fail('Mot de passe incorrect.', 401);
+      await this.store.deleteAll();
+      return json({ ok: true });
+    }
     const slot = String(d.slot ?? '');
     switch (path) {
       case '/saves/list': {
@@ -168,6 +175,20 @@ export class Account {
         };
         await this.store.put({ [`meta:${slot}`]: meta, [`save:${slot}`]: d.data });
         return json({ ok: true, meta });
+      }
+      // Hauts faits et Panthéon (D-174) : un seul bloc, que les appareils fusionnent. rev change à chaque écriture ;
+      // un appareil qui écrit sans avoir vu la dernière version reçoit celle-ci pour fusionner à nouveau.
+      case '/saves/progress/get': {
+        const p = await this.store.get<{ data: string; rev: number }>('progress');
+        return json(p ?? { data: null, rev: 0 });
+      }
+      case '/saves/progress/put': {
+        if (typeof d.data !== 'string' || d.data.length > MAX_PROGRESS || typeof d.base !== 'number') return fail('Données invalides.');
+        const cur = (await this.store.get<{ data: string; rev: number }>('progress')) ?? { data: null, rev: 0 };
+        if (cur.rev !== d.base) return json({ conflict: true, data: cur.data, rev: cur.rev }, 409);
+        const rev = cur.rev + 1;
+        await this.store.put('progress', { data: d.data, rev });
+        return json({ ok: true, rev });
       }
       case '/saves/delete': {
         await this.store.delete([`meta:${slot}`, `save:${slot}`]);

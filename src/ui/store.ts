@@ -3,7 +3,7 @@ import { useEffect, useReducer } from 'preact/hooks';
 import type { Command, GameState } from '../sim/types';
 import type { FromWorker, ToWorker } from '../worker/sim.worker';
 import type { AbsenceReport } from '../sim/engine';
-import { autoSlot, loadMeta, saveSlot, syncMeta, type Meta } from './saves';
+import { autoSlot, loadMeta, onMetaSaved, saveSlot, syncMeta, type Meta } from './saves';
 import type { DifficultyId, DifficultyValues, ScenarioId } from '../sim/types';
 import { alertsActive, away, back, forecastHours, setForecast } from './alerts';
 
@@ -16,6 +16,8 @@ let report: AbsenceReport | null = null;
 let meta: Meta | null = null;
 let metaMark = '';
 void loadMeta().then((m) => { meta = m; emit(); });
+// Hauts faits et Panthéon fusionnés depuis le compte (D-174) : l'écran les montre tout de suite.
+onMetaSaved((m) => { meta = m; emit(); });
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
